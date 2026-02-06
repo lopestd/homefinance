@@ -1,0 +1,14 @@
+.dashboard-grid .summary-card h4 {
+  color: #64748b !important;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.dashboard-grid .summary-card span {
+  color: #64748b !important;
+  font-weight: 400;
+}
+
+.dashboard-grid .summary-card strong {
+  font-weight: 500;
+}

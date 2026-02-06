@@ -1,0 +1,445 @@
+{
+  "meta": {
+    "version": 1,
+    "lastIds": {
+      "orcamento": 0,
+      "orcamentoMes": 0,
+      "categoria": 0,
+      "gastoPredefinido": 0,
+      "tipoReceita": 0,
+      "receita": 0,
+      "despesa": 0,
+      "cartao": 0,
+      "cartaoMes": 0,
+      "cartaoLancamento": 0
+    }
+  },
+  "orcamentos": [],
+  "orcamentoMeses": [],
+  "categorias": [],
+  "gastosPredefinidos": [],
+  "tiposReceita": [],
+  "receitas": [],
+  "despesas": [],
+  "cartoes": [],
+  "cartaoMeses": [],
+  "cartaoLancamentos": [],
+  "frontendConfig": {
+    "categorias": [
+      {
+        "tipo": "DESPESA",
+        "nome": "Imóvel",
+        "id": "cat-1"
+      },
+      {
+        "id": "cat-1770170333095",
+        "nome": "Rendimentos",
+        "tipo": "RECEITA"
+      },
+      {
+        "id": "cat-auto-1770325968137",
+        "nome": "Bancos/Cartões",
+        "tipo": "DESPESA"
+      }
+    ],
+    "gastosPredefinidos": [
+      {
+        "id": "gasto-1770335865470",
+        "descricao": "Financiamento imobiliário BRB",
+        "categoriaId": "cat-1"
+      }
+    ],
+    "tiposReceita": [
+      {
+        "id": "tipo-1770210109751",
+        "descricao": "Salário",
+        "recorrente": true
+      }
+    ],
+    "orcamentos": [
+      {
+        "id": "orc-1770208001125",
+        "label": "2026",
+        "meses": [
+          "Janeiro",
+          "Fevereiro",
+          "Março",
+          "Abril",
+          "Maio",
+          "Junho",
+          "Julho",
+          "Agosto",
+          "Setembro"
+        ]
+      }
+    ],
+    "receitas": [
+      {
+        "id": "rec-1770256269979-preserved",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Março",
+        "categoriaId": "cat-1770170333095",
+        "descricao": "Salário",
+        "valor": "300",
+        "tipoRecorrencia": "FIXO",
+        "qtdParcelas": "",
+        "meses": [
+          "Março"
+        ],
+        "status": "Pendente",
+        "categoria": "Rendimentos"
+      },
+      {
+        "id": "rec-1770256280209-preserved",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Janeiro",
+        "categoriaId": "cat-1770170333095",
+        "descricao": "Salário",
+        "valor": "1000",
+        "tipoRecorrencia": "FIXO",
+        "qtdParcelas": "",
+        "meses": [
+          "Janeiro"
+        ],
+        "status": "Recebido",
+        "categoria": "Rendimentos"
+      },
+      {
+        "id": "rec-1770262692775",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Fevereiro",
+        "categoriaId": "cat-1770170333095",
+        "descricao": "Extra 2",
+        "valor": "10000",
+        "tipoRecorrencia": "EVENTUAL",
+        "qtdParcelas": "",
+        "meses": [
+          "Fevereiro"
+        ],
+        "status": "Recebido",
+        "categoria": "Rendimentos"
+      },
+      {
+        "id": "rec-1770338076895-preserved",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Agosto",
+        "descricao": "Salário",
+        "valor": "100",
+        "tipoRecorrencia": "FIXO",
+        "qtdParcelas": "",
+        "meses": [
+          "Abril",
+          "Maio",
+          "Julho",
+          "Agosto",
+          "Setembro"
+        ],
+        "status": "Pendente",
+        "categoriaId": "cat-1770170333095",
+        "categoria": "Rendimentos"
+      },
+      {
+        "id": "rec-1770338124311",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Fevereiro",
+        "categoriaId": "cat-1770170333095",
+        "descricao": "Salário",
+        "valor": "6700",
+        "tipoRecorrencia": "EVENTUAL",
+        "qtdParcelas": "",
+        "meses": [],
+        "status": "Recebido",
+        "categoria": "Rendimentos"
+      }
+    ],
+    "despesas": [
+      {
+        "id": "desp-1770254985814-preserved",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Maio",
+        "categoriaId": "cat-1",
+        "descricao": "Financiamento imobiliário",
+        "valor": "1500",
+        "tipoRecorrencia": "FIXO",
+        "qtdParcelas": "",
+        "meses": [
+          "Maio"
+        ],
+        "status": "Pendente",
+        "categoria": "Imóvel"
+      },
+      {
+        "id": "desp-1770255277595",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Abril",
+        "descricao": "Financiamento imobiliário",
+        "valor": "1200",
+        "tipoRecorrencia": "FIXO",
+        "qtdParcelas": "",
+        "meses": [
+          "Abril"
+        ],
+        "status": "Pendente",
+        "categoriaId": "cat-1",
+        "categoria": "Imóvel"
+      },
+      {
+        "id": "desp-1770255293644-preserved",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Janeiro",
+        "descricao": "Financiamento imobiliário",
+        "valor": "1000",
+        "tipoRecorrencia": "FIXO",
+        "qtdParcelas": "",
+        "meses": [
+          "Janeiro",
+          "Março",
+          "Junho",
+          "Julho",
+          "Agosto",
+          "Setembro"
+        ],
+        "status": "Pendente",
+        "categoriaId": "cat-1",
+        "categoria": "Imóvel"
+      },
+      {
+        "id": "desp-1770296669108",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Fevereiro",
+        "categoriaId": "cat-1",
+        "descricao": "Financiamento imobiliário",
+        "valor": "1700",
+        "tipoRecorrencia": "FIXO",
+        "qtdParcelas": "",
+        "meses": [
+          "Fevereiro"
+        ],
+        "status": "Pago",
+        "categoria": "Imóvel"
+      },
+      {
+        "id": "desp-auto-1770331328676",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Março",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão Visa Banco do Brasil",
+        "valor": 500,
+        "status": "Pendente",
+        "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-auto-1770331328676",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Abril",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão Visa Banco do Brasil",
+        "valor": 500,
+        "status": "Pendente",
+        "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-auto-1770331328676",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Maio",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão Visa Banco do Brasil",
+        "valor": 500,
+        "status": "Pendente",
+        "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-auto-1770331328676",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Junho",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão Visa Banco do Brasil",
+        "valor": 500,
+        "status": "Pendente",
+        "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-auto-1770337387607",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Fevereiro",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão Banco do Brasil - Visa Infinite",
+        "valor": 4500,
+        "status": "Pago",
+        "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-auto-1770337387607",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Março",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão Banco do Brasil - Visa Infinite",
+        "valor": 4500,
+        "status": "Pago",
+        "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-auto-1770337387607",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Abril",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão Banco do Brasil - Visa Infinite",
+        "valor": 4500,
+        "status": "Pago",
+        "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-auto-1770337936727",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Fevereiro",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão BRB MasterCard",
+        "valor": 200,
+        "status": "Pendente",
+        "categoria": "Bancos/Cartões"
+      }
+    ],
+    "cartoes": [
+      {
+        "id": "card-1770324312283",
+        "nome": "Banco do Brasil - Visa Infinite",
+        "limitesMensais": {
+          "Fevereiro": 4500,
+          "Março": 3500
+        },
+        "faturasFechadas": [
+          "Março"
+        ],
+        "limite": 0
+      },
+      {
+        "id": "card-1770336031062",
+        "nome": "BRB MasterCard",
+        "limite": 0,
+        "limitesMensais": {
+          "Fevereiro": 200
+        },
+        "faturasFechadas": []
+      }
+    ],
+    "lancamentosCartao": [
+      {
+        "id": "lanc-card-1770326284757",
+        "cartaoId": "card-1770324312283",
+        "descricao": "Amazon",
+        "valor": 140,
+        "data": "2026-02-05",
+        "mesReferencia": "Fevereiro",
+        "categoriaId": "cat-auto-1770325968137",
+        "tipoRecorrencia": "EVENTUAL",
+        "qtdParcelas": "",
+        "meses": []
+      },
+      {
+        "id": "lanc-card-1770328278357",
+        "cartaoId": "card-1770324312283",
+        "descricao": "Financiamento imobiliário",
+        "valor": 2400,
+        "data": "2026-02-05",
+        "mesReferencia": "Fevereiro",
+        "categoriaId": "cat-auto-1770325968137",
+        "tipoRecorrencia": "EVENTUAL",
+        "qtdParcelas": "",
+        "meses": []
+      },
+      {
+        "id": "lanc-card-1770331223683",
+        "cartaoId": "card-1770324312283",
+        "descricao": "Financiamento imobiliário",
+        "valor": 345,
+        "data": "2026-02-05",
+        "mesReferencia": "Fevereiro",
+        "categoriaId": "cat-auto-1770325968137",
+        "tipoRecorrencia": "EVENTUAL",
+        "qtdParcelas": "",
+        "meses": []
+      },
+      {
+        "id": "lanc-card-1770331244324",
+        "cartaoId": "card-1770324312283",
+        "descricao": "Financiamento imobiliário",
+        "valor": 4000,
+        "data": "2026-02-05",
+        "mesReferencia": "Fevereiro",
+        "categoriaId": "cat-auto-1770325968137",
+        "tipoRecorrencia": "FIXO",
+        "qtdParcelas": "",
+        "meses": [
+          "Fevereiro",
+          "Março",
+          "Abril"
+        ]
+      },
+      {
+        "id": "lanc-card-1770331328676-0",
+        "cartaoId": "card-1770324312283",
+        "descricao": "Calçados (1/5)",
+        "valor": 100,
+        "data": "2026-02-05",
+        "mesReferencia": "Fevereiro",
+        "categoriaId": "cat-auto-1770325968137",
+        "tipoRecorrencia": "PARCELADO",
+        "parcela": 1,
+        "totalParcelas": 5,
+        "meses": []
+      },
+      {
+        "id": "lanc-card-1770331328676-1",
+        "cartaoId": "card-1770324312283",
+        "descricao": "Calçados (2/5)",
+        "valor": 100,
+        "data": "2026-02-05",
+        "mesReferencia": "Março",
+        "categoriaId": "cat-auto-1770325968137",
+        "tipoRecorrencia": "PARCELADO",
+        "parcela": 2,
+        "totalParcelas": 5,
+        "meses": []
+      },
+      {
+        "id": "lanc-card-1770331328676-2",
+        "cartaoId": "card-1770324312283",
+        "descricao": "Calçados (3/5)",
+        "valor": 100,
+        "data": "2026-02-05",
+        "mesReferencia": "Abril",
+        "categoriaId": "cat-auto-1770325968137",
+        "tipoRecorrencia": "PARCELADO",
+        "parcela": 3,
+        "totalParcelas": 5,
+        "meses": []
+      },
+      {
+        "id": "lanc-card-1770331328676-3",
+        "cartaoId": "card-1770324312283",
+        "descricao": "Calçados (4/5)",
+        "valor": 100,
+        "data": "2026-02-05",
+        "mesReferencia": "Maio",
+        "categoriaId": "cat-auto-1770325968137",
+        "tipoRecorrencia": "PARCELADO",
+        "parcela": 4,
+        "totalParcelas": 5,
+        "meses": []
+      },
+      {
+        "id": "lanc-card-1770331328676-4",
+        "cartaoId": "card-1770324312283",
+        "descricao": "Calçados (5/5)",
+        "valor": 100,
+        "data": "2026-02-05",
+        "mesReferencia": "Junho",
+        "categoriaId": "cat-auto-1770325968137",
+        "tipoRecorrencia": "PARCELADO",
+        "parcela": 5,
+        "totalParcelas": 5,
+        "meses": []
+      }
+    ]
+  }
+}
