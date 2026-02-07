@@ -1658,6 +1658,7 @@ const CartaoPage = ({
             id: createId("desp-auto"),
             orcamentoId: orcamento.id,
             mes: mes,
+            data: new Date().toISOString().split("T")[0],
             categoriaId: catId,
             descricao: despesaDescricao,
             valor: valorFinal,

@@ -264,22 +264,13 @@
         "categoria": "Bancos/Cartões"
       },
       {
-        "id": "desp-auto-2",
+        "id": "desp-auto-5",
         "orcamentoId": "orc-1770208001125",
         "mes": "Fevereiro",
+        "data": "2026-02-07",
         "categoriaId": "cat-auto-1770325968137",
         "descricao": "Fatura do cartão Banco do Brasil - Visa Infinite",
         "valor": 4500,
-        "status": "Pendente",
-        "categoria": "Bancos/Cartões"
-      },
-      {
-        "id": "desp-auto-2",
-        "orcamentoId": "orc-1770208001125",
-        "mes": "Fevereiro",
-        "categoriaId": "cat-auto-1770325968137",
-        "descricao": "Fatura do cartão BRB MasterCard",
-        "valor": 200,
         "status": "Pendente",
         "categoria": "Bancos/Cartões"
       }
@@ -302,7 +293,7 @@
         "nome": "BRB MasterCard",
         "limite": 0,
         "limitesMensais": {
-          "Fevereiro": 200
+          "Fevereiro": 0
         },
         "faturasFechadas": []
       }
