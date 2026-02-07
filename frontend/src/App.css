@@ -223,6 +223,16 @@ button.ghost:hover {
   color: #0f172a;
 }
 
+.modal .modal-actions button.ghost {
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+.modal .modal-actions button.ghost:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
 button.danger {
   background: #ef4444;
   color: white;
