@@ -264,12 +264,12 @@
         "categoria": "Bancos/Cartões"
       },
       {
-        "id": "desp-auto-5",
+        "id": "desp-auto-2",
         "orcamentoId": "orc-1770208001125",
         "mes": "Fevereiro",
         "data": "2026-02-07",
         "categoriaId": "cat-auto-1770325968137",
-        "descricao": "Fatura do cartão Banco do Brasil - Visa Infinite",
+        "descricao": "Fatura do cartão Banco do Brasil - Visa",
         "valor": 4500,
         "status": "Pendente",
         "categoria": "Bancos/Cartões"
@@ -278,7 +278,7 @@
     "cartoes": [
       {
         "id": "card-1770324312283",
-        "nome": "Banco do Brasil - Visa Infinite",
+        "nome": "Banco do Brasil - Visa",
         "limitesMensais": {
           "Fevereiro": 4500,
           "Março": 3500

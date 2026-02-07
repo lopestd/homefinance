@@ -23,11 +23,11 @@ const createId = (prefix) => {
   return `${prefix}-${idSeed}`;
 };
 
-const Modal = ({ open, title, children }) => {
+const Modal = ({ open, title, children, className = "" }) => {
   if (!open) return null;
   return (
     <div className="modal-backdrop">
-      <div className="modal" onClick={(event) => event.stopPropagation()}>
+      <div className={`modal ${className}`.trim()} onClick={(event) => event.stopPropagation()}>
         <div className="modal-header">
           <h3>{title}</h3>
         </div>
@@ -59,6 +59,78 @@ const IconTrash = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true">
     <path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 7h2v8h-2v-8zm4 0h2v8h-2v-8zM7 10h2v8H7v-8z" />
   </svg>
+);
+
+const IconInfo = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path fill="currentColor" d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2zm0 6a1.25 1.25 0 1 1 0 2.5A1.25 1.25 0 0 1 12 8zm1.5 9h-3v-2h1v-3h-1v-2h3v5h1v2z" />
+  </svg>
+);
+
+const IconWarning = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path fill="currentColor" d="M12 3 1 21h22L12 3zm1 13h-2v-4h2v4zm0 4h-2v-2h2v2z" />
+  </svg>
+);
+
+const IconSuccess = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path fill="currentColor" d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2zm-1.2 13.4-3.6-3.6 1.4-1.4 2.2 2.2 4.8-4.8 1.4 1.4-6.2 6.2z" />
+  </svg>
+);
+
+const IconDanger = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path fill="currentColor" d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2zm1 13h-2v-2h2v2zm0-4h-2V7h2v4z" />
+  </svg>
+);
+
+const getVariantIcon = (variant) => {
+  if (variant === "success") return <IconSuccess />;
+  if (variant === "warning") return <IconWarning />;
+  if (variant === "danger") return <IconDanger />;
+  return <IconInfo />;
+};
+
+const AlertDialog = ({
+  open,
+  title = "Atenção",
+  message,
+  variant = "info",
+  onClose,
+  primaryLabel = "OK"
+}) => (
+  <Modal open={open} title={title} className={`modal--${variant} modal--compact`}>
+    <div className={`modal-alert modal-alert--${variant}`}>
+      <div className="modal-alert__icon">{getVariantIcon(variant)}</div>
+      <p className="modal-alert__message">{message}</p>
+    </div>
+    <div className="modal-actions">
+      <button type="button" className="primary" onClick={onClose}>{primaryLabel}</button>
+    </div>
+  </Modal>
+);
+
+const ConfirmDialog = ({
+  open,
+  title = "Confirmação",
+  message,
+  variant = "danger",
+  onClose,
+  onConfirm,
+  primaryLabel = "Excluir",
+  secondaryLabel = "Cancelar"
+}) => (
+  <Modal open={open} title={title} className={`modal--${variant} modal--compact`}>
+    <div className={`modal-alert modal-alert--${variant}`}>
+      <div className="modal-alert__icon">{getVariantIcon(variant)}</div>
+      <p className="modal-alert__message">{message}</p>
+    </div>
+    <div className="modal-actions">
+      <button type="button" className="ghost" onClick={onClose}>{secondaryLabel}</button>
+      <button type="button" className="danger" onClick={onConfirm}>{primaryLabel}</button>
+    </div>
+  </Modal>
 );
 
 const DashboardPage = ({ receitas, despesas, orcamentos }) => {
@@ -357,9 +429,16 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
 
   const [alertModalOpen, setAlertModalOpen] = useState(false);
   const [alertMessage, _setAlertMessage] = useState("");
+  const alertTitle = "Atenção";
+  const alertVariant = "info";
+  const alertPrimaryLabel = "OK";
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState("");
   const [onConfirmAction, setOnConfirmAction] = useState(() => () => {});
+  const confirmTitle = "Confirmação";
+  const confirmVariant = "danger";
+  const confirmPrimaryLabel = "Excluir";
+  const confirmSecondaryLabel = "Cancelar";
 
   const showConfirm = (message, action) => {
     setConfirmMessage(message);
@@ -833,27 +912,28 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
         </form>
       </Modal>
 
-      <Modal open={alertModalOpen} title="Atenção" onClose={() => setAlertModalOpen(false)} size="small">
-        <div className="modal-grid">
-          <p>{alertMessage}</p>
-          <div className="modal-actions">
-             <button type="button" className="primary" onClick={() => setAlertModalOpen(false)}>OK</button>
-          </div>
-        </div>
-      </Modal>
+      <AlertDialog
+        open={alertModalOpen}
+        title={alertTitle}
+        message={alertMessage}
+        variant={alertVariant}
+        primaryLabel={alertPrimaryLabel}
+        onClose={() => setAlertModalOpen(false)}
+      />
 
-      <Modal open={confirmModalOpen} title="Confirmação" onClose={() => setConfirmModalOpen(false)} size="small">
-        <div className="modal-grid">
-          <p>{confirmMessage}</p>
-          <div className="modal-actions">
-             <button type="button" className="ghost" onClick={() => setConfirmModalOpen(false)}>Cancelar</button>
-             <button type="button" className="danger" onClick={() => {
-                onConfirmAction();
-                setConfirmModalOpen(false);
-             }}>Excluir</button>
-          </div>
-        </div>
-      </Modal>
+      <ConfirmDialog
+        open={confirmModalOpen}
+        title={confirmTitle}
+        message={confirmMessage}
+        variant={confirmVariant}
+        primaryLabel={confirmPrimaryLabel}
+        secondaryLabel={confirmSecondaryLabel}
+        onClose={() => setConfirmModalOpen(false)}
+        onConfirm={() => {
+          onConfirmAction();
+          setConfirmModalOpen(false);
+        }}
+      />
     </div>
   );
 };
@@ -928,12 +1008,22 @@ const DespesasPage = ({
 
   const [alertModalOpen, setAlertModalOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
+  const [alertVariant, setAlertVariant] = useState("warning");
+  const [alertTitle, setAlertTitle] = useState("Atenção");
+  const [alertPrimaryLabel, setAlertPrimaryLabel] = useState("OK");
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState("");
   const [onConfirmAction, setOnConfirmAction] = useState(() => () => {});
+  const confirmTitle = "Confirmação";
+  const confirmVariant = "danger";
+  const confirmPrimaryLabel = "Excluir";
+  const confirmSecondaryLabel = "Cancelar";
 
-  const _showAlert = (message) => {
+  const showAlert = (message, options = {}) => {
     setAlertMessage(message);
+    setAlertVariant(options.variant || "warning");
+    setAlertTitle(options.title || "Atenção");
+    setAlertPrimaryLabel(options.primaryLabel || "OK");
     setAlertModalOpen(true);
   };
 
@@ -1003,7 +1093,7 @@ const DespesasPage = ({
     const cartaoVinculado = item ? getCartaoVinculado(item) : null;
 
     if (cartaoVinculado && temLancamentosNoCartao(cartaoVinculado.id)) {
-      _showAlert(
+      showAlert(
         "Não é possível excluir esta despesa.\nO cartão de crédito possui lançamentos de despesas nessa fatura.\nPara excluir essa despesa, remova todos os lançamentos no cartão."
       );
       return;
@@ -1410,27 +1500,28 @@ const DespesasPage = ({
         </form>
       </Modal>
 
-      <Modal open={alertModalOpen} title="Atenção" onClose={() => setAlertModalOpen(false)} size="small">
-        <div className="modal-grid">
-          <p style={{ whiteSpace: "pre-line" }}>{alertMessage}</p>
-          <div className="modal-actions">
-             <button type="button" className="primary" onClick={() => setAlertModalOpen(false)}>OK</button>
-          </div>
-        </div>
-      </Modal>
+      <AlertDialog
+        open={alertModalOpen}
+        title={alertTitle}
+        message={alertMessage}
+        variant={alertVariant}
+        primaryLabel={alertPrimaryLabel}
+        onClose={() => setAlertModalOpen(false)}
+      />
 
-      <Modal open={confirmModalOpen} title="Confirmação" onClose={() => setConfirmModalOpen(false)} size="small">
-        <div className="modal-grid">
-          <p>{confirmMessage}</p>
-          <div className="modal-actions">
-             <button type="button" className="ghost" onClick={() => setConfirmModalOpen(false)}>Cancelar</button>
-             <button type="button" className="danger" onClick={() => {
-                onConfirmAction();
-                setConfirmModalOpen(false);
-             }}>Excluir</button>
-          </div>
-        </div>
-      </Modal>
+      <ConfirmDialog
+        open={confirmModalOpen}
+        title={confirmTitle}
+        message={confirmMessage}
+        variant={confirmVariant}
+        primaryLabel={confirmPrimaryLabel}
+        secondaryLabel={confirmSecondaryLabel}
+        onClose={() => setConfirmModalOpen(false)}
+        onConfirm={() => {
+          onConfirmAction();
+          setConfirmModalOpen(false);
+        }}
+      />
     </div>
   );
 };
@@ -1501,12 +1592,22 @@ const CartaoPage = ({
 
   const [alertModalOpen, setAlertModalOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
+  const [alertVariant, setAlertVariant] = useState("warning");
+  const [alertTitle, setAlertTitle] = useState("Atenção");
+  const [alertPrimaryLabel, setAlertPrimaryLabel] = useState("OK");
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState("");
   const [onConfirmAction, setOnConfirmAction] = useState(() => () => {});
+  const confirmTitle = "Confirmação";
+  const confirmVariant = "danger";
+  const confirmPrimaryLabel = "Excluir";
+  const confirmSecondaryLabel = "Cancelar";
 
-  const showAlert = (message) => {
+  const showAlert = (message, options = {}) => {
     setAlertMessage(message);
+    setAlertVariant(options.variant || "warning");
+    setAlertTitle(options.title || "Atenção");
+    setAlertPrimaryLabel(options.primaryLabel || "OK");
     setAlertModalOpen(true);
   };
 
@@ -1799,7 +1900,7 @@ const CartaoPage = ({
   };
 
   const handleDelete = (id) => {
-    showConfirm("Excluir lançamento?", () => {
+    showConfirm("Tem certeza que deseja excluir este lançamento?", () => {
       try {
         const lancamento = lancamentosCartao.find(l => l.id === id);
         if (!lancamento) return;
@@ -2119,27 +2220,28 @@ const CartaoPage = ({
           </form>
        </Modal>
 
-       <Modal open={alertModalOpen} title="Atenção" onClose={() => setAlertModalOpen(false)} size="small">
-         <div className="modal-grid">
-           <p>{alertMessage}</p>
-           <div className="modal-actions">
-              <button type="button" className="primary" onClick={() => setAlertModalOpen(false)}>OK</button>
-           </div>
-         </div>
-       </Modal>
+       <AlertDialog
+         open={alertModalOpen}
+         title={alertTitle}
+         message={alertMessage}
+         variant={alertVariant}
+         primaryLabel={alertPrimaryLabel}
+         onClose={() => setAlertModalOpen(false)}
+       />
  
-       <Modal open={confirmModalOpen} title="Confirmação" onClose={() => setConfirmModalOpen(false)} size="small">
-         <div className="modal-grid">
-           <p>{confirmMessage}</p>
-           <div className="modal-actions">
-              <button type="button" className="ghost" onClick={() => setConfirmModalOpen(false)}>Cancelar</button>
-              <button type="button" className="danger" onClick={() => {
-                 onConfirmAction();
-                 setConfirmModalOpen(false);
-              }}>Excluir</button>
-           </div>
-         </div>
-       </Modal>
+       <ConfirmDialog
+         open={confirmModalOpen}
+         title={confirmTitle}
+         message={confirmMessage}
+         variant={confirmVariant}
+         primaryLabel={confirmPrimaryLabel}
+         secondaryLabel={confirmSecondaryLabel}
+         onClose={() => setConfirmModalOpen(false)}
+         onConfirm={() => {
+           onConfirmAction();
+           setConfirmModalOpen(false);
+         }}
+       />
     </div>
   );
 };
@@ -2818,12 +2920,22 @@ const ConfiguracoesPage = ({
 
   const [alertModalOpen, setAlertModalOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
+  const [alertVariant, setAlertVariant] = useState("warning");
+  const [alertTitle, setAlertTitle] = useState("Atenção");
+  const [alertPrimaryLabel, setAlertPrimaryLabel] = useState("Entendi");
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState("");
   const [onConfirmAction, setOnConfirmAction] = useState(() => () => {});
+  const confirmTitle = "Confirmação";
+  const confirmVariant = "danger";
+  const confirmPrimaryLabel = "Excluir";
+  const confirmSecondaryLabel = "Cancelar";
 
-  const showAlert = (message) => {
+  const showAlert = (message, options = {}) => {
     setAlertMessage(message);
+    setAlertVariant(options.variant || "warning");
+    setAlertTitle(options.title || "Atenção");
+    setAlertPrimaryLabel(options.primaryLabel || "Entendi");
     setAlertModalOpen(true);
   };
 
@@ -3608,46 +3720,28 @@ const ConfiguracoesPage = ({
         </form>
       </Modal>
 
-      <Modal
+      <AlertDialog
         open={alertModalOpen}
-        title="Atenção"
+        title={alertTitle}
+        message={alertMessage}
+        variant={alertVariant}
+        primaryLabel={alertPrimaryLabel}
         onClose={() => setAlertModalOpen(false)}
-        size="small"
-      >
-        <div className="modal-grid">
-          <p>{alertMessage}</p>
-          <div className="modal-actions">
-            <button type="button" className="primary" onClick={() => setAlertModalOpen(false)}>
-              Entendi
-            </button>
-          </div>
-        </div>
-      </Modal>
+      />
 
-      <Modal
+      <ConfirmDialog
         open={confirmModalOpen}
-        title="Confirmação"
+        title={confirmTitle}
+        message={confirmMessage}
+        variant={confirmVariant}
+        primaryLabel={confirmPrimaryLabel}
+        secondaryLabel={confirmSecondaryLabel}
         onClose={() => setConfirmModalOpen(false)}
-      >
-        <div className="modal-grid">
-          <p>{confirmMessage}</p>
-          <div className="modal-actions">
-            <button type="button" className="ghost" onClick={() => setConfirmModalOpen(false)}>
-              Cancelar
-            </button>
-            <button
-              type="button"
-              className="danger"
-              onClick={() => {
-                onConfirmAction();
-                setConfirmModalOpen(false);
-              }}
-            >
-              Excluir
-            </button>
-          </div>
-        </div>
-      </Modal>
+        onConfirm={() => {
+          onConfirmAction();
+          setConfirmModalOpen(false);
+        }}
+      />
     </div>
   );
 };
