@@ -108,6 +108,7 @@
         "id": "rec-1770262692775",
         "orcamentoId": "orc-1770208001125",
         "mes": "Fevereiro",
+        "data": "2026-02-05",
         "categoriaId": "cat-1770170333095",
         "descricao": "Extra 2",
         "valor": "10000",
@@ -142,12 +143,15 @@
         "id": "rec-1770338124311",
         "orcamentoId": "orc-1770208001125",
         "mes": "Fevereiro",
+        "data": "2026-02-06",
         "categoriaId": "cat-1770170333095",
         "descricao": "Salário",
         "valor": "6700",
         "tipoRecorrencia": "EVENTUAL",
         "qtdParcelas": "",
-        "meses": [],
+        "meses": [
+          "Fevereiro"
+        ],
         "status": "Pendente",
         "categoria": "Rendimentos"
       }
@@ -207,6 +211,7 @@
         "id": "desp-1770296669108",
         "orcamentoId": "orc-1770208001125",
         "mes": "Fevereiro",
+        "data": "2026-02-05",
         "categoriaId": "cat-1",
         "descricao": "Financiamento imobiliário",
         "valor": "1700",
@@ -259,37 +264,17 @@
         "categoria": "Bancos/Cartões"
       },
       {
-        "id": "desp-auto-1770337387607",
+        "id": "desp-auto-2",
         "orcamentoId": "orc-1770208001125",
         "mes": "Fevereiro",
         "categoriaId": "cat-auto-1770325968137",
         "descricao": "Fatura do cartão Banco do Brasil - Visa Infinite",
         "valor": 4500,
-        "status": "Pago",
+        "status": "Pendente",
         "categoria": "Bancos/Cartões"
       },
       {
-        "id": "desp-auto-1770337387607",
-        "orcamentoId": "orc-1770208001125",
-        "mes": "Março",
-        "categoriaId": "cat-auto-1770325968137",
-        "descricao": "Fatura do cartão Banco do Brasil - Visa Infinite",
-        "valor": 4500,
-        "status": "Pago",
-        "categoria": "Bancos/Cartões"
-      },
-      {
-        "id": "desp-auto-1770337387607",
-        "orcamentoId": "orc-1770208001125",
-        "mes": "Abril",
-        "categoriaId": "cat-auto-1770325968137",
-        "descricao": "Fatura do cartão Banco do Brasil - Visa Infinite",
-        "valor": 4500,
-        "status": "Pago",
-        "categoria": "Bancos/Cartões"
-      },
-      {
-        "id": "desp-auto-1770337936727",
+        "id": "desp-auto-2",
         "orcamentoId": "orc-1770208001125",
         "mes": "Fevereiro",
         "categoriaId": "cat-auto-1770325968137",
@@ -336,18 +321,6 @@
         "meses": []
       },
       {
-        "id": "lanc-card-1770328278357",
-        "cartaoId": "card-1770324312283",
-        "descricao": "Financiamento imobiliário",
-        "valor": 2400,
-        "data": "2026-02-05",
-        "mesReferencia": "Fevereiro",
-        "categoriaId": "cat-auto-1770325968137",
-        "tipoRecorrencia": "EVENTUAL",
-        "qtdParcelas": "",
-        "meses": []
-      },
-      {
         "id": "lanc-card-1770331223683",
         "cartaoId": "card-1770324312283",
         "descricao": "Financiamento imobiliário",
@@ -365,12 +338,11 @@
         "descricao": "Financiamento imobiliário",
         "valor": 4000,
         "data": "2026-02-05",
-        "mesReferencia": "Fevereiro",
+        "mesReferencia": "Março",
         "categoriaId": "cat-auto-1770325968137",
         "tipoRecorrencia": "FIXO",
         "qtdParcelas": "",
         "meses": [
-          "Fevereiro",
           "Março",
           "Abril"
         ]

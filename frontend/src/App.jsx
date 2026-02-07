@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 
+const MONTHS_ORDER = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+];
+
 const getCurrentMonthName = () => {
-  const months = [
-    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-  ];
-  return months[new Date().getMonth()];
+  return MONTHS_ORDER[new Date().getMonth()];
 };
 
 const formatCurrency = (value) => {
@@ -38,19 +39,19 @@ const Modal = ({ open, title, children }) => {
 
 const IconCheck = () => (
   <svg viewBox="0 0 20 20" aria-hidden="true">
-    <path fill="currentColor" d="M7.667 13.2 4.4 9.933l-1.4 1.4 4.667 4.667 9-9-1.4-1.4-7.6 7.6z" />
+    <path fill="currentColor" d="M7.5 13.5 3.5 9.5l1.4-1.4 2.6 2.6 7.6-7.6 1.4 1.4z" />
   </svg>
 );
 
 const IconX = () => (
   <svg viewBox="0 0 20 20" aria-hidden="true">
-    <path fill="currentColor" d="M5.3 5.3a1 1 0 0 1 1.4 0L10 8.6l3.3-3.3a1 1 0 1 1 1.4 1.4L11.4 10l3.3 3.3a1 1 0 0 1-1.4 1.4L10 11.4l-3.3 3.3a1 1 0 0 1-1.4-1.4L8.6 10 5.3 6.7a1 1 0 0 1 0-1.4z" />
+    <path fill="currentColor" d="M5.3 5.3a1 1 0 0 1 1.4 0L10 8.6l3.3-3.3a1 1 0 1 1.4 1.4L11.4 10l3.3 3.3a1 1 0 0 1-1.4 1.4L10 11.4l-3.3 3.3a1 1 0 0 1-1.4 1.4L8.6 10 5.3 6.7a1 1 0 0 1 0-1.4 1.4-7.6 7.6z" />
   </svg>
 );
 
 const IconEdit = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path fill="currentColor" d="M3 17.25V21h3.75L17.8 9.95l-3.75-3.75L3 17.25zm2.92 2.33H5v-.92l9.06-9.06.92.92L5.92 19.58zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+    <path fill="currentColor" d="M3 17.25V21h3.75L17.8 9.95l-3.75-3.75L3 17.25zm2.92 2.33H5v-.92l9.06-9.06.92.92L5.92 19.58zM20.71 7.04a1 1 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
   </svg>
 );
 
@@ -230,7 +231,7 @@ const DashboardPage = ({ receitas, despesas, orcamentos }) => {
               </strong>
             </div>
             <div className="saldo-row">
-              <span style={{ color: '#64748b' }}>Saldo Acumulado (Previsão):</span>
+              <span style={{ color: '#64748b' }}>Saldo Acumulado (Mês):</span>
               <strong style={{ color: (resumoMensal.recLancadas - resumoMensal.despLancadas) >= 0 ? "#2563eb" : "#dc2626" }}>
                 {formatCurrency(resumoMensal.recLancadas - resumoMensal.despLancadas)}
               </strong>
@@ -284,7 +285,6 @@ const DashboardPage = ({ receitas, despesas, orcamentos }) => {
           </div>
         </div>
       </section>
-
     </div>
   );
 };
@@ -327,9 +327,15 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
       lancado += val;
       if (r.status === "Recebido") recebido += val;
     });
+    const pendente = lancado - recebido;
     return {
       lancado: formatCurrency(lancado),
-      recebido: formatCurrency(recebido)
+      recebido: formatCurrency(recebido),
+      lancadoNum: lancado,
+      recebidoNum: recebido,
+      pendente: formatCurrency(pendente),
+      pendenteNum: pendente,
+      tudoRecebido: pendente === 0
     };
   }, [filteredReceitas]);
 
@@ -341,6 +347,7 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
     valor: "",
     tipoRecorrencia: "EVENTUAL",
     qtdParcelas: "",
+    data: "",
     mesInicial: "",
     meses: [],
     status: "Pendente"
@@ -370,6 +377,7 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
       valor: "",
       tipoRecorrencia: "EVENTUAL",
       qtdParcelas: "",
+      data: new Date().toISOString().split("T")[0],
       mesInicial: effectiveMes || mesesDisponiveis[0] || "",
       meses: [],
       status: "Pendente"
@@ -393,7 +401,6 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
         const item = prev.find(r => r.id === id);
         if (!item) return prev;
 
-        // Se estiver filtrando por mês e o item tiver recorrência nesse mês
         if (effectiveMes && item.meses && item.meses.includes(effectiveMes)) {
           const newMeses = item.meses.filter(m => m !== effectiveMes);
           if (newMeses.length === 0) {
@@ -426,6 +433,7 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
       valor: receita.valor,
       tipoRecorrencia: receita.tipoRecorrencia || "EVENTUAL",
       qtdParcelas: receita.qtdParcelas || "",
+      data: receita.data,
       mesInicial: effectiveMes || receita.mes || "",
       meses: effectiveMes ? [effectiveMes] : (receita.meses || []),
       status: receita.status || "Pendente"
@@ -456,6 +464,7 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
       id: receitaEditId || createId("rec"),
       orcamentoId: effectiveOrcamentoId,
       mes: manualForm.mesInicial,
+      data: manualForm.data,
       categoriaId: manualForm.categoriaId,
       descricao: manualForm.descricao,
       valor: manualForm.valor,
@@ -466,7 +475,6 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
       categoria: receitasCategorias.find(c => c.id === manualForm.categoriaId)?.nome || "—"
     };
 
-    // Garantir que a receita seja visível no mês filtrado ou tenha um mês válido
     if (effectiveMes && novaReceita.meses && novaReceita.meses.includes(effectiveMes)) {
       novaReceita.mes = effectiveMes;
     } else if (novaReceita.meses && novaReceita.meses.length > 0 && !novaReceita.meses.includes(novaReceita.mes)) {
@@ -549,66 +557,106 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
       </section>
       <section className="panel">
         <h2>Lista de Receitas</h2>
-        <div className="table">
-          <div className="table-row table-header cols-5">
-            <span>Descrição</span>
-            <span>Categoria</span>
-            <span>Valor</span>
-            <span>Status</span>
-            <span>Ações</span>
-          </div>
-          {filteredReceitas.length === 0 ? (
-            <div className="table-row empty cols-5">
-              <span>Sem receitas para o mês selecionado.</span>
-            </div>
-          ) : (
-            filteredReceitas.map((receita) => (
-              <div className="table-row cols-5" key={receita.id}>
-                <span>{receita.descricao}</span>
-                <span>{receita.categoria}</span>
-                <span>{formatCurrency(receita.valor)}</span>
-                <span>{receita.status}</span>
-                <div className="actions">
-                  <button
-                    type="button"
-                    className={`icon-button ${receita.status === "Recebido" ? "danger" : "success"}`}
-                    onClick={() => toggleStatus(receita.id)}
-                    title={receita.status === "Recebido" ? "Cancelar recebimento" : "Marcar como recebido"}
-                    aria-label={receita.status === "Recebido" ? "Cancelar recebimento" : "Marcar como recebido"}
-                  >
-                    {receita.status === "Recebido" ? <IconX /> : <IconCheck />}
-                  </button>
-                  <button
-                    type="button"
-                    className="icon-button info"
-                    onClick={() => editarReceita(receita)}
-                    title="Editar esta receita"
-                    aria-label="Editar esta receita"
-                  >
-                    <IconEdit />
-                  </button>
-                  <button
-                    type="button"
-                    className="icon-button danger"
-                    onClick={() => excluirReceita(receita.id)}
-                    title="Excluir esta receita"
-                    aria-label="Excluir esta receita"
-                  >
-                    <IconTrash />
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
+        <div className="table list-table-wrapper">
+          <table className="list-table" aria-label="Lista de Receitas">
+            <colgroup>
+              <col className="list-table__col list-table__col--date" />
+              <col className="list-table__col list-table__col--desc" />
+              <col className="list-table__col list-table__col--cat" />
+              <col className="list-table__col list-table__col--valor" />
+              <col className="list-table__col list-table__col--status" />
+              <col className="list-table__col list-table__col--acoes" />
+            </colgroup>
+            <thead className="list-table__head">
+              <tr>
+                <th scope="col">Data</th>
+                <th scope="col">Descrição</th>
+                <th scope="col">Categoria</th>
+                <th scope="col">Valor</th>
+                <th scope="col">Status</th>
+                <th scope="col" className="list-table__head-actions">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredReceitas.length === 0 ? (
+                <tr className="list-table__row list-table__row--empty">
+                  <td colSpan={6}>Sem receitas para o mês selecionado.</td>
+                </tr>
+              ) : (
+                filteredReceitas.map((receita) => (
+                  <tr className="list-table__row" key={receita.id}>
+                    <td>{new Date(receita.data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</td>
+                    <td>{receita.descricao}</td>
+                    <td>{receita.categoria}</td>
+                    <td>{formatCurrency(receita.valor)}</td>
+                    <td>{receita.status}</td>
+                    <td className="list-table__cell list-table__cell--acoes">
+                      <div className="actions">
+                        <button
+                          type="button"
+                          className={`icon-button ${receita.status === "Recebido" ? "danger" : "success"}`}
+                          onClick={() => toggleStatus(receita.id)}
+                          title={receita.status === "Recebido" ? "Cancelar recebimento" : "Marcar como recebido"}
+                          aria-label={receita.status === "Recebido" ? "Cancelar recebimento" : "Marcar como recebido"}
+                        >
+                          {receita.status === "Recebido" ? <IconX /> : <IconCheck />}
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-button info"
+                          onClick={() => editarReceita(receita)}
+                          title="Editar esta receita"
+                          aria-label="Editar esta receita"
+                        >
+                          <IconEdit />
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-button danger"
+                          onClick={() => excluirReceita(receita.id)}
+                          title="Excluir esta receita"
+                          aria-label="Excluir esta receita"
+                        >
+                          <IconTrash />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
         <div className="summary">
           <div className="summary-card">
             <span className="summary-title">Total lançado</span>
-            <strong className="summary-value">{totals.lancado}</strong>
+            <strong className="summary-value" style={{ fontSize: '1.1rem', fontWeight: '700' }}>{totals.lancado}</strong>
           </div>
           <div className="summary-card">
             <span className="summary-title">Total recebido</span>
-            <strong className="summary-value">{totals.recebido}</strong>
+            <strong 
+              className="summary-value" 
+              style={{ 
+                color: totals.tudoRecebido ? '#15803d' : '#059669',
+                fontSize: '1.1rem',
+                fontWeight: totals.tudoRecebido ? '700' : '600'
+              }}
+            >
+              {totals.recebido}
+            </strong>
+          </div>
+          <div className="summary-card">
+            <span className="summary-title">Pendente de recebimento</span>
+            <strong 
+              className="summary-value"
+              style={{ 
+                color: totals.pendenteNum === 0 ? '#64748b' : '#ea580c',
+                fontSize: '1.1rem',
+                fontWeight: totals.pendenteNum !== 0 ? '700' : '600'
+              }}
+            >
+              {totals.pendente}
+            </strong>
           </div>
         </div>
       </section>
@@ -682,6 +730,16 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
             />
           </label>
           <label className="field">
+            Data
+            <input
+              type="date"
+              value={manualForm.data}
+              onChange={(event) =>
+                setManualForm((prev) => ({ ...prev, data: event.target.value }))
+              }
+            />
+          </label>
+          <label className="field">
             Tipo
             <select
               value={manualForm.tipoRecorrencia}
@@ -710,7 +768,7 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
             <div className="field">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
                 <span style={{ fontWeight: 500 }}>Meses Recorrentes</span>
-                <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9em", cursor: "pointer" }}>
+                <label className="select-all" style={{ fontSize: "0.9em", cursor: "pointer" }}>
                   <input
                     type="checkbox"
                     checked={manualForm.meses.length === mesesDisponiveis.length && mesesDisponiveis.length > 0}
@@ -800,7 +858,15 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
   );
 };
 
-const DespesasPage = ({ categorias, gastosPredefinidos, orcamentos, despesas, setDespesas }) => {
+const DespesasPage = ({
+  categorias,
+  gastosPredefinidos,
+  orcamentos,
+  despesas,
+  setDespesas,
+  cartoes,
+  lancamentosCartao
+}) => {
   const despesasCategorias = categorias.filter((categoria) => categoria.tipo === "DESPESA");
   const initialOrcamentoId = orcamentos[0]?.id ?? "";
   const [filters, setFilters] = useState({
@@ -852,6 +918,7 @@ const DespesasPage = ({ categorias, gastosPredefinidos, orcamentos, despesas, se
     valor: "",
     tipoRecorrencia: "EVENTUAL",
     qtdParcelas: "",
+    data: "",
     mesInicial: "",
     meses: [],
     status: "Pendente"
@@ -875,6 +942,16 @@ const DespesasPage = ({ categorias, gastosPredefinidos, orcamentos, despesas, se
     setOnConfirmAction(() => action);
     setConfirmModalOpen(true);
   };
+
+  const getCartaoVinculado = (despesa) => {
+    const prefix = "Fatura do cartão ";
+    if (!despesa?.descricao || !despesa.descricao.startsWith(prefix)) return null;
+    const nomeCartao = despesa.descricao.slice(prefix.length);
+    return cartoes.find((cartao) => cartao.nome === nomeCartao) || null;
+  };
+
+  const temLancamentosNoCartao = (cartaoId) =>
+    lancamentosCartao.some((lancamento) => lancamento.cartaoId === cartaoId);
 
   const toggleMesDespesa = (mes) => {
     setManualForm((prev) => {
@@ -903,6 +980,7 @@ const DespesasPage = ({ categorias, gastosPredefinidos, orcamentos, despesas, se
       valor: "",
       tipoRecorrencia: "EVENTUAL",
       qtdParcelas: "",
+      data: new Date().toISOString().split("T")[0],
       mesInicial: effectiveMes || mesesDisponiveis[0] || "",
       meses: [],
       status: "Pendente"
@@ -921,12 +999,21 @@ const DespesasPage = ({ categorias, gastosPredefinidos, orcamentos, despesas, se
   };
 
   const excluirDespesa = (id) => {
+    const item = despesas.find((d) => d.id === id);
+    const cartaoVinculado = item ? getCartaoVinculado(item) : null;
+
+    if (cartaoVinculado && temLancamentosNoCartao(cartaoVinculado.id)) {
+      _showAlert(
+        "Não é possível excluir esta despesa.\nO cartão de crédito possui lançamentos de despesas nessa fatura.\nPara excluir essa despesa, remova todos os lançamentos no cartão."
+      );
+      return;
+    }
+
     showConfirm("Tem certeza que deseja excluir esta despesa?", () => {
       setDespesas((prev) => {
         const item = prev.find(d => d.id === id);
         if (!item) return prev;
 
-        // Se estiver filtrando por mês e o item tiver recorrência nesse mês
         if (effectiveMes && item.meses && item.meses.includes(effectiveMes)) {
           const newMeses = item.meses.filter(m => m !== effectiveMes);
           if (newMeses.length === 0) {
@@ -959,6 +1046,7 @@ const DespesasPage = ({ categorias, gastosPredefinidos, orcamentos, despesas, se
       valor: despesa.valor,
       tipoRecorrencia: despesa.tipoRecorrencia || "EVENTUAL",
       qtdParcelas: despesa.qtdParcelas || "",
+      data: despesa.data,
       mesInicial: effectiveMes || despesa.mes || "",
       meses: effectiveMes ? [effectiveMes] : (despesa.meses || []),
       status: despesa.status || "Pendente"
@@ -972,6 +1060,7 @@ const DespesasPage = ({ categorias, gastosPredefinidos, orcamentos, despesas, se
       id: despesaEditId || createId("desp"),
       orcamentoId: effectiveOrcamentoId,
       mes: manualForm.mesInicial,
+      data: manualForm.data,
       categoriaId: manualForm.categoriaId,
       descricao: manualForm.descricao,
       valor: manualForm.valor,
@@ -982,7 +1071,6 @@ const DespesasPage = ({ categorias, gastosPredefinidos, orcamentos, despesas, se
       categoria: despesasCategorias.find(c => c.id === manualForm.categoriaId)?.nome || "—"
     };
 
-    // Garantir que a despesa seja visível no mês filtrado ou tenha um mês válido
     if (effectiveMes && novaDespesa.meses && novaDespesa.meses.includes(effectiveMes)) {
       novaDespesa.mes = effectiveMes;
     } else if (novaDespesa.meses && novaDespesa.meses.length > 0 && !novaDespesa.meses.includes(novaDespesa.mes)) {
@@ -1062,57 +1150,75 @@ const DespesasPage = ({ categorias, gastosPredefinidos, orcamentos, despesas, se
       </section>
       <section className="panel">
         <h2>Lista de Despesas</h2>
-        <div className="table">
-          <div className="table-row table-header cols-5">
-            <span>Descrição</span>
-            <span>Categoria</span>
-            <span>Valor</span>
-            <span>Status</span>
-            <span>Ações</span>
-          </div>
-          {filteredDespesas.length === 0 ? (
-            <div className="table-row empty cols-5">
-              <span>Sem despesas para o mês selecionado.</span>
-            </div>
-          ) : (
-            filteredDespesas.map((despesa) => (
-              <div className="table-row cols-5" key={despesa.id}>
-                <span>{despesa.descricao}</span>
-                <span>{despesa.categoria}</span>
-                <span>{formatCurrency(despesa.valor)}</span>
-                <span>{despesa.status}</span>
-                <div className="actions">
-                  <button
-                    type="button"
-                    className={`icon-button ${despesa.status === "Pago" ? "danger" : "success"}`}
-                    onClick={() => toggleStatus(despesa.id)}
-                    title={despesa.status === "Pago" ? "Cancelar pagamento" : "Marcar como pago"}
-                    aria-label={despesa.status === "Pago" ? "Cancelar pagamento" : "Marcar como pago"}
-                  >
-                    {despesa.status === "Pago" ? <IconX /> : <IconCheck />}
-                  </button>
-                  <button
-                    type="button"
-                    className="icon-button info"
-                    onClick={() => editarDespesa(despesa)}
-                    title="Editar esta despesa"
-                    aria-label="Editar esta despesa"
-                  >
-                    <IconEdit />
-                  </button>
-                  <button
-                    type="button"
-                    className="icon-button danger"
-                    onClick={() => excluirDespesa(despesa.id)}
-                    title="Excluir esta despesa"
-                    aria-label="Excluir esta despesa"
-                  >
-                    <IconTrash />
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
+        <div className="table list-table-wrapper">
+          <table className="list-table" aria-label="Lista de Despesas">
+            <colgroup>
+              <col className="list-table__col list-table__col--date" />
+              <col className="list-table__col list-table__col--desc" />
+              <col className="list-table__col list-table__col--cat" />
+              <col className="list-table__col list-table__col--valor" />
+              <col className="list-table__col list-table__col--status" />
+              <col className="list-table__col list-table__col--acoes" />
+            </colgroup>
+            <thead className="list-table__head">
+              <tr>
+                <th scope="col">Data</th>
+                <th scope="col">Descrição</th>
+                <th scope="col">Categoria</th>
+                <th scope="col">Valor</th>
+                <th scope="col">Status</th>
+                <th scope="col" className="list-table__head-actions">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredDespesas.length === 0 ? (
+                <tr className="list-table__row list-table__row--empty">
+                  <td colSpan={6}>Sem despesas para o mês selecionado.</td>
+                </tr>
+              ) : (
+                filteredDespesas.map((despesa) => (
+                  <tr className="list-table__row" key={despesa.id}>
+                    <td>{new Date(despesa.data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</td>
+                    <td>{despesa.descricao}</td>
+                    <td>{despesa.categoria}</td>
+                    <td>{formatCurrency(despesa.valor)}</td>
+                    <td>{despesa.status}</td>
+                    <td className="list-table__cell list-table__cell--acoes">
+                      <div className="actions">
+                        <button
+                          type="button"
+                          className={`icon-button ${despesa.status === "Pago" ? "danger" : "success"}`}
+                          onClick={() => toggleStatus(despesa.id)}
+                          title={despesa.status === "Pago" ? "Cancelar pagamento" : "Marcar como pago"}
+                          aria-label={despesa.status === "Pago" ? "Cancelar pagamento" : "Marcar como pago"}
+                        >
+                          {despesa.status === "Pago" ? <IconX /> : <IconCheck />}
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-button info"
+                          onClick={() => editarDespesa(despesa)}
+                          title="Editar esta despesa"
+                          aria-label="Editar esta despesa"
+                        >
+                          <IconEdit />
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-button danger"
+                          onClick={() => excluirDespesa(despesa.id)}
+                          title="Excluir esta despesa"
+                          aria-label="Excluir esta despesa"
+                        >
+                          <IconTrash />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
         <div className="summary">
           <div className="summary-card">
@@ -1201,6 +1307,16 @@ const DespesasPage = ({ categorias, gastosPredefinidos, orcamentos, despesas, se
             />
           </label>
           <label className="field">
+            Data
+            <input
+              type="date"
+              value={manualForm.data}
+              onChange={(event) =>
+                setManualForm((prev) => ({ ...prev, data: event.target.value }))
+              }
+            />
+          </label>
+          <label className="field">
             Tipo
             <select
               value={manualForm.tipoRecorrencia}
@@ -1229,7 +1345,7 @@ const DespesasPage = ({ categorias, gastosPredefinidos, orcamentos, despesas, se
             <div className="field">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
                 <span style={{ fontWeight: 500 }}>Meses Recorrentes</span>
-                <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9em", cursor: "pointer" }}>
+                <label className="select-all" style={{ fontSize: "0.9em", cursor: "pointer" }}>
                   <input
                     type="checkbox"
                     checked={manualForm.meses.length === mesesDisponiveis.length && mesesDisponiveis.length > 0}
@@ -1296,7 +1412,7 @@ const DespesasPage = ({ categorias, gastosPredefinidos, orcamentos, despesas, se
 
       <Modal open={alertModalOpen} title="Atenção" onClose={() => setAlertModalOpen(false)} size="small">
         <div className="modal-grid">
-          <p>{alertMessage}</p>
+          <p style={{ whiteSpace: "pre-line" }}>{alertMessage}</p>
           <div className="modal-actions">
              <button type="button" className="primary" onClick={() => setAlertModalOpen(false)}>OK</button>
           </div>
@@ -1315,8 +1431,6 @@ const DespesasPage = ({ categorias, gastosPredefinidos, orcamentos, despesas, se
           </div>
         </div>
       </Modal>
-
- 
     </div>
   );
 };
@@ -1368,7 +1482,6 @@ const CartaoPage = ({
   const valorAlocado = useMemo(() => {
      if (!selectedCartao) return 0;
      const limitesMensais = selectedCartao.limitesMensais || {};
-     // Verifica se existe valor definido para o mês (mesmo que seja 0, é válido se o usuário definiu)
      if (limitesMensais[selectedMes] !== undefined && limitesMensais[selectedMes] !== null && limitesMensais[selectedMes] !== "") {
         return parseFloat(limitesMensais[selectedMes]);
      }
@@ -1379,8 +1492,6 @@ const CartaoPage = ({
 
   const [limiteModalOpen, setLimiteModalOpen] = useState(false);
   const [limiteEditValue, setLimiteEditValue] = useState("");
-
-  // handleUpdateLimite moved down
 
   const isFaturaFechada = useMemo(() => {
     return selectedCartao.faturasFechadas?.includes(selectedMes) || false;
@@ -1453,11 +1564,8 @@ const CartaoPage = ({
       const temPredefinidos = gastosPredefinidos && gastosPredefinidos.length > 0;
       setIsManualDescricao(!temPredefinidos);
 
-      // Tenta encontrar a categoria padrão "Bancos/Cartões" ou usa a primeira disponível
-      const catNome = "Bancos/Cartões";
-      let targetCat = categorias.find(c => c.nome.toLowerCase() === catNome.toLowerCase() && c.tipo === "DESPESA");
+      let targetCat = categorias.find(c => c.nome.toLowerCase() === "Bancos/Cartões".toLowerCase() && c.tipo === "DESPESA");
       
-      // Se não encontrar a específica, usa a primeira categoria de despesa disponível (sem criar nada automaticamente)
       if (!targetCat) {
         targetCat = categorias.find(c => c.tipo === "DESPESA");
       }
@@ -1493,18 +1601,6 @@ const CartaoPage = ({
     setCartoes(updatedCartoes);
     window.localStorage.setItem("hf_cartoes", JSON.stringify(updatedCartoes));
 
-    // Force sync specifically for the selected month with the NEW status
-    // We need to pass the updated cartoes or handle it inside syncDespesa
-    // Since syncDespesa reads from 'cartoes' state which isn't updated yet in this scope,
-    // we should modify syncDespesa to accept an override or just wait for effect?
-    // Better: pass the updated cartoes list to syncDespesa or make syncDespesa robust.
-    // Simplest: Call a specialized sync function or pass the new status explicitly.
-    // But syncDespesa is generic.
-    // Let's just update the logic in syncDespesa to look at the cartao passed or found.
-    // For now, I'll manually trigger the sync logic here with the new status assumption.
-    
-    // We can't easily pass "updatedCartoes" to syncDespesa as currently written.
-    // I will rewrite syncDespesa to accept optional 'cartoesOverride'.
     syncDespesa(selectedMes, effectiveCartaoId, lancamentosCartao, updatedCartoes);
   };
 
@@ -1517,13 +1613,6 @@ const CartaoPage = ({
       .reduce((acc, l) => acc + (parseFloat(l.valor) || 0), 0);
 
     const isFechada = cartao.faturasFechadas?.includes(mes);
-    
-    // Comportamento da fatura: Limite quando aberta, Total do mês quando fechada.
-    // Se aberta: Valor = Limite (parseFloat(cartao.limite) || 0)
-    // Se fechada: Valor = totalGastos
-    // Mas se o totalGastos for 0 e estiver aberta? Ainda é o limite? Sim, "Valor Alocado".
-    // Cuidado: Se não tiver limite definido, fallback para totalGastos?
-    // Vamos assumir que se tiver limite, usa o limite quando aberta.
     
     let valorFinal = totalGastos;
     if (!isFechada) {
@@ -1538,15 +1627,13 @@ const CartaoPage = ({
     }
 
     let catId = "";
-    const catNome = "Bancos/Cartões";
+    let catNome = "Bancos/Cartões";
     
-    // Tenta encontrar a categoria padrão ou usa a primeira disponível
     const existingCat = categorias.find(c => c.nome.toLowerCase() === catNome.toLowerCase() && c.tipo === "DESPESA");
     
     if (existingCat) {
       catId = existingCat.id;
     } else {
-      // Fallback para a primeira categoria de despesa se a específica não existir
       const fallbackCat = categorias.find(c => c.tipo === "DESPESA");
       catId = fallbackCat ? fallbackCat.id : "";
     }
@@ -1603,7 +1690,7 @@ const CartaoPage = ({
      setCartoes(updatedCartoes);
      window.localStorage.setItem("hf_cartoes", JSON.stringify(updatedCartoes));
      setLimiteModalOpen(false);
-    syncDespesa(selectedMes, effectiveCartaoId, lancamentosCartao, updatedCartoes);
+     syncDespesa(selectedMes, effectiveCartaoId, lancamentosCartao, updatedCartoes);
   };
 
   const handleSave = (e) => {
@@ -1717,7 +1804,6 @@ const CartaoPage = ({
         if (!lancamento) return;
         
         let nextLancamentos;
-        // Lógica de split para exclusão em mês específico (apenas para FIXO)
         if (lancamento.tipoRecorrencia === "FIXO" && selectedMes && lancamento.meses && lancamento.meses.includes(selectedMes)) {
           const newMeses = lancamento.meses.filter(m => m !== selectedMes);
           
@@ -1783,8 +1869,51 @@ const CartaoPage = ({
             Lançamentos de <span className="badge-month">{selectedMes}</span>
          </h3>
          
+         <div className="table list-table-wrapper">
+            <table className="list-table list-table--cartao" aria-label="Lançamentos do cartão">
+              <colgroup>
+                <col className="list-table__col list-table__col--date" />
+                <col className="list-table__col list-table__col--desc" />
+                <col className="list-table__col list-table__col--tipo" />
+                <col className="list-table__col list-table__col--valor" />
+                <col className="list-table__col list-table__col--acoes" />
+              </colgroup>
+              <thead className="list-table__head">
+                <tr>
+                  <th scope="col">Data</th>
+                  <th scope="col">Descrição</th>
+                  <th scope="col">Tipo de Gasto</th>
+                  <th scope="col">Valor</th>
+                  <th scope="col">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredLancamentos.length === 0 ? (
+                  <tr className="list-table__row list-table__row--empty">
+                    <td colSpan={5}>Nenhum lançamento nesta fatura.</td>
+                  </tr>
+                ) : (
+                  filteredLancamentos.map(l => (
+                    <tr className="list-table__row" key={l.id}>
+                      <td>{new Date(l.data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</td>
+                      <td>{l.descricao}</td>
+                      <td>{l.tipoRecorrencia === "FIXO" ? "Fixo" : l.tipoRecorrencia === "PARCELADO" ? "Parcelado" : "Eventual"}</td>
+                      <td>{formatCurrency(l.valor)}</td>
+                      <td className="list-table__cell list-table__cell--acoes">
+                        <div className="actions">
+                          <button className="icon-button info" onClick={() => openModal(l)} title="Editar"><IconEdit /></button>
+                          <button className="icon-button danger" onClick={() => handleDelete(l.id)} title="Excluir"><IconTrash /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+         </div>
+
          <div className="dashboard-grid">
-            <div className="summary-card" style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <div className="summary-card" style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                   <h4 style={{ marginTop: '0', marginBottom: '0', color: '#64748b', fontSize: '0.9em' }}>Limite do Cartão</h4>
                   <button 
@@ -1802,20 +1931,20 @@ const CartaoPage = ({
                <strong style={{ fontSize: '1.4em', color: '#0f172a' }}>{formatCurrency(valorAlocado)}</strong>
             </div>
             
-            <div className="summary-card" style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <div className="summary-card" style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                <h4 style={{ marginTop: '0', marginBottom: '4px', color: '#64748b', fontSize: '0.9em' }}>Fatura Atual</h4>
                <strong style={{ fontSize: '1.4em', color: '#dc2626' }}>{formatCurrency(totalMes)}</strong>
-               <div style={{ fontSize: '0.9em', fontWeight: '500', color: '#64748b', marginTop: '2px' }}>
+              <div style={{ fontSize: '0.8em', fontWeight: '500', color: '#64748b', marginTop: '1px' }}>
                   Fixo: {formatCurrency(fixoParcelado)} | Var: {formatCurrency(gastosMes)}
                </div>
             </div>
 
-            <div className="summary-card" style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <div className="summary-card" style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                <h4 style={{ marginTop: '0', marginBottom: '4px', color: '#64748b', fontSize: '0.9em' }}>Disponível</h4>
                <strong style={{ fontSize: '1.4em', color: saldoMes >= 0 ? '#16a34a' : '#dc2626' }}>{formatCurrency(saldoMes)}</strong>
             </div>
 
-            <div className="summary-card" style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
+            <div className="summary-card" style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                  <h4 style={{ margin: 0, color: '#64748b', fontSize: '0.9em' }}>Status</h4>
                  <span style={{ 
@@ -1847,32 +1976,6 @@ const CartaoPage = ({
                  {isFaturaFechada ? 'Reabrir Fatura' : 'Fechar Fatura'}
                </button>
             </div>
-         </div>
-
-         <div className="table">
-            <div className="table-row table-header cols-5">
-               <span>Data</span>
-               <span>Descrição</span>
-               <span>Tipo de Gasto</span>
-               <span>Valor</span>
-               <span>Ações</span>
-            </div>
-            {filteredLancamentos.length === 0 ? (
-               <div className="table-row empty cols-5"><span>Nenhum lançamento nesta fatura.</span></div>
-            ) : (
-               filteredLancamentos.map(l => (
-                 <div className="table-row cols-5" key={l.id}>
-                    <span>{new Date(l.data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
-                    <span>{l.descricao}</span>
-                    <span>{l.tipoRecorrencia === "FIXO" ? "Fixo" : l.tipoRecorrencia === "PARCELADO" ? "Parcelado" : "Eventual"}</span>
-                    <span>{formatCurrency(l.valor)}</span>
-                    <div className="actions">
-                       <button className="icon-button info" onClick={() => openModal(l)} title="Editar"><IconEdit /></button>
-                       <button className="icon-button danger" onClick={() => handleDelete(l.id)} title="Excluir"><IconTrash /></button>
-                    </div>
-                 </div>
-               ))
-            )}
          </div>
        </section>
 
@@ -1946,7 +2049,7 @@ const CartaoPage = ({
                 <div className="field">
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
                     <span style={{ fontWeight: 500 }}>Meses Recorrentes</span>
-                    <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9em", cursor: "pointer" }}>
+                    <label className="select-all" style={{ fontSize: "0.9em", cursor: "pointer" }}>
                       <input
                         type="checkbox"
                         checked={form.meses.length === months.length && months.length > 0}
@@ -2040,22 +2143,651 @@ const CartaoPage = ({
   );
 };
 
-const RelatoriosPage = () => (
-  <div className="page-grid">
-    <section className="panel">
-      <h2>Relatório por Período</h2>
-      <div className="table-placeholder">Comparativo receitas × despesas</div>
-    </section>
-    <section className="panel">
-      <h2>Previsto × Pago</h2>
-      <div className="table-placeholder">Resumo pago e previsto</div>
-    </section>
-    <section className="panel">
-      <h2>Evolução Mensal</h2>
-      <div className="table-placeholder">Totais por mês</div>
-    </section>
-  </div>
-);
+const RelatoriosPage = ({
+  orcamentos,
+  receitas,
+  despesas,
+  cartoes,
+  lancamentosCartao,
+  categorias
+}) => {
+  const initialOrcamentoId = orcamentos[0]?.id ?? "";
+  const [filters, setFilters] = useState({
+    orcamentoId: initialOrcamentoId,
+    mesInicio: "",
+    mesFim: "",
+    visao: "Acumulada"
+  });
+
+  const effectiveOrcamentoId = filters.orcamentoId || initialOrcamentoId;
+  const currentOrcamento = orcamentos.find((o) => o.id === effectiveOrcamentoId);
+  const mesesOrcamento = MONTHS_ORDER.filter((mes) => currentOrcamento?.meses?.includes(mes));
+  const defaultMes = useMemo(() => {
+    if (mesesOrcamento.length === 0) return "";
+    const currentMonth = getCurrentMonthName();
+    return mesesOrcamento.includes(currentMonth) ? currentMonth : mesesOrcamento[0];
+  }, [mesesOrcamento]);
+  const mesInicio = filters.mesInicio && mesesOrcamento.includes(filters.mesInicio) ? filters.mesInicio : defaultMes;
+  const mesFim = filters.mesFim && mesesOrcamento.includes(filters.mesFim) ? filters.mesFim : mesInicio;
+
+  const mesesIntervalo = useMemo(() => {
+    if (!mesInicio) return [];
+    const startIndex = mesesOrcamento.indexOf(mesInicio);
+    const endIndex = mesesOrcamento.indexOf(mesFim);
+    if (startIndex === -1 || endIndex === -1) return mesInicio ? [mesInicio] : [];
+    const from = Math.min(startIndex, endIndex);
+    const to = Math.max(startIndex, endIndex);
+    return mesesOrcamento.slice(from, to + 1);
+  }, [mesInicio, mesFim, mesesOrcamento]);
+
+  const mesesSelecionados = useMemo(() => {
+    return filters.visao === "Mensal"
+      ? (mesInicio ? [mesInicio] : [])
+      : mesesIntervalo;
+  }, [filters.visao, mesInicio, mesesIntervalo]);
+
+  const categoriasMap = useMemo(
+    () => new Map(categorias.map((categoria) => [categoria.id, categoria.nome])),
+    [categorias]
+  );
+
+  const formatPercent = (value) => {
+    if (value === null || value === undefined || Number.isNaN(value)) return "—";
+    return `${value.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+  };
+
+  const getCategoriaNome = useCallback(
+    (item) => item.categoria || categoriasMap.get(item.categoriaId) || "Sem categoria",
+    [categoriasMap]
+  );
+
+  const getMesesItem = useCallback((item) => {
+    if (item.meses && item.meses.length > 0) return item.meses;
+    if (item.mes) return [item.mes];
+    return [];
+  }, []);
+
+  const countOcorrencias = useCallback(
+    (item, months) => {
+      const monthsItem = getMesesItem(item);
+      if (monthsItem.length === 0) return 0;
+      return monthsItem.filter((m) => months.includes(m)).length;
+    },
+    [getMesesItem]
+  );
+
+  const receitasOrcamento = useMemo(
+    () => receitas.filter((r) => r.orcamentoId === effectiveOrcamentoId),
+    [receitas, effectiveOrcamentoId]
+  );
+  const despesasOrcamento = useMemo(
+    () => despesas.filter((d) => d.orcamentoId === effectiveOrcamentoId),
+    [despesas, effectiveOrcamentoId]
+  );
+
+  const calcResumo = useCallback((months) => {
+    let recPrevisto = 0;
+    let recRecebido = 0;
+    let despPrevisto = 0;
+    let despPago = 0;
+
+    receitasOrcamento.forEach((r) => {
+      const ocorrencias = countOcorrencias(r, months);
+      if (ocorrencias === 0) return;
+      const val = parseFloat(r.valor) || 0;
+      recPrevisto += val * ocorrencias;
+      if (r.status === "Recebido") recRecebido += val * ocorrencias;
+    });
+
+    despesasOrcamento.forEach((d) => {
+      const ocorrencias = countOcorrencias(d, months);
+      if (ocorrencias === 0) return;
+      const val = parseFloat(d.valor) || 0;
+      despPrevisto += val * ocorrencias;
+      if (d.status === "Pago") despPago += val * ocorrencias;
+    });
+
+    return { recPrevisto, recRecebido, despPrevisto, despPago };
+  }, [receitasOrcamento, despesasOrcamento, countOcorrencias]);
+
+  const resumoConsolidado = useMemo(() => {
+    if (mesesSelecionados.length === 0) {
+      return { recPrevisto: 0, recRecebido: 0, despPrevisto: 0, despPago: 0 };
+    }
+    return calcResumo(mesesSelecionados);
+  }, [mesesSelecionados, calcResumo]);
+
+  const evolucaoMensal = useMemo(() => {
+    return mesesSelecionados.map((mes) => {
+      const resumo = calcResumo([mes]);
+      const saldoMes = resumo.recRecebido - resumo.despPago;
+      return { mes, ...resumo, saldoMes };
+    });
+  }, [mesesSelecionados, calcResumo]);
+
+  const evolucaoMensalComAcumulado = useMemo(() => {
+    return evolucaoMensal.map((item, index) => {
+      const saldoAcumulado = evolucaoMensal
+        .slice(0, index + 1)
+        .reduce((acc, current) => acc + current.saldoMes, 0);
+      return {
+        ...item,
+        saldoAcumulado: filters.visao === "Acumulada" ? saldoAcumulado : item.saldoMes
+      };
+    });
+  }, [evolucaoMensal, filters.visao]);
+
+  const comparativoPlanejado = useMemo(() => {
+    const diffReceitas = resumoConsolidado.recRecebido - resumoConsolidado.recPrevisto;
+    const diffDespesas = resumoConsolidado.despPago - resumoConsolidado.despPrevisto;
+    return [
+      {
+        tipo: "Receitas",
+        diff: diffReceitas,
+        percent: resumoConsolidado.recPrevisto ? (diffReceitas / resumoConsolidado.recPrevisto) * 100 : 0
+      },
+      {
+        tipo: "Despesas",
+        diff: diffDespesas,
+        percent: resumoConsolidado.despPrevisto ? (diffDespesas / resumoConsolidado.despPrevisto) * 100 : 0
+      }
+    ];
+  }, [resumoConsolidado]);
+
+  const despesasPorCategoria = useMemo(() => {
+    const map = new Map();
+    despesasOrcamento.forEach((d) => {
+      const ocorrencias = countOcorrencias(d, mesesSelecionados);
+      if (ocorrencias === 0) return;
+      const nome = getCategoriaNome(d);
+      const val = parseFloat(d.valor) || 0;
+      const previsto = val * ocorrencias;
+      const pago = d.status === "Pago" ? val * ocorrencias : 0;
+      const current = map.get(nome) || { categoria: nome, previsto: 0, pago: 0 };
+      map.set(nome, {
+        categoria: nome,
+        previsto: current.previsto + previsto,
+        pago: current.pago + pago
+      });
+    });
+    return Array.from(map.values()).map((item) => ({
+      ...item,
+      diferenca: item.previsto - item.pago
+    }));
+  }, [despesasOrcamento, mesesSelecionados, countOcorrencias, getCategoriaNome]);
+
+  const receitasPorCategoria = useMemo(() => {
+    const map = new Map();
+    receitasOrcamento.forEach((r) => {
+      const ocorrencias = countOcorrencias(r, mesesSelecionados);
+      if (ocorrencias === 0) return;
+      const nome = getCategoriaNome(r);
+      const val = parseFloat(r.valor) || 0;
+      const previsto = val * ocorrencias;
+      const recebido = r.status === "Recebido" ? val * ocorrencias : 0;
+      const current = map.get(nome) || { categoria: nome, previsto: 0, recebido: 0 };
+      map.set(nome, {
+        categoria: nome,
+        previsto: current.previsto + previsto,
+        recebido: current.recebido + recebido
+      });
+    });
+    const totalRecebido = Array.from(map.values()).reduce((acc, item) => acc + item.recebido, 0);
+    return Array.from(map.values()).map((item) => ({
+      ...item,
+      percentual: totalRecebido ? (item.recebido / totalRecebido) * 100 : 0
+    }));
+  }, [receitasOrcamento, mesesSelecionados, countOcorrencias, getCategoriaNome]);
+
+  const gastosPorDescricao = useMemo(() => {
+    const map = new Map();
+    despesasOrcamento.forEach((d) => {
+      const monthsItem = getMesesItem(d).filter((m) => mesesSelecionados.includes(m));
+      if (monthsItem.length === 0) return;
+      const descricao = d.descricao || "Sem descrição";
+      const val = parseFloat(d.valor) || 0;
+      const previsto = val * monthsItem.length;
+      const pago = d.status === "Pago" ? val * monthsItem.length : 0;
+      const current = map.get(descricao) || {
+        descricao,
+        ocorrencias: 0,
+        previsto: 0,
+        pago: 0,
+        meses: new Set(),
+        tipos: new Set()
+      };
+      monthsItem.forEach((mes) => current.meses.add(mes));
+      if (d.tipoRecorrencia) current.tipos.add(d.tipoRecorrencia);
+      map.set(descricao, {
+        ...current,
+        ocorrencias: current.ocorrencias,
+        previsto: current.previsto + previsto,
+        pago: current.pago + pago,
+        meses: current.meses
+      });
+    });
+    return Array.from(map.values()).map((item) => ({
+      ...item,
+      media: item.ocorrencias ? item.previsto / item.ocorrencias : 0
+    }));
+  }, [despesasOrcamento, mesesSelecionados, getMesesItem]);
+
+  const recorrentesOcultos = useMemo(() => {
+    return gastosPorDescricao
+      .filter((item) => item.meses.size > 1 && !item.tipos.has("FIXO"))
+      .map((item) => ({
+        descricao: item.descricao,
+        meses: item.meses.size,
+        ocorrencias: item.ocorrencias,
+        previsto: item.previsto,
+        pago: item.pago
+      }));
+  }, [gastosPorDescricao]);
+
+  const analiseCartao = useMemo(() => {
+    const rows = [];
+    cartoes.forEach((cartao) => {
+      mesesSelecionados.forEach((mes) => {
+        const lancamentosMes = lancamentosCartao.filter((l) =>
+          l.cartaoId === cartao.id &&
+          (l.mesReferencia === mes || (l.meses && l.meses.includes(mes)))
+        );
+        const fixoParcelado = lancamentosMes.reduce((acc, l) => {
+          const val = parseFloat(l.valor) || 0;
+          if (l.tipoRecorrencia === "FIXO" || l.tipoRecorrencia === "PARCELADO") return acc + val;
+          return acc;
+        }, 0);
+        const gastosMes = lancamentosMes.reduce((acc, l) => {
+          const val = parseFloat(l.valor) || 0;
+          if (l.tipoRecorrencia === "FIXO" || l.tipoRecorrencia === "PARCELADO") return acc;
+          return acc + val;
+        }, 0);
+        const totalMes = fixoParcelado + gastosMes;
+        const limitesMensais = cartao.limitesMensais || {};
+        const valorAlocado = limitesMensais[mes] !== undefined && limitesMensais[mes] !== null && limitesMensais[mes] !== ""
+          ? parseFloat(limitesMensais[mes]) || 0
+          : parseFloat(cartao.limite) || 0;
+        const saldoMes = valorAlocado - totalMes;
+        const isFechada = cartao.faturasFechadas?.includes(mes) || false;
+        if (lancamentosMes.length > 0 || valorAlocado > 0 || isFechada) {
+          rows.push({
+            cartao: cartao.nome,
+            mes,
+            valorAlocado,
+            fixoParcelado,
+            gastosMes,
+            totalMes,
+            saldoMes,
+            situacao: isFechada ? "Fechada" : "Aberta"
+          });
+        }
+      });
+    });
+    return rows;
+  }, [cartoes, lancamentosCartao, mesesSelecionados]);
+
+  const resumoAnual = useMemo(() => {
+    const base = mesesOrcamento.map((mes) => {
+      const resumo = calcResumo([mes]);
+      const saldoMes = resumo.recRecebido - resumo.despPago;
+      return {
+        mes,
+        ...resumo,
+        saldoMes
+      };
+    });
+    return base.map((item, index) => {
+      const saldoAcumulado = base
+        .slice(0, index + 1)
+        .reduce((acc, current) => acc + current.saldoMes, 0);
+      return { ...item, saldoAcumulado };
+    });
+  }, [mesesOrcamento, calcResumo]);
+
+  const saldoPrevisto = resumoConsolidado.recPrevisto - resumoConsolidado.despPrevisto;
+  const saldoEmConta = resumoConsolidado.recRecebido - resumoConsolidado.despPago;
+  const saldoAcumuladoPrevisto = saldoPrevisto;
+
+  return (
+    <div className="page-grid">
+      <section className="panel filters-panel">
+        <div className="panel-header">
+          <div>
+            <h2>Relatórios Analíticos</h2>
+          </div>
+        </div>
+        <form className="form-inline" onSubmit={(event) => event.preventDefault()}>
+          <label className="field">
+            Orçamento
+            <select
+              value={effectiveOrcamentoId}
+              onChange={(event) => setFilters((prev) => ({ ...prev, orcamentoId: event.target.value }))}
+            >
+              {orcamentos.length === 0 ? (
+                <option value="">Sem orçamentos</option>
+              ) : (
+                orcamentos.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.label}
+                  </option>
+                ))
+              )}
+            </select>
+          </label>
+          <label className="field">
+            Mês inicial
+            <select
+              value={mesInicio || ""}
+              onChange={(event) => setFilters((prev) => ({ ...prev, mesInicio: event.target.value }))}
+            >
+              {mesesOrcamento.length === 0 ? (
+                <option value="">Sem meses configurados</option>
+              ) : (
+                mesesOrcamento.map((mes) => (
+                  <option key={mes} value={mes}>
+                    {mes}
+                  </option>
+                ))
+              )}
+            </select>
+          </label>
+          <label className="field">
+            Mês final
+            <select
+              value={mesFim || ""}
+              onChange={(event) => setFilters((prev) => ({ ...prev, mesFim: event.target.value }))}
+            >
+              {mesesOrcamento.length === 0 ? (
+                <option value="">Sem meses configurados</option>
+              ) : (
+                mesesOrcamento.map((mes) => (
+                  <option key={mes} value={mes}>
+                    {mes}
+                  </option>
+                ))
+              )}
+            </select>
+          </label>
+          <label className="field">
+            Visão
+            <select
+              value={filters.visao}
+              onChange={(event) => setFilters((prev) => ({ ...prev, visao: event.target.value }))}
+            >
+              <option value="Mensal">Mensal</option>
+              <option value="Acumulada">Acumulada</option>
+            </select>
+          </label>
+        </form>
+      </section>
+
+      <section className="panel">
+        <h3>Resumo Financeiro Consolidado</h3>
+        <div className="dashboard-grid">
+          <div className="summary-card">
+            <span className="summary-title">Receitas</span>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>Previsto:</span>
+              <strong>{formatCurrency(resumoConsolidado.recPrevisto)}</strong>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>Recebido:</span>
+              <strong>{formatCurrency(resumoConsolidado.recRecebido)}</strong>
+            </div>
+          </div>
+          <div className="summary-card">
+            <span className="summary-title">Despesas</span>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>Previsto:</span>
+              <strong>{formatCurrency(resumoConsolidado.despPrevisto)}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Pago:</span>
+              <strong>{formatCurrency(resumoConsolidado.despPago)}</strong>
+            </div>
+          </div>
+          <div className="summary-card">
+            <span className="summary-title">Saldo</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Previsto:</span>
+              <strong>{formatCurrency(saldoPrevisto)}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Em conta:</span>
+              <strong>{formatCurrency(saldoEmConta)}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Acumulado (previsão):</span>
+              <strong>{formatCurrency(saldoAcumuladoPrevisto)}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="panel">
+        <h3>Evolução Mensal do Orçamento</h3>
+        <div className="table">
+          <div className="table-row table-header cols-7">
+            <span>Mês</span>
+            <span>Rec. Previsto</span>
+            <span>Rec. Recebido</span>
+            <span>Desp. Previsto</span>
+            <span>Desp. Pago</span>
+            <span>Saldo do Mês</span>
+            <span>Saldo Acumulado</span>
+          </div>
+          {evolucaoMensalComAcumulado.length === 0 ? (
+            <div className="table-row empty cols-7">
+              <span>Sem dados para o período selecionado.</span>
+            </div>
+          ) : (
+            evolucaoMensalComAcumulado.map((item) => (
+              <div className="table-row cols-7" key={item.mes}>
+                <span>{item.mes}</span>
+                <span>{formatCurrency(item.recPrevisto)}</span>
+                <span>{formatCurrency(item.recRecebido)}</span>
+                <span>{formatCurrency(item.despPrevisto)}</span>
+                <span>{formatCurrency(item.despPago)}</span>
+                <span>{formatCurrency(item.saldoMes)}</span>
+                <span>{formatCurrency(item.saldoAcumulado)}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="panel">
+        <h3>Comparativo Planejado x Realizado</h3>
+        <div className="table">
+          <div className="table-row table-header cols-3">
+            <span>Tipo</span>
+            <span>Diferença (R$)</span>
+            <span>Diferença (%)</span>
+          </div>
+          {comparativoPlanejado.map((item) => (
+            <div className="table-row cols-3" key={item.tipo}>
+              <span>{item.tipo}</span>
+              <span>{formatCurrency(item.diff)}</span>
+              <span>{formatPercent(item.percent)}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="panel">
+        <h3>Despesas por Categoria</h3>
+        <div className="table">
+          <div className="table-row table-header cols-4">
+            <span>Categoria</span>
+            <span>Total previsto</span>
+            <span>Total pago</span>
+            <span>Diferença</span>
+          </div>
+          {despesasPorCategoria.length === 0 ? (
+            <div className="table-row empty cols-4">
+              <span>Sem despesas no período selecionado.</span>
+            </div>
+          ) : (
+            despesasPorCategoria.map((item) => (
+              <div className="table-row cols-4" key={item.categoria}>
+                <span>{item.categoria}</span>
+                <span>{formatCurrency(item.previsto)}</span>
+                <span>{formatCurrency(item.pago)}</span>
+                <span>{formatCurrency(item.diferenca)}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="panel">
+        <h3>Receitas por Categoria</h3>
+        <div className="table">
+          <div className="table-row table-header cols-4">
+            <span>Categoria</span>
+            <span>Total previsto</span>
+            <span>Total recebido</span>
+            <span>Percentual</span>
+          </div>
+          {receitasPorCategoria.length === 0 ? (
+            <div className="table-row empty cols-4">
+              <span>Sem receitas no período selecionado.</span>
+            </div>
+          ) : (
+            receitasPorCategoria.map((item) => (
+              <div className="table-row cols-4" key={item.categoria}>
+                <span>{item.categoria}</span>
+                <span>{formatCurrency(item.previsto)}</span>
+                <span>{formatCurrency(item.recebido)}</span>
+                <span>{formatPercent(item.percentual)}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="panel">
+        <h3>Gastos por Descrição (Gastos Idênticos)</h3>
+        <div className="table">
+          <div className="table-row table-header cols-5-report">
+            <span>Descrição</span>
+            <span>Ocorrências</span>
+            <span>Total previsto</span>
+            <span>Total pago</span>
+            <span>Valor médio</span>
+          </div>
+          {gastosPorDescricao.length === 0 ? (
+            <div className="table-row empty cols-5-report">
+              <span>Sem gastos no período selecionado.</span>
+            </div>
+          ) : (
+            gastosPorDescricao.map((item) => (
+              <div className="table-row cols-5-report" key={item.descricao}>
+                <span>{item.descricao}</span>
+                <span>{item.ocorrencias}</span>
+                <span>{formatCurrency(item.previsto)}</span>
+                <span>{formatCurrency(item.pago)}</span>
+                <span>{formatCurrency(item.media)}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="panel">
+        <h3>Gastos Recorrentes Ocultos</h3>
+        <div className="table">
+          <div className="table-row table-header cols-4">
+            <span>Descrição</span>
+            <span>Meses distintos</span>
+            <span>Ocorrências</span>
+            <span>Total previsto</span>
+          </div>
+          {recorrentesOcultos.length === 0 ? (
+            <div className="table-row empty cols-4">
+              <span>Sem gastos recorrentes ocultos no período.</span>
+            </div>
+          ) : (
+            recorrentesOcultos.map((item) => (
+              <div className="table-row cols-4" key={item.descricao}>
+                <span>{item.descricao}</span>
+                <span>{item.meses}</span>
+                <span>{item.ocorrencias}</span>
+                <span>{formatCurrency(item.previsto)}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="panel">
+        <h3>Análise do Cartão de Crédito</h3>
+        <div className="table">
+          <div className="table-row table-header cols-8">
+            <span>Cartão</span>
+            <span>Mês</span>
+            <span>Valor alocado</span>
+            <span>Fixo/Parcelado</span>
+            <span>Gastos do mês</span>
+            <span>Total do mês</span>
+            <span>Saldo do mês</span>
+            <span>Situação</span>
+          </div>
+          {analiseCartao.length === 0 ? (
+            <div className="table-row empty cols-8">
+              <span>Sem dados de cartão no período selecionado.</span>
+            </div>
+          ) : (
+            analiseCartao.map((item, index) => (
+              <div className="table-row cols-8" key={`${item.cartao}-${item.mes}-${index}`}>
+                <span>{item.cartao}</span>
+                <span>{item.mes}</span>
+                <span>{formatCurrency(item.valorAlocado)}</span>
+                <span>{formatCurrency(item.fixoParcelado)}</span>
+                <span>{formatCurrency(item.gastosMes)}</span>
+                <span>{formatCurrency(item.totalMes)}</span>
+                <span>{formatCurrency(item.saldoMes)}</span>
+                <span>{item.situacao}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="panel">
+        <h3>Resumo Anual por Mês</h3>
+        <div className="table">
+          <div className="table-row table-header cols-7">
+            <span>Mês</span>
+            <span>Rec. Previsto</span>
+            <span>Rec. Recebido</span>
+            <span>Desp. Previsto</span>
+            <span>Desp. Pago</span>
+            <span>Saldo do Mês</span>
+            <span>Saldo Acumulado</span>
+          </div>
+          {resumoAnual.length === 0 ? (
+            <div className="table-row empty cols-7">
+              <span>Sem dados para o orçamento selecionado.</span>
+            </div>
+          ) : (
+            resumoAnual.map((item) => (
+              <div className="table-row cols-7" key={`anual-${item.mes}`}>
+                <span>{item.mes}</span>
+                <span>{formatCurrency(item.recPrevisto)}</span>
+                <span>{formatCurrency(item.recRecebido)}</span>
+                <span>{formatCurrency(item.despPrevisto)}</span>
+                <span>{formatCurrency(item.despPago)}</span>
+                <span>{formatCurrency(item.saldoMes)}</span>
+                <span>{formatCurrency(item.saldoAcumulado)}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+    </div>
+  );
+};
 
 const ConfiguracoesPage = ({
   categorias,
@@ -2072,6 +2804,11 @@ const ConfiguracoesPage = ({
   receitas,
   lancamentosCartao
 }) => {
+  const [allMonths] = useState([
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+  ]);
+
   const categoriasMap = useMemo(
     () => new Map(categorias.map((categoria) => [categoria.id, categoria.nome])),
     [categorias]
@@ -2095,18 +2832,14 @@ const ConfiguracoesPage = ({
     setConfirmModalOpen(true);
   };
 
-  // Funções de Exclusão com Validação
   const handleDeleteOrcamento = (id) => {
     const orcamento = orcamentos.find(o => o.id === id);
     if (!orcamento) return;
 
     const mesesOrcamento = orcamento.meses || [];
     
-    // Check Despesas/Receitas (direct link by ID)
     const hasLinkedDespesas = despesas.some(d => d.orcamentoId === id);
     const hasLinkedReceitas = receitas.some(r => r.orcamentoId === id);
-    
-    // Check Cartao Lancamentos (indirect link by Month)
     const hasLinkedCartao = lancamentosCartao.some(l => {
        if (mesesOrcamento.includes(l.mesReferencia)) return true;
        if (l.meses && l.meses.some(m => mesesOrcamento.includes(m))) return true;
@@ -2148,14 +2881,12 @@ const ConfiguracoesPage = ({
   };
 
   const handleDeleteGastoPredefinido = (id) => {
-    // Gastos pré-definidos são templates, não possuem vínculo forte por ID nos lançamentos
     showConfirm("Tem certeza que deseja excluir este gasto pré-definido?", () => {
       setGastosPredefinidos(prev => prev.filter(g => g.id !== id));
     });
   };
 
   const handleDeleteTipoReceita = (id) => {
-    // Receitas pré-definidas são templates, não possuem vínculo forte por ID nos lançamentos
     showConfirm("Tem certeza que deseja excluir esta receita pré-definida?", () => {
       setTiposReceita(prev => prev.filter(t => t.id !== id));
     });
@@ -2181,11 +2912,6 @@ const ConfiguracoesPage = ({
   const [tipoForm, setTipoForm] = useState({ descricao: "", recorrente: "false" });
   const [orcamentoForm, setOrcamentoForm] = useState({ label: "", meses: [] });
   const [cartaoForm, setCartaoForm] = useState({ nome: "", limite: "" });
-
-  const allMonths = [
-    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-  ];
 
   const abrirCategoriaModal = () => {
     setCategoriaEditId(null);
@@ -2257,6 +2983,132 @@ const ConfiguracoesPage = ({
     });
   };
 
+  const handleSubmitCategoria = (event) => {
+    event.preventDefault();
+    const nome = categoriaForm.nome.trim();
+    if (!nome) return;
+    const nextCategorias = categoriaEditId
+      ? categorias.map((categoria) =>
+          categoria.id === categoriaEditId
+            ? { ...categoria, nome, tipo: categoriaForm.tipo }
+            : categoria
+        )
+      : [
+          ...categorias,
+          {
+            id: createId("cat"),
+            nome,
+            tipo: categoriaForm.tipo
+          }
+        ];
+    setCategorias(nextCategorias);
+    window.localStorage.setItem("hf_categorias", JSON.stringify(nextCategorias));
+    setCategoriaEditId(null);
+    setCategoriaForm({ nome: "", tipo: "DESPESA" });
+    setCategoriaModalOpen(false);
+  };
+
+  const handleSubmitGasto = (event) => {
+    event.preventDefault();
+    const descricao = gastoForm.descricao.trim();
+    if (!descricao || !gastoForm.categoriaId) return;
+    const nextGastos = gastoEditId
+      ? gastosPredefinidos.map((gasto) =>
+          gasto.id === gastoEditId
+            ? { ...gasto, descricao, categoriaId: gasto.categoriaId }
+            : gasto
+        )
+      : [
+          ...gastosPredefinidos,
+          {
+            id: createId("gasto"),
+            descricao,
+            categoriaId: gastoForm.categoriaId
+          }
+        ];
+    setGastosPredefinidos(nextGastos);
+    window.localStorage.setItem("hf_gastos_predefinidos", JSON.stringify(nextGastos));
+    setGastoEditId(null);
+    setGastoForm({ descricao: "", categoriaId: despesasCategorias[0]?.id ?? "" });
+    setGastoModalOpen(false);
+  };
+
+  const handleSubmitTipo = (event) => {
+    event.preventDefault();
+    const descricao = tipoForm.descricao.trim();
+    if (!descricao) return;
+    const nextTipos = tipoEditId
+      ? tiposReceita.map((tipo) =>
+          tipo.id === tipoEditId
+            ? { ...tipo, descricao, recorrente: tipoForm.recorrente ? "true" : "false" }
+            : tipo
+        )
+      : [
+          ...tiposReceita,
+          {
+            id: createId("tipo"),
+            descricao,
+            recorrente: tipoForm.recorrente === "true" ? "true" : "false"
+          }
+        ];
+    setTiposReceita(nextTipos);
+    window.localStorage.setItem("hf_tipos_receita", JSON.stringify(nextTipos));
+    setTipoEditId(null);
+    setTipoForm({ descricao: "", recorrente: "false" });
+    setTipoModalOpen(false);
+  };
+
+  const handleSubmitOrcamento = (event) => {
+    event.preventDefault();
+    const nome = orcamentoForm.label.trim();
+    if (!nome) return;
+    const nextOrcamentos = orcamentoEditId
+      ? orcamentos.map((o) =>
+          o.id === orcamentoEditId
+            ? { ...o, label: nome, meses: orcamentoForm.meses }
+            : o
+        )
+      : [
+          ...orcamentos,
+          {
+            id: createId("orc"),
+            label: nome,
+            meses: allMonths.filter((m) => orcamentoForm.meses.includes(m) ? [m] : [])
+          }
+      ];
+    setOrcamentos(nextOrcamentos);
+    window.localStorage.setItem("hf_orcamentos", JSON.stringify(nextOrcamentos));
+    setOrcamentoEditId(null);
+    setOrcamentoForm({ label: "", meses: [] });
+    setOrcamentoModalOpen(false);
+  };
+
+  const handleSubmitCartao = (event) => {
+    event.preventDefault();
+    const nome = cartaoForm.nome.trim();
+    if (!nome) return;
+    const limite = parseFloat(cartaoForm.limite) || 0;
+    const nextCartoes = cartaoEditId
+      ? cartoes.map((c) =>
+          c.id === cartaoEditId
+            ? { ...c, nome, limite }
+            : c
+        )
+      : [
+          ...cartoes,
+          {
+            id: createId("card"),
+            nome,
+            limite
+          }
+        ];
+    setCartoes(nextCartoes);
+    window.localStorage.setItem("hf_cartoes", JSON.stringify(nextCartoes));
+    setCartaoEditId(null);
+    setCartaoForm({ nome: "", limite: "" });
+    setCartaoModalOpen(false);
+  };
+
   return (
     <div className="page-grid">
       <section className="panel">
@@ -2271,34 +3123,47 @@ const ConfiguracoesPage = ({
             </button>
           </div>
         </div>
-        <div className="list">
-          <div className="list-row list-header">
-            <span>Identificação</span>
-            <span>Meses</span>
-            <span>Ações</span>
-          </div>
-          {orcamentos.length === 0 ? (
-            <div className="list-row empty">
-              <span>Nenhum período cadastrado.</span>
-            </div>
-          ) : (
-            orcamentos.map((orcamento) => (
-              <div className="list-row" key={orcamento.id}>
-                <span>{orcamento.label}</span>
-                <span style={{ fontSize: "0.85em", color: "#666" }}>
-                  {(orcamento.meses || []).join(", ") || "Nenhum mês selecionado"}
-                </span>
-                <div className="actions">
-                  <button type="button" className="icon-button info" onClick={() => editarOrcamento(orcamento)} title="Editar">
-                    <IconEdit />
-                  </button>
-                  <button type="button" className="icon-button danger" onClick={() => handleDeleteOrcamento(orcamento.id)} title="Excluir">
-                    <IconTrash />
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
+        <div className="table list-table-wrapper">
+          <table className="list-table list-table--config-periodos" aria-label="Períodos do orçamento">
+            <colgroup>
+              <col className="list-table__col list-table__col--periodo" />
+              <col className="list-table__col list-table__col--meses" />
+              <col className="list-table__col list-table__col--acoes" />
+            </colgroup>
+            <thead className="list-table__head">
+              <tr>
+                <th scope="col">Identificação</th>
+                <th scope="col">Meses</th>
+                <th scope="col" className="list-table__head-actions">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orcamentos.length === 0 ? (
+                <tr className="list-table__row list-table__row--empty">
+                  <td colSpan={3}>Nenhum período cadastrado.</td>
+                </tr>
+              ) : (
+                orcamentos.map((orcamento) => (
+                  <tr className="list-table__row" key={orcamento.id}>
+                    <td>{orcamento.label}</td>
+                    <td style={{ fontSize: "0.85em", color: "#666" }}>
+                      {(orcamento.meses || []).join(", ") || "Nenhum mês selecionado"}
+                    </td>
+                    <td className="list-table__cell list-table__cell--acoes">
+                      <div className="actions">
+                        <button type="button" className="icon-button info" onClick={() => editarOrcamento(orcamento)} title="Editar">
+                          <IconEdit />
+                        </button>
+                        <button type="button" className="icon-button danger" onClick={() => handleDeleteOrcamento(orcamento.id)} title="Excluir">
+                          <IconTrash />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -2309,35 +3174,47 @@ const ConfiguracoesPage = ({
             <p>Cadastre seus cartões para controle de faturas.</p>
           </div>
           <div className="actions">
-            <button type="button" onClick={abrirCartaoModal}>
+            <button type="button" className="primary" onClick={abrirCartaoModal}>
               + Novo cartão
             </button>
           </div>
         </div>
-        <div className="list">
-          <div className="list-row list-header">
-            <span>Nome</span>
-            <span>Ações</span>
-          </div>
-          {cartoes.length === 0 ? (
-            <div className="list-row empty">
-              <span>Nenhum cartão cadastrado.</span>
-            </div>
-          ) : (
-            cartoes.map((cartao) => (
-              <div className="list-row" key={cartao.id}>
-                <span>{cartao.nome}</span>
-                <div className="actions">
-                  <button type="button" className="icon-button info" onClick={() => editarCartao(cartao)} title="Editar">
-                    <IconEdit />
-                  </button>
-                  <button type="button" className="icon-button danger" onClick={() => handleDeleteCartao(cartao.id)} title="Excluir">
-                    <IconTrash />
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
+        <div className="table list-table-wrapper">
+          <table className="list-table list-table--config-cartoes" aria-label="Cartões de crédito">
+            <colgroup>
+              <col className="list-table__col list-table__col--nome" />
+              <col className="list-table__col list-table__col--acoes" />
+            </colgroup>
+            <thead className="list-table__head">
+              <tr>
+                <th scope="col">Nome</th>
+                <th scope="col" className="list-table__head-actions">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cartoes.length === 0 ? (
+                <tr className="list-table__row list-table__row--empty">
+                  <td colSpan={2}>Nenhum cartão cadastrado.</td>
+                </tr>
+              ) : (
+                cartoes.map((cartao) => (
+                  <tr className="list-table__row" key={cartao.id}>
+                    <td>{cartao.nome}</td>
+                    <td className="list-table__cell list-table__cell--acoes">
+                      <div className="actions">
+                        <button type="button" className="icon-button info" onClick={() => editarCartao(cartao)} title="Editar">
+                          <IconEdit />
+                        </button>
+                        <button type="button" className="icon-button danger" onClick={() => handleDeleteCartao(cartao.id)} title="Excluir">
+                          <IconTrash />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -2348,39 +3225,53 @@ const ConfiguracoesPage = ({
             <p>Cadastre e organize as categorias de receita e despesa.</p>
           </div>
           <div className="actions">
-            <button type="button" onClick={abrirCategoriaModal}>
+            <button type="button" className="primary" onClick={abrirCategoriaModal}>
               + Nova categoria
             </button>
           </div>
         </div>
-        <div className="list">
-          <div className="list-row list-header">
-            <span>Categoria</span>
-            <span>Tipo</span>
-            <span>Ações</span>
-          </div>
-          {categorias.length === 0 ? (
-            <div className="list-row empty">
-              <span>Nenhuma categoria cadastrada.</span>
-            </div>
-          ) : (
-            categorias.map((categoria) => (
-              <div className="list-row" key={categoria.id}>
-                <span>{categoria.nome}</span>
-                <span>{categoria.tipo}</span>
-                <div className="actions">
-                  <button type="button" className="icon-button info" onClick={() => editarCategoria(categoria)} title="Editar">
-                    <IconEdit />
-                  </button>
-                  <button type="button" className="icon-button danger" onClick={() => handleDeleteCategoria(categoria.id)} title="Excluir">
-                    <IconTrash />
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
+        <div className="table list-table-wrapper">
+          <table className="list-table list-table--config-categorias" aria-label="Categorias">
+            <colgroup>
+              <col className="list-table__col list-table__col--desc" />
+              <col className="list-table__col list-table__col--tipo" />
+              <col className="list-table__col list-table__col--acoes" />
+            </colgroup>
+            <thead className="list-table__head">
+              <tr>
+                <th scope="col">Categoria</th>
+                <th scope="col">Tipo</th>
+                <th scope="col" className="list-table__head-actions">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {categorias.length === 0 ? (
+                <tr className="list-table__row list-table__row--empty">
+                  <td colSpan={3}>Nenhuma categoria cadastrada.</td>
+                </tr>
+              ) : (
+                categorias.map((categoria) => (
+                  <tr className="list-table__row" key={categoria.id}>
+                    <td>{categoria.nome}</td>
+                    <td>{categoria.tipo}</td>
+                    <td className="list-table__cell list-table__cell--acoes">
+                      <div className="actions">
+                        <button type="button" className="icon-button info" onClick={() => editarCategoria(categoria)} title="Editar">
+                          <IconEdit />
+                        </button>
+                        <button type="button" className="icon-button danger" onClick={() => handleDeleteCategoria(categoria.id)} title="Excluir">
+                          <IconTrash />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
+
       <section className="panel">
         <div className="panel-header">
           <div>
@@ -2388,39 +3279,53 @@ const ConfiguracoesPage = ({
             <p>Modelos rápidos para despesas recorrentes.</p>
           </div>
           <div className="actions">
-            <button type="button" onClick={abrirGastoModal} title="Cadastrar modelo de despesa">
+            <button type="button" className="primary" onClick={abrirGastoModal} title="Cadastrar modelo de despesa">
               + Novo gasto
             </button>
           </div>
         </div>
-        <div className="list">
-          <div className="list-row list-header">
-            <span>Descrição</span>
-            <span>Categoria</span>
-            <span>Ações</span>
-          </div>
-          {gastosPredefinidos.length === 0 ? (
-            <div className="list-row empty">
-              <span>Nenhum gasto pré-definido cadastrado.</span>
-            </div>
-          ) : (
-            gastosPredefinidos.map((gasto) => (
-              <div className="list-row" key={gasto.id}>
-                <span>{gasto.descricao}</span>
-                <span>{categoriasMap.get(gasto.categoriaId) || "—"}</span>
-                <div className="actions">
-                  <button type="button" className="icon-button info" onClick={() => editarGasto(gasto)} title="Editar">
-                    <IconEdit />
-                  </button>
-                  <button type="button" className="icon-button danger" onClick={() => handleDeleteGastoPredefinido(gasto.id)} title="Excluir">
-                    <IconTrash />
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
+        <div className="table list-table-wrapper">
+          <table className="list-table list-table--config-gastos" aria-label="Gastos pré-definidos">
+            <colgroup>
+              <col className="list-table__col list-table__col--desc" />
+              <col className="list-table__col list-table__col--cat" />
+              <col className="list-table__col list-table__col--acoes" />
+            </colgroup>
+            <thead className="list-table__head">
+              <tr>
+                <th scope="col">Descrição</th>
+                <th scope="col">Categoria</th>
+                <th scope="col" className="list-table__head-actions">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {gastosPredefinidos.length === 0 ? (
+                <tr className="list-table__row list-table__row--empty">
+                  <td colSpan={3}>Nenhum gasto pré-definido cadastrado.</td>
+                </tr>
+              ) : (
+                gastosPredefinidos.map((gasto) => (
+                  <tr className="list-table__row" key={gasto.id}>
+                    <td>{gasto.descricao}</td>
+                    <td>{categoriasMap.get(gasto.categoriaId) || "—"}</td>
+                    <td className="list-table__cell list-table__cell--acoes">
+                      <div className="actions">
+                        <button type="button" className="icon-button info" onClick={() => editarGasto(gasto)} title="Editar">
+                          <IconEdit />
+                        </button>
+                        <button type="button" className="icon-button danger" onClick={() => handleDeleteGastoPredefinido(gasto.id)} title="Excluir">
+                          <IconTrash />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
+
       <section className="panel">
         <div className="panel-header">
           <div>
@@ -2433,34 +3338,48 @@ const ConfiguracoesPage = ({
             </button>
           </div>
         </div>
-        <div className="list">
-          <div className="list-row list-header">
-            <span>Descrição</span>
-            <span>Recorrente</span>
-            <span>Ações</span>
-          </div>
-          {tiposReceita.length === 0 ? (
-            <div className="list-row empty">
-              <span>Nenhuma receita pré-definida cadastrada.</span>
-            </div>
-          ) : (
-            tiposReceita.map((tipo) => (
-              <div className="list-row" key={tipo.id}>
-                <span>{tipo.descricao}</span>
-                <span>{tipo.recorrente ? "Sim" : "Não"}</span>
-                <div className="actions">
-                  <button type="button" className="icon-button info" onClick={() => editarTipo(tipo)} title="Editar">
-                    <IconEdit />
-                  </button>
-                  <button type="button" className="icon-button danger" onClick={() => handleDeleteTipoReceita(tipo.id)} title="Excluir">
-                    <IconTrash />
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
+        <div className="table list-table-wrapper">
+          <table className="list-table list-table--config-receitas" aria-label="Receitas pré-definidas">
+            <colgroup>
+              <col className="list-table__col list-table__col--desc" />
+              <col className="list-table__col list-table__col--recorrente" />
+              <col className="list-table__col list-table__col--acoes" />
+            </colgroup>
+            <thead className="list-table__head">
+              <tr>
+                <th scope="col">Descrição</th>
+                <th scope="col">Recorrente</th>
+                <th scope="col" className="list-table__col list-table__col--acoes list-table__head-actions">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tiposReceita.length === 0 ? (
+                <tr className="list-table__row list-table__row--empty">
+                  <td colSpan={3}>Nenhuma receita pré-definida cadastrada.</td>
+                </tr>
+              ) : (
+                tiposReceita.map((tipo) => (
+                  <tr className="list-table__row" key={tipo.id}>
+                    <td>{tipo.descricao}</td>
+                    <td>{tipo.recorrente ? "Sim" : "Não"}</td>
+                    <td className="list-table__cell list-table__cell--acoes">
+                      <div className="actions">
+                        <button type="button" className="icon-button info" onClick={() => editarTipo(tipo)} title="Editar">
+                          <IconEdit />
+                        </button>
+                        <button type="button" className="icon-button danger" onClick={() => handleDeleteTipoReceita(tipo.id)} title="Excluir">
+                          <IconTrash />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
+
       <Modal
         open={orcamentoModalOpen}
         title={orcamentoEditId ? "Editar período" : "Novo período"}
@@ -2468,28 +3387,7 @@ const ConfiguracoesPage = ({
       >
         <form
           className="modal-grid"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (orcamentoEditId) {
-              setOrcamentos((prev) =>
-                prev.map((o) =>
-                  o.id === orcamentoEditId
-                    ? { ...o, label: orcamentoForm.label, meses: orcamentoForm.meses }
-                    : o
-                )
-              );
-            } else {
-              setOrcamentos((prev) => [
-                ...prev,
-                {
-                  id: createId("orc"),
-                  label: orcamentoForm.label,
-                  meses: orcamentoForm.meses
-                }
-              ]);
-            }
-            setOrcamentoModalOpen(false);
-          }}
+          onSubmit={handleSubmitOrcamento}
         >
           <label className="field">
             Identificação (Ex: 2024)
@@ -2505,10 +3403,10 @@ const ConfiguracoesPage = ({
           <div className="field">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
               <span style={{ fontWeight: 500 }}>Meses do Período</span>
-              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9em", cursor: "pointer" }}>
+              <label className="select-all" style={{ fontSize: "0.9em", cursor: "pointer" }}>
                 <input
                   type="checkbox"
-                  checked={orcamentoForm.meses.length === allMonths.length}
+                  checked={orcamentoForm.meses.length === allMonths.length && allMonths.length > 0}
                   onChange={() => {
                     const allSelected = orcamentoForm.meses.length === allMonths.length;
                     setOrcamentoForm((prev) => ({
@@ -2549,31 +3447,7 @@ const ConfiguracoesPage = ({
       >
         <form
           className="modal-grid"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const nome = cartaoForm.nome.trim();
-            if (!nome) return;
-            const limite = parseFloat(cartaoForm.limite) || 0;
-            const nextCartoes = cartaoEditId
-              ? cartoes.map((cartao) =>
-                  cartao.id === cartaoEditId
-                    ? { ...cartao, nome, limite }
-                    : cartao
-                )
-              : [
-                  ...cartoes,
-                  {
-                    id: createId("card"),
-                    nome,
-                    limite
-                  }
-                ];
-            setCartoes(nextCartoes);
-            window.localStorage.setItem("hf_cartoes", JSON.stringify(nextCartoes));
-            setCartaoEditId(null);
-            setCartaoForm({ nome: "", limite: "" });
-            setCartaoModalOpen(false);
-          }}
+          onSubmit={handleSubmitCartao}
         >
           <label className="field">
             Nome do Cartão
@@ -2613,30 +3487,7 @@ const ConfiguracoesPage = ({
       >
         <form
           className="modal-grid"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const nome = categoriaForm.nome.trim();
-            if (!nome) return;
-            const nextCategorias = categoriaEditId
-              ? categorias.map((categoria) =>
-                  categoria.id === categoriaEditId
-                    ? { ...categoria, nome, tipo: categoriaForm.tipo }
-                    : categoria
-                )
-              : [
-                  ...categorias,
-                  {
-                    id: createId("cat"),
-                    nome,
-                    tipo: categoriaForm.tipo
-                  }
-                ];
-            setCategorias(nextCategorias);
-            window.localStorage.setItem("hf_categorias", JSON.stringify(nextCategorias));
-            setCategoriaEditId(null);
-            setCategoriaForm({ nome: "", tipo: "DESPESA" });
-            setCategoriaModalOpen(false);
-          }}
+          onSubmit={handleSubmitCategoria}
         >
           <label className="field">
             Nome
@@ -2668,6 +3519,7 @@ const ConfiguracoesPage = ({
           </div>
         </form>
       </Modal>
+
       <Modal
         open={gastoModalOpen}
         title={gastoEditId ? "Editar gasto pré-definido" : "Novo gasto pré-definido"}
@@ -2675,30 +3527,7 @@ const ConfiguracoesPage = ({
       >
         <form
           className="modal-grid"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const descricao = gastoForm.descricao.trim();
-            if (!descricao || !gastoForm.categoriaId) return;
-            const nextGastos = gastoEditId
-              ? gastosPredefinidos.map((gasto) =>
-                  gasto.id === gastoEditId
-                    ? { ...gasto, descricao, categoriaId: gastoForm.categoriaId }
-                    : gasto
-                )
-              : [
-                  ...gastosPredefinidos,
-                  {
-                    id: createId("gasto"),
-                    descricao,
-                    categoriaId: gastoForm.categoriaId
-                  }
-                ];
-            setGastosPredefinidos(nextGastos);
-            window.localStorage.setItem("hf_gastos_predefinidos", JSON.stringify(nextGastos));
-            setGastoEditId(null);
-            setGastoForm({ descricao: "", categoriaId: despesasCategorias[0]?.id ?? "" });
-            setGastoModalOpen(false);
-          }}
+          onSubmit={handleSubmitGasto}
         >
           <label className="field">
             Descrição
@@ -2737,6 +3566,7 @@ const ConfiguracoesPage = ({
           </div>
         </form>
       </Modal>
+
       <Modal
         open={tipoModalOpen}
         title={tipoEditId ? "Editar receita pré-definida" : "Nova receita pré-definida"}
@@ -2744,30 +3574,7 @@ const ConfiguracoesPage = ({
       >
         <form
           className="modal-grid"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const descricao = tipoForm.descricao.trim();
-            if (!descricao) return;
-            const nextTipos = tipoEditId
-              ? tiposReceita.map((tipo) =>
-                  tipo.id === tipoEditId
-                    ? { ...tipo, descricao, recorrente: tipoForm.recorrente === "true" }
-                    : tipo
-                )
-              : [
-                  ...tiposReceita,
-                  {
-                    id: createId("tipo"),
-                    descricao,
-                    recorrente: tipoForm.recorrente === "true"
-                  }
-                ];
-            setTiposReceita(nextTipos);
-            window.localStorage.setItem("hf_tipos_receita", JSON.stringify(nextTipos));
-            setTipoEditId(null);
-            setTipoForm({ descricao: "", recorrente: "false" });
-            setTipoModalOpen(false);
-          }}
+          onSubmit={handleSubmitTipo}
         >
           <label className="field">
             Descrição
@@ -2792,10 +3599,10 @@ const ConfiguracoesPage = ({
             </select>
           </label>
           <div className="modal-actions">
-            <button type="button" className="ghost" onClick={() => setTipoModalOpen(false)} title="Fechar sem salvar">
+            <button type="button" className="ghost" onClick={() => setTipoModalOpen(false)}>
               Cancelar
             </button>
-            <button type="submit" className="primary" title="Confirmar e salvar dados">Salvar</button>
+            <button type="submit" className="primary">Salvar</button>
           </div>
         </form>
       </Modal>
@@ -2975,6 +3782,7 @@ function App() {
   }, [storageReady, categorias, gastosPredefinidos, tiposReceita, receitas, despesas, orcamentos, cartoes, lancamentosCartao]);
 
   const activePage = pages.find((p) => p.key === activeKey) || pages[0];
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (window.location.hash.replace("#", "") !== activePage.key) {
@@ -2982,28 +3790,64 @@ function App() {
     }
   }, [activePage.key]);
 
+  useEffect(() => {
+    const updateZoom = () => {
+      const zoom = window.devicePixelRatio || 1;
+      document.documentElement.style.setProperty("--ui-zoom", zoom.toString());
+    };
+    updateZoom();
+    window.addEventListener("resize", updateZoom);
+    return () => window.removeEventListener("resize", updateZoom);
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 900px)");
+    const handleChange = (event) => {
+      if (!event.matches) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+    handleChange(mediaQuery);
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
+  const handleNavClick = () => {
+    setIsMobileMenuOpen(false);
+  };
+
   return (
-    <div className="app">
+    <div className={`app ${isMobileMenuOpen ? "mobile-menu-open" : ""}`}>
       <aside className="sidebar">
         <div className="brand">
           <h1>HomeFinance</h1>
           <span>Orçamento Doméstico</span>
         </div>
-        <nav className="nav">
+        <nav className="nav" aria-label="Navegação principal">
           {pages.map((page) => (
             <a
               key={page.key}
               href={`#${page.key}`}
               className={`nav-item ${page.key === activePage.key ? "active" : ""}`}
+              onClick={handleNavClick}
             >
               {page.label}
             </a>
           ))}
         </nav>
       </aside>
+      {isMobileMenuOpen && <div className="mobile-backdrop" onClick={handleNavClick} />}
       <div className="main">
         <header className="header">
-          <div>
+          <div className="header-left">
+            <button
+              type="button"
+              className="menu-toggle"
+              aria-label={isMobileMenuOpen ? "Fechar menu" : "Abrir menu"}
+              onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+            >
+              ☰
+            </button>
             <h2>{activePage.label}</h2>
           </div>
         </header>
@@ -3031,6 +3875,8 @@ function App() {
               orcamentos={orcamentos}
               despesas={despesas}
               setDespesas={setDespesas}
+              cartoes={cartoes}
+              lancamentosCartao={lancamentosCartao}
             />
           )}
           {activeKey === "cartao" && (
@@ -3043,11 +3889,19 @@ function App() {
               despesas={despesas}
               setDespesas={setDespesas}
               categorias={categorias}
-              setCategorias={setCategorias}
               gastosPredefinidos={gastosPredefinidos}
             />
           )}
-          {activeKey === "relatorios" && <RelatoriosPage />}
+          {activeKey === "relatorios" && (
+            <RelatoriosPage
+              orcamentos={orcamentos}
+              receitas={receitas}
+              despesas={despesas}
+              cartoes={cartoes}
+              lancamentosCartao={lancamentosCartao}
+              categorias={categorias}
+            />
+          )}
           {activeKey === "configuracoes" && (
             <ConfiguracoesPage
               categorias={categorias}
