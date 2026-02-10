@@ -1526,6 +1526,63 @@ const DespesasPage = ({
   );
 };
 
+const MonthlySummaryCard = ({ summary, isCurrentMonth }) => {
+  const {
+    mes,
+    limite,
+    fixoParcelado,
+    gastosEventuais,
+    totalFatura,
+    saldo,
+    isFechada
+  } = summary;
+
+  return (
+    <div className={`monthly-summary-card ${isCurrentMonth ? 'current-month' : ''}`}>
+      <div className="monthly-summary-card__header">
+        <h4 className="monthly-summary-card__title">Fatura de {mes}</h4>
+        <div className="monthly-summary-card__badges">
+          {isCurrentMonth && (
+            <span className="monthly-summary-card__badge current">Atual</span>
+          )}
+          {isFechada && (
+            <span className="monthly-summary-card__badge closed">Fechada</span>
+          )}
+        </div>
+      </div>
+      
+      <div className="monthly-summary-card__content">
+        <div className="monthly-summary-card__row">
+          <span className="label">Limite:</span>
+          <span className="value">{formatCurrency(limite)}</span>
+        </div>
+        
+        <div className="monthly-summary-card__row">
+          <span className="label">Parcelado + Fixo:</span>
+          <span className="value">{formatCurrency(fixoParcelado)}</span>
+        </div>
+        
+        <div className="monthly-summary-card__row">
+          <span className="label">Gastos:</span>
+          <span className="value">{formatCurrency(gastosEventuais)}</span>
+        </div>
+        
+        <div className="monthly-summary-card__row">
+          <span className="label">Saldo:</span>
+          <span className={`value ${saldo >= 0 ? 'positive' : 'negative'}`}>
+            {formatCurrency(saldo)}
+          </span>
+        </div>
+        
+        <div className="monthly-summary-card__row total">
+          <span className="label">Valor Fatura:</span>
+          <span className="value">{formatCurrency(totalFatura)}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const CartaoPage = ({
   cartoes,
   setCartoes,
@@ -1580,6 +1637,70 @@ const CartaoPage = ({
   }, [selectedCartao, selectedMes]);
 
   const saldoMes = valorAlocado - totalMes;
+
+  // Identificar orçamento baseado no mês selecionado
+  const effectiveOrcamento = useMemo(() => {
+    return orcamentos.find(o => o.meses && o.meses.includes(selectedMes));
+  }, [orcamentos, selectedMes]);
+
+  const effectiveOrcamentoId = effectiveOrcamento?.id || orcamentos[0]?.id || "";
+
+  // Função para calcular resumo de um mês específico
+  const calculateMonthSummary = useCallback((cartaoId, mes) => {
+    const cartao = cartoes.find(c => c.id === cartaoId);
+    if (!cartao) return null;
+
+    // Filtrar lançamentos do mês
+    const lancamentosDoMes = lancamentosCartao.filter(l =>
+      l.cartaoId === cartaoId &&
+      (l.mesReferencia === mes || (l.meses && l.meses.includes(mes)))
+    );
+
+    // Calcular valores
+    let fixoParcelado = 0;
+    let gastosEventuais = 0;
+
+    lancamentosDoMes.forEach(l => {
+      const val = parseFloat(l.valor) || 0;
+      if (l.tipoRecorrencia === "FIXO" || l.tipoRecorrencia === "PARCELADO") {
+        fixoParcelado += val;
+      } else {
+        gastosEventuais += val;
+      }
+    });
+
+    // Limite do mês
+    const limitesMensais = cartao.limitesMensais || {};
+    const limite = limitesMensais[mes] !== undefined && limitesMensais[mes] !== null && limitesMensais[mes] !== ""
+      ? parseFloat(limitesMensais[mes])
+      : parseFloat(cartao.limite) || 0;
+
+    const totalFatura = fixoParcelado + gastosEventuais;
+    const saldo = limite - totalFatura;
+    const isFechada = cartao.faturasFechadas?.includes(mes) || false;
+
+    return {
+      mes,
+      limite,
+      fixoParcelado,
+      gastosEventuais,
+      totalFatura,
+      saldo,
+      isFechada
+    };
+  }, [cartoes, lancamentosCartao]);
+
+  // Calcular resumo de todos os meses do orçamento
+  const allMonthsSummary = useMemo(() => {
+    if (!effectiveCartaoId || !effectiveOrcamentoId) return [];
+    
+    const orcamento = orcamentos.find(o => o.id === effectiveOrcamentoId);
+    if (!orcamento || !orcamento.meses) return [];
+
+    return orcamento.meses
+      .map(mes => calculateMonthSummary(effectiveCartaoId, mes))
+      .filter(summary => summary !== null);
+  }, [effectiveCartaoId, effectiveOrcamentoId, orcamentos, calculateMonthSummary]);
 
   const [limiteModalOpen, setLimiteModalOpen] = useState(false);
   const [limiteEditValue, setLimiteEditValue] = useState("");
@@ -2080,6 +2201,27 @@ const CartaoPage = ({
             </div>
          </div>
        </section>
+
+      {/* Seção de Resumo Mensal - NOVA */}
+      <section className="panel monthly-summary-section">
+        <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '15px' }}>
+          Resumo Mensal das Faturas - Orçamento <span className="badge-year">{effectiveOrcamento?.label || 'Orçamento'}</span>
+        </h3>
+        
+        {allMonthsSummary.length === 0 ? (
+          <p className="empty-message">Nenhum mês disponível no orçamento selecionado.</p>
+        ) : (
+          <div className="monthly-summary-grid">
+            {allMonthsSummary.map((summary) => (
+              <MonthlySummaryCard
+                key={summary.mes}
+                summary={summary}
+                isCurrentMonth={summary.mes === selectedMes}
+              />
+            ))}
+          </div>
+        )}
+      </section>
 
        <Modal open={modalOpen} title={editId ? "Editar lançamento" : "Novo lançamento"} onClose={() => setModalOpen(false)}>
           <form className="modal-grid" onSubmit={handleSave}>

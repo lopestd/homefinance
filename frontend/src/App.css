@@ -1320,3 +1320,151 @@ input:focus, select:focus {
     padding: 1px 5px !important;
   }
 }
+
+/* ========================================
+   Monthly Summary Cards - Resumo Mensal
+   ======================================== */
+
+/* Container para os cards mensais */
+.monthly-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+/* Card individual de resumo mensal */
+.monthly-summary-card {
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 14px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.monthly-summary-card.current-month {
+  border-color: #2563eb;
+  border-width: 2px;
+  background: #eff6ff;
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.15);
+}
+
+/* Cabeçalho do card */
+.monthly-summary-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.monthly-summary-card.current-month .monthly-summary-card__header {
+  border-bottom-color: #bfdbfe;
+}
+
+.monthly-summary-card__title {
+  margin: 0;
+  font-size: 0.95em;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.monthly-summary-card__badges {
+  display: flex;
+  gap: 4px;
+}
+
+.monthly-summary-card__badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7em;
+  font-weight: 600;
+}
+
+.monthly-summary-card__badge.current {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.monthly-summary-card__badge.closed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Conteúdo do card */
+.monthly-summary-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.monthly-summary-card__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85em;
+}
+
+.monthly-summary-card__row .label {
+  color: #64748b;
+}
+
+.monthly-summary-card__row .value {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.monthly-summary-card__row .value.positive {
+  color: #16a34a;
+}
+
+.monthly-summary-card__row .value.negative {
+  color: #dc2626;
+}
+
+.monthly-summary-card__row.total {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 2px solid #cbd5e1;
+}
+
+.monthly-summary-card.current-month .monthly-summary-card__row.total {
+  border-top-color: #93c5fd;
+}
+
+.monthly-summary-card__row.total .value {
+  font-size: 1.15em;
+  color: #dc2626;
+}
+
+/* Responsividade para Monthly Summary Cards */
+@media (max-width: 900px) {
+  .monthly-summary-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+  }
+  
+  .monthly-summary-card {
+    padding: 10px;
+  }
+  
+  .monthly-summary-card__title {
+    font-size: 0.9em;
+  }
+  
+  .monthly-summary-card__row {
+    font-size: 0.8em;
+  }
+}
+
+@media (max-width: 480px) {
+  .monthly-summary-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .monthly-summary-card {
+    padding: 10px;
+  }
+}

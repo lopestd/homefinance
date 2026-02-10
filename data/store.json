@@ -71,6 +71,24 @@
           "Agosto",
           "Setembro"
         ]
+      },
+      {
+        "id": "orc-1",
+        "label": "2027",
+        "meses": [
+          "Janeiro",
+          "Fevereiro",
+          "Março",
+          "Abril",
+          "Maio",
+          "Junho",
+          "Julho",
+          "Agosto",
+          "Setembro",
+          "Outubro",
+          "Novembro",
+          "Dezembro"
+        ]
       }
     ],
     "receitas": [
@@ -152,6 +170,20 @@
         "meses": [
           "Fevereiro"
         ],
+        "status": "Pendente",
+        "categoria": "Rendimentos"
+      },
+      {
+        "id": "rec-3",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Fevereiro",
+        "data": "2026-02-08",
+        "categoriaId": "cat-1770170333095",
+        "descricao": "Serviço extra",
+        "valor": "1000",
+        "tipoRecorrencia": "PARCELADO",
+        "qtdParcelas": "4",
+        "meses": [],
         "status": "Pendente",
         "categoria": "Rendimentos"
       }
@@ -270,7 +302,128 @@
         "data": "2026-02-07",
         "categoriaId": "cat-auto-1770325968137",
         "descricao": "Fatura do cartão Banco do Brasil - Visa",
-        "valor": 4500,
+        "valor": 1285,
+        "status": "Pago",
+        "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-auto-10",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Março",
+        "data": "2026-02-08",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "valor": 3500,
+        "status": "Pendente",
+        "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-auto-13",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Janeiro",
+        "data": "2026-02-08",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "valor": 200,
+        "status": "Pendente",
+        "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-auto-15",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Abril",
+        "data": "2026-02-08",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "valor": 4300,
+        "status": "Pendente",
+        "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-auto-17",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Maio",
+        "data": "2026-02-08",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "valor": 300,
+        "status": "Pendente",
+        "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-auto-19",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Junho",
+        "data": "2026-02-08",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "valor": 300,
+        "status": "Pendente",
+        "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-auto-21",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Julho",
+        "data": "2026-02-08",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "valor": 200,
+        "status": "Pendente",
+        "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-auto-23",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Agosto",
+        "data": "2026-02-08",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "valor": 200,
+        "status": "Pendente",
+        "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-auto-25",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Setembro",
+        "data": "2026-02-08",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "valor": 200,
+        "status": "Pendente",
+        "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-auto-27",
+        "orcamentoId": "orc-1",
+        "mes": "Outubro",
+        "data": "2026-02-08",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "valor": 200,
+        "status": "Pendente",
+        "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-auto-29",
+        "orcamentoId": "orc-1",
+        "mes": "Novembro",
+        "data": "2026-02-08",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "valor": 200,
+        "status": "Pendente",
+        "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-auto-31",
+        "orcamentoId": "orc-1",
+        "mes": "Dezembro",
+        "data": "2026-02-08",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "valor": 200,
         "status": "Pendente",
         "categoria": "Bancos/Cartões"
       }
@@ -284,7 +437,7 @@
           "Março": 3500
         },
         "faturasFechadas": [
-          "Março"
+          "Fevereiro"
         ],
         "limite": 0
       },
@@ -293,7 +446,7 @@
         "nome": "BRB MasterCard",
         "limite": 0,
         "limitesMensais": {
-          "Fevereiro": 0
+          "Fevereiro": 1
         },
         "faturasFechadas": []
       }
@@ -402,6 +555,57 @@
         "parcela": 5,
         "totalParcelas": 5,
         "meses": []
+      },
+      {
+        "id": "lanc-card-parc-7",
+        "cartaoId": "card-1770324312283",
+        "descricao": "Compra parcelada (1/2)",
+        "valor": 500,
+        "data": "2026-02-08",
+        "mesReferencia": "Fevereiro",
+        "categoriaId": "cat-auto-1770325968137",
+        "tipoRecorrencia": "PARCELADO",
+        "parcela": 1,
+        "totalParcelas": 2,
+        "meses": []
+      },
+      {
+        "id": "lanc-card-parc-8",
+        "cartaoId": "card-1770324312283",
+        "descricao": "Compra parcelada (2/2)",
+        "valor": 500,
+        "data": "2026-02-08",
+        "mesReferencia": "Março",
+        "categoriaId": "cat-auto-1770325968137",
+        "tipoRecorrencia": "PARCELADO",
+        "parcela": 2,
+        "totalParcelas": 2,
+        "meses": []
+      },
+      {
+        "id": "lanc-card-11",
+        "cartaoId": "card-1770324312283",
+        "descricao": "Água",
+        "valor": 200,
+        "data": "2026-02-08",
+        "mesReferencia": "Fevereiro",
+        "categoriaId": "cat-1",
+        "tipoRecorrencia": "FIXO",
+        "qtdParcelas": "",
+        "meses": [
+          "Janeiro",
+          "Fevereiro",
+          "Março",
+          "Abril",
+          "Maio",
+          "Junho",
+          "Julho",
+          "Agosto",
+          "Setembro",
+          "Outubro",
+          "Novembro",
+          "Dezembro"
+        ]
       }
     ]
   }
