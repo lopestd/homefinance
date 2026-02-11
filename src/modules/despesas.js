@@ -53,6 +53,7 @@ const criarDespesas = (store, base, meses) => {
       id_categoria: base.id_categoria,
       id_gasto_predefinido: base.id_gasto_predefinido || null,
       descricao: base.descricao,
+      complemento: base.complemento || null,
       valor: base.valor,
       paga: false,
       tipo_recorrencia: base.tipo_recorrencia,
@@ -68,6 +69,7 @@ const criarDespesaManual = async ({
   id_orcamento_mes,
   id_categoria,
   descricao,
+  complemento,
   valor,
   tipo_recorrencia,
   qtd_parcelas
@@ -98,6 +100,7 @@ const criarDespesaManual = async ({
     id_orcamento,
     id_categoria,
     descricao,
+    complemento,
     valor,
     tipo_recorrencia,
     qtd_parcelas
@@ -111,6 +114,7 @@ const criarDespesaManualPorMes = async ({
   mesInicial,
   categoriaId,
   descricao,
+  complemento,
   valor,
   tipoRecorrencia,
   qtdParcelas
@@ -150,6 +154,7 @@ const criarDespesaManualPorMes = async ({
     id_orcamento: orcamentoId,
     id_categoria: categoriaId,
     descricao,
+    complemento,
     valor,
     tipo_recorrencia: tipoRecorrencia,
     qtd_parcelas: qtdParcelas
@@ -165,6 +170,7 @@ const criarDespesaDeGastoPredefinido = async ({
   id_gasto_predefinido,
   id_orcamento,
   id_orcamento_mes,
+  complemento,
   valor,
   tipo_recorrencia,
   qtd_parcelas
@@ -197,6 +203,7 @@ const criarDespesaDeGastoPredefinido = async ({
     id_categoria: gasto.id_categoria,
     id_gasto_predefinido,
     descricao: gasto.descricao,
+    complemento,
     valor,
     tipo_recorrencia,
     qtd_parcelas
@@ -209,6 +216,7 @@ const criarDespesaPredefinidaPorMes = async ({
   gastoPredefinidoId,
   orcamentoId,
   mesInicial,
+  complemento,
   valor,
   tipoRecorrencia,
   qtdParcelas
@@ -250,6 +258,7 @@ const criarDespesaPredefinidaPorMes = async ({
     id_categoria: gasto.id_categoria,
     id_gasto_predefinido: gastoPredefinidoId,
     descricao: gasto.descricao,
+    complemento,
     valor,
     tipo_recorrencia: tipoRecorrencia,
     qtd_parcelas: qtdParcelas

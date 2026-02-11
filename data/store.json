@@ -19,85 +19,14 @@
   "categorias": [],
   "gastosPredefinidos": [],
   "tiposReceita": [],
-  "receitas": [],
-  "despesas": [],
-  "cartoes": [],
-  "cartaoMeses": [],
-  "cartaoLancamentos": [],
-  "frontendConfig": {
-    "categorias": [
-      {
-        "tipo": "DESPESA",
-        "nome": "Imóvel",
-        "id": "cat-1"
-      },
-      {
-        "id": "cat-1770170333095",
-        "nome": "Rendimentos",
-        "tipo": "RECEITA"
-      },
-      {
-        "id": "cat-auto-1770325968137",
-        "nome": "Bancos/Cartões",
-        "tipo": "DESPESA"
-      }
-    ],
-    "gastosPredefinidos": [
-      {
-        "id": "gasto-1770335865470",
-        "descricao": "Financiamento imobiliário BRB",
-        "categoriaId": "cat-1"
-      }
-    ],
-    "tiposReceita": [
-      {
-        "id": "tipo-1770210109751",
-        "descricao": "Salário",
-        "recorrente": true
-      }
-    ],
-    "orcamentos": [
-      {
-        "id": "orc-1770208001125",
-        "label": "2026",
-        "meses": [
-          "Janeiro",
-          "Fevereiro",
-          "Março",
-          "Abril",
-          "Maio",
-          "Junho",
-          "Julho",
-          "Agosto",
-          "Setembro"
-        ]
-      },
-      {
-        "id": "orc-1",
-        "label": "2027",
-        "meses": [
-          "Janeiro",
-          "Fevereiro",
-          "Março",
-          "Abril",
-          "Maio",
-          "Junho",
-          "Julho",
-          "Agosto",
-          "Setembro",
-          "Outubro",
-          "Novembro",
-          "Dezembro"
-        ]
-      }
-    ],
-    "receitas": [
+  "receitas": [
       {
         "id": "rec-1770256269979-preserved",
         "orcamentoId": "orc-1770208001125",
         "mes": "Março",
         "categoriaId": "cat-1770170333095",
         "descricao": "Salário",
+        "complemento": "",
         "valor": "300",
         "tipoRecorrencia": "FIXO",
         "qtdParcelas": "",
@@ -113,6 +42,7 @@
         "mes": "Janeiro",
         "categoriaId": "cat-1770170333095",
         "descricao": "Salário",
+        "complemento": "",
         "valor": "1000",
         "tipoRecorrencia": "FIXO",
         "qtdParcelas": "",
@@ -123,12 +53,13 @@
         "categoria": "Rendimentos"
       },
       {
-        "id": "rec-1770262692775",
+        "id": "rec-1770338076895",
         "orcamentoId": "orc-1770208001125",
         "mes": "Fevereiro",
         "data": "2026-02-05",
         "categoriaId": "cat-1770170333095",
         "descricao": "Extra 2",
+        "complemento": "",
         "valor": "10000",
         "tipoRecorrencia": "EVENTUAL",
         "qtdParcelas": "",
@@ -139,31 +70,13 @@
         "categoria": "Rendimentos"
       },
       {
-        "id": "rec-1770338076895-preserved",
-        "orcamentoId": "orc-1770208001125",
-        "mes": "Agosto",
-        "descricao": "Salário",
-        "valor": "100",
-        "tipoRecorrencia": "FIXO",
-        "qtdParcelas": "",
-        "meses": [
-          "Abril",
-          "Maio",
-          "Julho",
-          "Agosto",
-          "Setembro"
-        ],
-        "status": "Pendente",
-        "categoriaId": "cat-1770170333095",
-        "categoria": "Rendimentos"
-      },
-      {
         "id": "rec-1770338124311",
         "orcamentoId": "orc-1770208001125",
         "mes": "Fevereiro",
         "data": "2026-02-06",
         "categoriaId": "cat-1770170333095",
         "descricao": "Salário",
+        "complemento": "",
         "valor": "6700",
         "tipoRecorrencia": "EVENTUAL",
         "qtdParcelas": "",
@@ -180,11 +93,32 @@
         "data": "2026-02-08",
         "categoriaId": "cat-1770170333095",
         "descricao": "Serviço extra",
+        "complemento": "",
         "valor": "1000",
         "tipoRecorrencia": "PARCELADO",
         "qtdParcelas": "4",
         "meses": [],
         "status": "Pendente",
+        "categoria": "Rendimentos"
+      },
+      {
+        "id": "rec-1770338076895-preserved",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Agosto",
+        "descricao": "Salário",
+        "complemento": "",
+        "valor": "100",
+        "tipoRecorrencia": "FIXO",
+        "qtdParcelas": "",
+        "meses": [
+          "Abril",
+          "Maio",
+          "Julho",
+          "Agosto",
+          "Setembro"
+        ],
+        "status": "Pendente",
+        "categoriaId": "cat-1770170333095",
         "categoria": "Rendimentos"
       }
     ],
@@ -195,6 +129,7 @@
         "mes": "Maio",
         "categoriaId": "cat-1",
         "descricao": "Financiamento imobiliário",
+        "complemento": "",
         "valor": "1500",
         "tipoRecorrencia": "FIXO",
         "qtdParcelas": "",
@@ -209,6 +144,7 @@
         "orcamentoId": "orc-1770208001125",
         "mes": "Abril",
         "descricao": "Financiamento imobiliário",
+        "complemento": "",
         "valor": "1200",
         "tipoRecorrencia": "FIXO",
         "qtdParcelas": "",
@@ -224,6 +160,7 @@
         "orcamentoId": "orc-1770208001125",
         "mes": "Janeiro",
         "descricao": "Financiamento imobiliário",
+        "complemento": "",
         "valor": "1000",
         "tipoRecorrencia": "FIXO",
         "qtdParcelas": "",
@@ -246,8 +183,9 @@
         "data": "2026-02-05",
         "categoriaId": "cat-1",
         "descricao": "Financiamento imobiliário",
+        "complemento": "Casa",
         "valor": "1700",
-        "tipoRecorrencia": "FIXO",
+        "tipoRecorrencia": "EVENTUAL",
         "qtdParcelas": "",
         "meses": [
           "Fevereiro"
@@ -261,6 +199,7 @@
         "mes": "Março",
         "categoriaId": "cat-auto-1770325968137",
         "descricao": "Fatura do cartão Visa Banco do Brasil",
+        "complemento": "",
         "valor": 500,
         "status": "Pendente",
         "categoria": "Bancos/Cartões"
@@ -271,6 +210,7 @@
         "mes": "Abril",
         "categoriaId": "cat-auto-1770325968137",
         "descricao": "Fatura do cartão Visa Banco do Brasil",
+        "complemento": "",
         "valor": 500,
         "status": "Pendente",
         "categoria": "Bancos/Cartões"
@@ -281,6 +221,7 @@
         "mes": "Maio",
         "categoriaId": "cat-auto-1770325968137",
         "descricao": "Fatura do cartão Visa Banco do Brasil",
+        "complemento": "",
         "valor": 500,
         "status": "Pendente",
         "categoria": "Bancos/Cartões"
@@ -291,6 +232,40 @@
         "mes": "Junho",
         "categoriaId": "cat-auto-1770325968137",
         "descricao": "Fatura do cartão Visa Banco do Brasil",
+        "complemento": "",
+        "valor": 500,
+        "status": "Pendente",
+        "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-auto-1770331328676",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Julho",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão Visa Banco do Brasil",
+        "complemento": "",
+        "valor": 500,
+        "status": "Pendente",
+        "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-auto-1770331328676",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Agosto",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão Visa Banco do Brasil",
+        "complemento": "",
+        "valor": 500,
+        "status": "Pendente",
+        "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-auto-1770331328676",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Setembro",
+        "categoriaId": "cat-auto-1770325968137",
+        "descricao": "Fatura do cartão Visa Banco do Brasil",
+        "complemento": "",
         "valor": 500,
         "status": "Pendente",
         "categoria": "Bancos/Cartões"
@@ -302,6 +277,7 @@
         "data": "2026-02-07",
         "categoriaId": "cat-auto-1770325968137",
         "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "complemento": "",
         "valor": 1285,
         "status": "Pago",
         "categoria": "Bancos/Cartões"
@@ -313,6 +289,7 @@
         "data": "2026-02-08",
         "categoriaId": "cat-auto-1770325968137",
         "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "complemento": "",
         "valor": 3500,
         "status": "Pendente",
         "categoria": "Bancos/Cartões"
@@ -324,6 +301,7 @@
         "data": "2026-02-08",
         "categoriaId": "cat-auto-1770325968137",
         "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "complemento": "",
         "valor": 200,
         "status": "Pendente",
         "categoria": "Bancos/Cartões"
@@ -335,6 +313,7 @@
         "data": "2026-02-08",
         "categoriaId": "cat-auto-1770325968137",
         "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "complemento": "",
         "valor": 4300,
         "status": "Pendente",
         "categoria": "Bancos/Cartões"
@@ -346,6 +325,7 @@
         "data": "2026-02-08",
         "categoriaId": "cat-auto-1770325968137",
         "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "complemento": "",
         "valor": 300,
         "status": "Pendente",
         "categoria": "Bancos/Cartões"
@@ -357,6 +337,7 @@
         "data": "2026-02-08",
         "categoriaId": "cat-auto-1770325968137",
         "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "complemento": "",
         "valor": 300,
         "status": "Pendente",
         "categoria": "Bancos/Cartões"
@@ -368,6 +349,7 @@
         "data": "2026-02-08",
         "categoriaId": "cat-auto-1770325968137",
         "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "complemento": "",
         "valor": 200,
         "status": "Pendente",
         "categoria": "Bancos/Cartões"
@@ -379,6 +361,7 @@
         "data": "2026-02-08",
         "categoriaId": "cat-auto-1770325968137",
         "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "complemento": "",
         "valor": 200,
         "status": "Pendente",
         "categoria": "Bancos/Cartões"
@@ -390,6 +373,7 @@
         "data": "2026-02-08",
         "categoriaId": "cat-auto-1770325968137",
         "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "complemento": "",
         "valor": 200,
         "status": "Pendente",
         "categoria": "Bancos/Cartões"
@@ -401,6 +385,7 @@
         "data": "2026-02-08",
         "categoriaId": "cat-auto-1770325968137",
         "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "complemento": "",
         "valor": 200,
         "status": "Pendente",
         "categoria": "Bancos/Cartões"
@@ -412,6 +397,7 @@
         "data": "2026-02-08",
         "categoriaId": "cat-auto-1770325968137",
         "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "complemento": "",
         "valor": 200,
         "status": "Pendente",
         "categoria": "Bancos/Cartões"
@@ -423,9 +409,35 @@
         "data": "2026-02-08",
         "categoriaId": "cat-auto-1770325968137",
         "descricao": "Fatura do cartão Banco do Brasil - Visa",
+        "complemento": "",
         "valor": 200,
         "status": "Pendente",
         "categoria": "Bancos/Cartões"
+      },
+      {
+        "id": "desp-1",
+        "orcamentoId": "orc-1770208001125",
+        "mes": "Fevereiro",
+        "data": "2026-02-11",
+        "categoriaId": "cat-1",
+        "descricao": "Financiamento imobiliário BRB",
+        "complemento": "Casa",
+        "valor": "2520",
+        "tipoRecorrencia": "FIXO",
+        "qtdParcelas": "",
+        "meses": [
+          "Janeiro",
+          "Fevereiro",
+          "Março",
+          "Abril",
+          "Maio",
+          "Junho",
+          "Julho",
+          "Agosto",
+          "Setembro"
+        ],
+        "status": "Pendente",
+        "categoria": "Imóvel"
       }
     ],
     "cartoes": [
@@ -456,6 +468,7 @@
         "id": "lanc-card-1770326284757",
         "cartaoId": "card-1770324312283",
         "descricao": "Amazon",
+        "complemento": "",
         "valor": 140,
         "data": "2026-02-05",
         "mesReferencia": "Fevereiro",
@@ -468,6 +481,7 @@
         "id": "lanc-card-1770331223683",
         "cartaoId": "card-1770324312283",
         "descricao": "Financiamento imobiliário",
+        "complemento": "",
         "valor": 345,
         "data": "2026-02-05",
         "mesReferencia": "Fevereiro",
@@ -480,6 +494,7 @@
         "id": "lanc-card-1770331244324",
         "cartaoId": "card-1770324312283",
         "descricao": "Financiamento imobiliário",
+        "complemento": "",
         "valor": 4000,
         "data": "2026-02-05",
         "mesReferencia": "Março",
@@ -495,6 +510,7 @@
         "id": "lanc-card-1770331328676-0",
         "cartaoId": "card-1770324312283",
         "descricao": "Calçados (1/5)",
+        "complemento": "",
         "valor": 100,
         "data": "2026-02-05",
         "mesReferencia": "Fevereiro",
@@ -508,6 +524,7 @@
         "id": "lanc-card-1770331328676-1",
         "cartaoId": "card-1770324312283",
         "descricao": "Calçados (2/5)",
+        "complemento": "",
         "valor": 100,
         "data": "2026-02-05",
         "mesReferencia": "Março",
@@ -521,6 +538,7 @@
         "id": "lanc-card-1770331328676-2",
         "cartaoId": "card-1770324312283",
         "descricao": "Calçados (3/5)",
+        "complemento": "",
         "valor": 100,
         "data": "2026-02-05",
         "mesReferencia": "Abril",
@@ -534,6 +552,7 @@
         "id": "lanc-card-1770331328676-3",
         "cartaoId": "card-1770324312283",
         "descricao": "Calçados (4/5)",
+        "complemento": "",
         "valor": 100,
         "data": "2026-02-05",
         "mesReferencia": "Maio",
@@ -547,6 +566,7 @@
         "id": "lanc-card-1770331328676-4",
         "cartaoId": "card-1770324312283",
         "descricao": "Calçados (5/5)",
+        "complemento": "",
         "valor": 100,
         "data": "2026-02-05",
         "mesReferencia": "Junho",
@@ -560,6 +580,7 @@
         "id": "lanc-card-parc-7",
         "cartaoId": "card-1770324312283",
         "descricao": "Compra parcelada (1/2)",
+        "complemento": "",
         "valor": 500,
         "data": "2026-02-08",
         "mesReferencia": "Fevereiro",
@@ -573,6 +594,7 @@
         "id": "lanc-card-parc-8",
         "cartaoId": "card-1770324312283",
         "descricao": "Compra parcelada (2/2)",
+        "complemento": "",
         "valor": 500,
         "data": "2026-02-08",
         "mesReferencia": "Março",
@@ -586,6 +608,7 @@
         "id": "lanc-card-11",
         "cartaoId": "card-1770324312283",
         "descricao": "Água",
+        "complemento": "",
         "valor": 200,
         "data": "2026-02-08",
         "mesReferencia": "Fevereiro",
@@ -606,6 +629,73 @@
           "Novembro",
           "Dezembro"
         ]
+      }
+    ],
+    "frontendConfig": {
+      "categorias": [
+        {
+          "tipo": "DESPESA",
+          "nome": "Imóvel",
+          "id": "cat-1"
+        },
+        {
+          "id": "cat-1770170333095",
+          "nome": "Rendimentos",
+          "tipo": "RECEITA"
+        },
+        {
+          "id": "cat-auto-1770325968137",
+          "nome": "Bancos/Cartões",
+          "tipo": "DESPESA"
+        }
+      ],
+      "gastosPredefinidos": [
+        {
+          "id": "gasto-1770335865470",
+          "descricao": "Financiamento imobiliário BRB",
+          "categoriaId": "cat-1"
+        }
+      ],
+      "tiposReceita": [
+        {
+          "id": "tipo-1770210109751",
+          "descricao": "Salário",
+          "recorrente": true
+        }
+      ],
+      "orcamentos": [
+        {
+          "id": "orc-1770208001125",
+          "label": "2026",
+          "meses": [
+            "Janeiro",
+            "Fevereiro",
+            "Março",
+            "Abril",
+            "Maio",
+            "Junho",
+            "Julho",
+            "Agosto",
+            "Setembro"
+          ]
+      },
+      {
+          "id": "orc-1",
+          "label": "2027",
+          "meses": [
+            "Janeiro",
+            "Fevereiro",
+            "Março",
+            "Abril",
+            "Maio",
+            "Junho",
+            "Julho",
+            "Agosto",
+            "Setembro",
+            "Outubro",
+            "Novembro",
+            "Dezembro"
+          ]
       }
     ]
   }

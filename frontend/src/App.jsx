@@ -416,6 +416,7 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
   const [manualForm, setManualForm] = useState({
     categoriaId: receitasCategorias[0]?.id ?? "",
     descricao: "",
+    complemento: "",
     valor: "",
     tipoRecorrencia: "EVENTUAL",
     qtdParcelas: "",
@@ -453,6 +454,7 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
     setManualForm({
       categoriaId: receitasCategorias[0]?.id ?? "",
       descricao: "",
+      complemento: "",
       valor: "",
       tipoRecorrencia: "EVENTUAL",
       qtdParcelas: "",
@@ -509,6 +511,7 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
     setManualForm({
       categoriaId: receita.categoriaId || receitasCategorias[0]?.id || "",
       descricao: receita.descricao,
+      complemento: receita.complemento || "",
       valor: receita.valor,
       tipoRecorrencia: receita.tipoRecorrencia || "EVENTUAL",
       qtdParcelas: receita.qtdParcelas || "",
@@ -546,6 +549,7 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
       data: manualForm.data,
       categoriaId: manualForm.categoriaId,
       descricao: manualForm.descricao,
+      complemento: manualForm.complemento || "",
       valor: manualForm.valor,
       tipoRecorrencia: manualForm.tipoRecorrencia,
       qtdParcelas: manualForm.qtdParcelas,
@@ -665,7 +669,7 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
                 filteredReceitas.map((receita) => (
                   <tr className="list-table__row" key={receita.id}>
                     <td>{new Date(receita.data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</td>
-                    <td>{receita.descricao}</td>
+                    <td>{receita.complemento ? `${receita.descricao} - ${receita.complemento}` : receita.descricao}</td>
                     <td>{receita.categoria}</td>
                     <td>{formatCurrency(receita.valor)}</td>
                     <td>{receita.status}</td>
@@ -796,6 +800,17 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
               />
               Informar manualmente
             </label>
+          </label>
+          <label className="field">
+            Complemento
+            <input
+              type="text"
+              value={manualForm.complemento}
+              placeholder="Opcional"
+              onChange={(event) =>
+                setManualForm((prev) => ({ ...prev, complemento: event.target.value }))
+              }
+            />
           </label>
           <label className="field">
             Valor
@@ -995,6 +1010,7 @@ const DespesasPage = ({
   const [manualForm, setManualForm] = useState({
     categoriaId: despesasCategorias[0]?.id ?? "",
     descricao: "",
+    complemento: "",
     valor: "",
     tipoRecorrencia: "EVENTUAL",
     qtdParcelas: "",
@@ -1067,6 +1083,7 @@ const DespesasPage = ({
     setManualForm({
       categoriaId: despesasCategorias[0]?.id ?? "",
       descricao: "",
+      complemento: "",
       valor: "",
       tipoRecorrencia: "EVENTUAL",
       qtdParcelas: "",
@@ -1133,6 +1150,7 @@ const DespesasPage = ({
     setManualForm({
       categoriaId: despesa.categoriaId || despesasCategorias[0]?.id || "",
       descricao: despesa.descricao,
+      complemento: despesa.complemento || "",
       valor: despesa.valor,
       tipoRecorrencia: despesa.tipoRecorrencia || "EVENTUAL",
       qtdParcelas: despesa.qtdParcelas || "",
@@ -1153,6 +1171,7 @@ const DespesasPage = ({
       data: manualForm.data,
       categoriaId: manualForm.categoriaId,
       descricao: manualForm.descricao,
+      complemento: manualForm.complemento || "",
       valor: manualForm.valor,
       tipoRecorrencia: manualForm.tipoRecorrencia,
       qtdParcelas: manualForm.qtdParcelas,
@@ -1269,7 +1288,7 @@ const DespesasPage = ({
                 filteredDespesas.map((despesa) => (
                   <tr className="list-table__row" key={despesa.id}>
                     <td>{new Date(despesa.data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</td>
-                    <td>{despesa.descricao}</td>
+                    <td>{despesa.complemento ? `${despesa.descricao} - ${despesa.complemento}` : despesa.descricao}</td>
                     <td>{despesa.categoria}</td>
                     <td>{formatCurrency(despesa.valor)}</td>
                     <td>{despesa.status}</td>
@@ -1384,6 +1403,17 @@ const DespesasPage = ({
               />
               Informar manualmente
             </label>
+          </label>
+          <label className="field">
+            Complemento
+            <input
+              type="text"
+              value={manualForm.complemento}
+              placeholder="Opcional"
+              onChange={(event) =>
+                setManualForm((prev) => ({ ...prev, complemento: event.target.value }))
+              }
+            />
           </label>
           <label className="field">
             Valor

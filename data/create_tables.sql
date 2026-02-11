@@ -48,6 +48,7 @@ CREATE TABLE receitas (
     id_categoria INTEGER NOT NULL,
     id_tipo_receita INTEGER,
     descricao VARCHAR(255) NOT NULL,
+    complemento VARCHAR(500),
     valor DECIMAL(15, 2) NOT NULL,
     recebida BOOLEAN DEFAULT FALSE,
     CONSTRAINT fk_receita_orcamento FOREIGN KEY (id_orcamento) REFERENCES orcamentos(id_orcamento) ON DELETE CASCADE,
@@ -64,6 +65,7 @@ CREATE TABLE despesas (
     id_categoria INTEGER NOT NULL,
     id_gasto_predefinido INTEGER,
     descricao VARCHAR(255) NOT NULL,
+    complemento VARCHAR(500),
     valor DECIMAL(15, 2) NOT NULL,
     paga BOOLEAN DEFAULT FALSE,
     tipo_recorrencia VARCHAR(50), -- 'FIXO', 'PARCELADO', 'UNICO'

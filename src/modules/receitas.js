@@ -51,6 +51,7 @@ const criarReceitaManual = async ({
   id_orcamento_mes,
   id_categoria,
   descricao,
+  complemento,
   valor,
   recebida
 }) => {
@@ -70,6 +71,7 @@ const criarReceitaManual = async ({
     id_categoria,
     id_tipo_receita: null,
     descricao,
+    complemento: complemento || null,
     valor,
     recebida: Boolean(recebida)
   });
@@ -82,6 +84,7 @@ const criarReceitaRecorrente = async ({
   meses,
   id_categoria,
   descricao,
+  complemento,
   valor
 }) => {
   assert(descricao, "Descrição obrigatória");
@@ -110,6 +113,7 @@ const criarReceitaRecorrente = async ({
       id_categoria,
       id_tipo_receita: null,
       descricao,
+      complemento: complemento || null,
       valor,
       recebida: false
     });
@@ -133,6 +137,7 @@ const createReceita = async ({
   mes,
   categoriaId,
   descricao,
+  complemento,
   valor,
   recebida
 }) => {
@@ -153,6 +158,7 @@ const createReceita = async ({
     id_categoria: categoriaId,
     id_tipo_receita: null,
     descricao,
+    complemento: complemento || null,
     valor,
     recebida: Boolean(recebida)
   });
@@ -165,6 +171,7 @@ const createReceitaRecorrente = async ({
   meses,
   categoriaId,
   descricao,
+  complemento,
   valor
 }) => {
   assert(descricao, "Descrição obrigatória");
@@ -193,6 +200,7 @@ const createReceitaRecorrente = async ({
       id_categoria: categoriaId,
       id_tipo_receita: null,
       descricao,
+      complemento: complemento || null,
       valor,
       recebida: false
     });
