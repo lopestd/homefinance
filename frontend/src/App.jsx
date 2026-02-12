@@ -542,6 +542,41 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
 
   const handleSaveManual = (event) => {
     event.preventDefault();
+
+    if (!receitaEditId && manualForm.tipoRecorrencia === "PARCELADO" && parseInt(manualForm.qtdParcelas) > 1) {
+      const qtd = parseInt(manualForm.qtdParcelas);
+      const val = parseFloat(manualForm.valor);
+      const parcValue = val / qtd;
+
+      const getNextMonth = (current, offset) => {
+        const idx = MONTHS_ORDER.indexOf(current);
+        if (idx === -1) return current;
+        return MONTHS_ORDER[(idx + offset) % 12];
+      };
+
+      let newEntries = [];
+      for (let i = 0; i < qtd; i++) {
+        newEntries.push({
+          id: createId("rec-parc"),
+          orcamentoId: effectiveOrcamentoId,
+          mes: getNextMonth(manualForm.mesInicial, i),
+          data: manualForm.data,
+          categoriaId: manualForm.categoriaId,
+          descricao: `${manualForm.descricao} (${i + 1}/${qtd})`,
+          complemento: manualForm.complemento || "",
+          valor: parcValue,
+          tipoRecorrencia: "PARCELADO",
+          qtdParcelas: qtd,
+          meses: [],
+          status: "Pendente",
+          categoria: receitasCategorias.find(c => c.id === manualForm.categoriaId)?.nome || "—"
+        });
+      }
+      setReceitas(prev => [...prev, ...newEntries]);
+      setManualOpen(false);
+      return;
+    }
+
     let novaReceita = {
       id: receitaEditId || createId("rec"),
       orcamentoId: effectiveOrcamentoId,
@@ -1164,6 +1199,41 @@ const DespesasPage = ({
 
   const handleSaveManual = (event) => {
     event.preventDefault();
+
+    if (!despesaEditId && manualForm.tipoRecorrencia === "PARCELADO" && parseInt(manualForm.qtdParcelas) > 1) {
+      const qtd = parseInt(manualForm.qtdParcelas);
+      const val = parseFloat(manualForm.valor);
+      const parcValue = val / qtd;
+
+      const getNextMonth = (current, offset) => {
+        const idx = MONTHS_ORDER.indexOf(current);
+        if (idx === -1) return current;
+        return MONTHS_ORDER[(idx + offset) % 12];
+      };
+
+      let newEntries = [];
+      for (let i = 0; i < qtd; i++) {
+        newEntries.push({
+          id: createId("desp-parc"),
+          orcamentoId: effectiveOrcamentoId,
+          mes: getNextMonth(manualForm.mesInicial, i),
+          data: manualForm.data,
+          categoriaId: manualForm.categoriaId,
+          descricao: `${manualForm.descricao} (${i + 1}/${qtd})`,
+          complemento: manualForm.complemento || "",
+          valor: parcValue,
+          tipoRecorrencia: "PARCELADO",
+          qtdParcelas: qtd,
+          meses: [],
+          status: "Pendente",
+          categoria: despesasCategorias.find(c => c.id === manualForm.categoriaId)?.nome || "—"
+        });
+      }
+      setDespesas(prev => [...prev, ...newEntries]);
+      setManualOpen(false);
+      return;
+    }
+
     let novaDespesa = {
       id: despesaEditId || createId("desp"),
       orcamentoId: effectiveOrcamentoId,
@@ -1851,7 +1921,6 @@ const CartaoPage = ({
       c.id === effectiveCartaoId ? { ...c, faturasFechadas: newFechadas } : c
     );
     setCartoes(updatedCartoes);
-    window.localStorage.setItem("hf_cartoes", JSON.stringify(updatedCartoes));
 
     syncDespesa(selectedMes, effectiveCartaoId, lancamentosCartao, updatedCartoes);
   };
@@ -1941,7 +2010,6 @@ const CartaoPage = ({
      });
      
      setCartoes(updatedCartoes);
-     window.localStorage.setItem("hf_cartoes", JSON.stringify(updatedCartoes));
      setLimiteModalOpen(false);
      syncDespesa(selectedMes, effectiveCartaoId, lancamentosCartao, updatedCartoes);
   };
@@ -3287,7 +3355,6 @@ const ConfiguracoesPage = ({
           }
         ];
     setCategorias(nextCategorias);
-    window.localStorage.setItem("hf_categorias", JSON.stringify(nextCategorias));
     setCategoriaEditId(null);
     setCategoriaForm({ nome: "", tipo: "DESPESA" });
     setCategoriaModalOpen(false);
@@ -3312,7 +3379,6 @@ const ConfiguracoesPage = ({
           }
         ];
     setGastosPredefinidos(nextGastos);
-    window.localStorage.setItem("hf_gastos_predefinidos", JSON.stringify(nextGastos));
     setGastoEditId(null);
     setGastoForm({ descricao: "", categoriaId: despesasCategorias[0]?.id ?? "" });
     setGastoModalOpen(false);
@@ -3337,7 +3403,6 @@ const ConfiguracoesPage = ({
           }
         ];
     setTiposReceita(nextTipos);
-    window.localStorage.setItem("hf_tipos_receita", JSON.stringify(nextTipos));
     setTipoEditId(null);
     setTipoForm({ descricao: "", recorrente: "false" });
     setTipoModalOpen(false);
@@ -3362,7 +3427,6 @@ const ConfiguracoesPage = ({
           }
       ];
     setOrcamentos(nextOrcamentos);
-    window.localStorage.setItem("hf_orcamentos", JSON.stringify(nextOrcamentos));
     setOrcamentoEditId(null);
     setOrcamentoForm({ label: "", meses: [] });
     setOrcamentoModalOpen(false);
@@ -3388,7 +3452,6 @@ const ConfiguracoesPage = ({
           }
         ];
     setCartoes(nextCartoes);
-    window.localStorage.setItem("hf_cartoes", JSON.stringify(nextCartoes));
     setCartaoEditId(null);
     setCartaoForm({ nome: "", limite: "" });
     setCartaoModalOpen(false);
@@ -3923,17 +3986,6 @@ const getHashPage = () => {
   return hash || "dashboard";
 };
 
-const loadFromStorage = (key, fallback) => {
-  try {
-    const raw = window.localStorage.getItem(key);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : fallback;
-  } catch {
-    return fallback;
-  }
-};
-
 const loadConfigFromApi = async () => {
   try {
     const response = await fetch("/api/config");
@@ -3968,20 +4020,15 @@ const persistConfigToApi = async (payload) => {
 
 function App() {
   const [activeKey, setActiveKey] = useState(getHashPage());
-  const [categorias, setCategorias] = useState(() => loadFromStorage("hf_categorias", []));
-  const [gastosPredefinidos, setGastosPredefinidos] = useState(() =>
-    loadFromStorage("hf_gastos_predefinidos", [])
-  );
-  const [tiposReceita, setTiposReceita] = useState(() =>
-    loadFromStorage("hf_tipos_receita", [])
-  );
-  const [receitas, setReceitas] = useState(() => loadFromStorage("hf_receitas", []));
-  const [despesas, setDespesas] = useState(() => loadFromStorage("hf_despesas", []));
-  const [orcamentos, setOrcamentos] = useState(() => loadFromStorage("hf_orcamentos", []));
-  const [cartoes, setCartoes] = useState(() => loadFromStorage("hf_cartoes", []));
-  const [lancamentosCartao, setLancamentosCartao] = useState(() => loadFromStorage("hf_lancamentos_cartao", []));
-  const [storageReady, setStorageReady] = useState(false);
-  const hasPersistedOnce = useRef(false);
+  const [categorias, setCategorias] = useState([]);
+  const [gastosPredefinidos, setGastosPredefinidos] = useState([]);
+  const [tiposReceita, setTiposReceita] = useState([]);
+  const [receitas, setReceitas] = useState([]);
+  const [despesas, setDespesas] = useState([]);
+  const [orcamentos, setOrcamentos] = useState([]);
+  const [cartoes, setCartoes] = useState([]);
+  const [lancamentosCartao, setLancamentosCartao] = useState([]);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   const pages = [
     { key: "dashboard", label: "Dashboard" },
@@ -3992,6 +4039,25 @@ function App() {
     { key: "configuracoes", label: "Configurações" }
   ];
 
+  // Load initial data from API
+  useEffect(() => {
+    const loadData = async () => {
+      const data = await loadConfigFromApi();
+      if (data) {
+        setCategorias(data.categorias);
+        setGastosPredefinidos(data.gastosPredefinidos);
+        setTiposReceita(data.tiposReceita);
+        setReceitas(data.receitas);
+        setDespesas(data.despesas);
+        setOrcamentos(data.orcamentos);
+        setCartoes(data.cartoes);
+        setLancamentosCartao(data.lancamentosCartao);
+        setIsDataLoaded(true);
+      }
+    };
+    loadData();
+  }, []);
+
   useEffect(() => {
     const onHashChange = () => setActiveKey(getHashPage());
     window.addEventListener("hashchange", onHashChange);
@@ -3999,43 +4065,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    let active = true;
-    const load = async () => {
-      const remote = await loadConfigFromApi();
-      if (!active) return;
-      if (remote) {
-        setCategorias(remote.categorias);
-        setGastosPredefinidos(remote.gastosPredefinidos);
-        setTiposReceita(remote.tiposReceita);
-        setReceitas(remote.receitas);
-        setDespesas(remote.despesas);
-        setOrcamentos(remote.orcamentos);
-        setCartoes(remote.cartoes);
-        setLancamentosCartao(remote.lancamentosCartao);
-      }
-      setStorageReady(true);
-    };
-    load();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!storageReady) return;
-    window.localStorage.setItem("hf_categorias", JSON.stringify(categorias));
-    window.localStorage.setItem("hf_gastos_predefinidos", JSON.stringify(gastosPredefinidos));
-    window.localStorage.setItem("hf_tipos_receita", JSON.stringify(tiposReceita));
-    window.localStorage.setItem("hf_receitas", JSON.stringify(receitas));
-    window.localStorage.setItem("hf_despesas", JSON.stringify(despesas));
-    window.localStorage.setItem("hf_orcamentos", JSON.stringify(orcamentos));
-    window.localStorage.setItem("hf_cartoes", JSON.stringify(cartoes));
-    window.localStorage.setItem("hf_lancamentos_cartao", JSON.stringify(lancamentosCartao));
-    
-    if (!hasPersistedOnce.current) {
-      hasPersistedOnce.current = true;
-      return;
-    }
+    if (!isDataLoaded) return;
     persistConfigToApi({
       categorias,
       gastosPredefinidos,
@@ -4046,7 +4076,7 @@ function App() {
       cartoes,
       lancamentosCartao
     });
-  }, [storageReady, categorias, gastosPredefinidos, tiposReceita, receitas, despesas, orcamentos, cartoes, lancamentosCartao]);
+  }, [categorias, gastosPredefinidos, tiposReceita, receitas, despesas, orcamentos, cartoes, lancamentosCartao, isDataLoaded]);
 
   const activePage = pages.find((p) => p.key === activeKey) || pages[0];
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
