@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import "./App.css";
 
 const MONTHS_ORDER = [
@@ -566,7 +566,8 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
           complemento: manualForm.complemento || "",
           valor: parcValue,
           tipoRecorrencia: "PARCELADO",
-          qtdParcelas: qtd,
+          parcela: i + 1,
+          totalParcelas: qtd,
           meses: [],
           status: "Pendente",
           categoria: receitasCategorias.find(c => c.id === manualForm.categoriaId)?.nome || "—"
@@ -1223,6 +1224,8 @@ const DespesasPage = ({
           complemento: manualForm.complemento || "",
           valor: parcValue,
           tipoRecorrencia: "PARCELADO",
+          parcela: i + 1,
+          totalParcelas: qtd,
           qtdParcelas: qtd,
           meses: [],
           status: "Pendente",

@@ -32,6 +32,10 @@ build
 .env.local
 .env.*.local
 
+# Docs dev
+plans
+data
+
 # OS files
 Thumbs.db
 Desktop.ini

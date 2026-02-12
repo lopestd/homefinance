@@ -46,6 +46,43 @@ const ensureOrcamentoMesPertence = (store, id_orcamento, id_orcamento_mes) => {
   return orcamentoMes;
 };
 
+const getMesesOrdenados = (store, id_orcamento) =>
+  store.orcamentoMeses
+    .filter((m) => m.id_orcamento === id_orcamento)
+    .slice()
+    .sort((a, b) => a.mes - b.mes);
+
+const criarReceitas = (store, base, meses) => {
+  const created = [];
+  const isParcelado = base.tipo_recorrencia === "PARCELADO";
+  const qtd = meses.length;
+  const valorParcela = isParcelado ? parseFloat((base.valor / qtd).toFixed(2)) : base.valor;
+
+  meses.forEach((mesData, index) => {
+    const id_receita = allocateId(store, "receita");
+    const descricao = isParcelado 
+      ? `${base.descricao} (${index + 1}/${qtd})` 
+      : base.descricao;
+
+    store.receitas.push({
+      id_receita,
+      id_orcamento: base.id_orcamento,
+      id_orcamento_mes: mesData.id_orcamento_mes,
+      id_categoria: base.id_categoria,
+      id_tipo_receita: null,
+      descricao: descricao,
+      complemento: base.complemento || null,
+      valor: valorParcela,
+      recebida: Boolean(base.recebida),
+      tipo_recorrencia: base.tipo_recorrencia,
+      qtd_parcelas: isParcelado ? qtd : null,
+      parcela_atual: isParcelado ? index + 1 : null
+    });
+    created.push(id_receita);
+  });
+  return created;
+};
+
 const criarReceitaManual = async ({
   id_orcamento,
   id_orcamento_mes,
@@ -53,30 +90,47 @@ const criarReceitaManual = async ({
   descricao,
   complemento,
   valor,
-  recebida
+  recebida,
+  tipo_recorrencia,
+  qtd_parcelas
 }) => {
   assert(descricao, "Descrição obrigatória");
   assert(isPositiveNumber(valor), "Valor > 0");
   const store = await loadStore();
   const orcamento = getOrcamentoById(store, id_orcamento);
   assert(orcamento, "Orçamento inexistente");
-  ensureOrcamentoMesPertence(store, id_orcamento, id_orcamento_mes);
   const categoria = getCategoriaById(store, id_categoria);
   ensureCategoriaReceitaAtiva(categoria);
-  const id_receita = allocateId(store, "receita");
-  store.receitas.push({
-    id_receita,
+
+  const orcamentoMes = ensureOrcamentoMesPertence(store, id_orcamento, id_orcamento_mes);
+  let meses = [orcamentoMes];
+
+  if (tipo_recorrencia === "FIXO") {
+    meses = getMesesOrdenados(store, id_orcamento);
+  }
+  if (tipo_recorrencia === "PARCELADO") {
+    assert(Number.isInteger(qtd_parcelas) && qtd_parcelas > 0, "Parcelas inválidas");
+    const ordenados = getMesesOrdenados(store, id_orcamento);
+    const startIndex = ordenados.findIndex((m) => m.id_orcamento_mes === id_orcamento_mes);
+    assert(startIndex >= 0, "Mês não pertence ao orçamento");
+    const slice = ordenados.slice(startIndex, startIndex + qtd_parcelas);
+    assert(slice.length === qtd_parcelas, "Parcelas ultrapassam o período");
+    meses = slice;
+  }
+
+  const ids = criarReceitas(store, {
     id_orcamento,
-    id_orcamento_mes,
     id_categoria,
-    id_tipo_receita: null,
     descricao,
-    complemento: complemento || null,
+    complemento,
     valor,
-    recebida: Boolean(recebida)
-  });
+    recebida,
+    tipo_recorrencia,
+    qtd_parcelas
+  }, meses);
+  
   await saveStore(store);
-  return { id_receita };
+  return { id_receitas: ids };
 };
 
 const criarReceitaRecorrente = async ({

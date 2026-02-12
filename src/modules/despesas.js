@@ -44,20 +44,29 @@ const getMesesOrdenados = (store, id_orcamento) =>
 
 const criarDespesas = (store, base, meses) => {
   const created = [];
-  meses.forEach((mesData) => {
+  const isParcelado = base.tipo_recorrencia === "PARCELADO";
+  const qtd = meses.length;
+  const valorParcela = isParcelado ? parseFloat((base.valor / qtd).toFixed(2)) : base.valor;
+
+  meses.forEach((mesData, index) => {
     const id_despesa = allocateId(store, "despesa");
+    const descricao = isParcelado 
+      ? `${base.descricao} (${index + 1}/${qtd})` 
+      : base.descricao;
+
     store.despesas.push({
       id_despesa,
       id_orcamento: base.id_orcamento,
       id_orcamento_mes: mesData.id_orcamento_mes,
       id_categoria: base.id_categoria,
       id_gasto_predefinido: base.id_gasto_predefinido || null,
-      descricao: base.descricao,
+      descricao: descricao,
       complemento: base.complemento || null,
-      valor: base.valor,
+      valor: valorParcela,
       paga: false,
       tipo_recorrencia: base.tipo_recorrencia,
-      qtd_parcelas: base.qtd_parcelas || null
+      qtd_parcelas: isParcelado ? qtd : null,
+      parcela_atual: isParcelado ? index + 1 : null
     });
     created.push(id_despesa);
   });
