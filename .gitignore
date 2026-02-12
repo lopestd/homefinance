@@ -22,7 +22,6 @@ build
 .idea
 .DS_Store
 *.suo
-*.ntvs*
 *.njsproj
 *.sln
 *.sw?
@@ -34,7 +33,6 @@ build
 
 # Docs dev
 plans
-data
 
 # OS files
 Thumbs.db
