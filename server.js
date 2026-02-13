@@ -5,6 +5,7 @@ const rateLimit = require("express-rate-limit");
 const jwt = require("jsonwebtoken");
 const argon2 = require("argon2");
 const crypto = require("crypto");
+const path = require("path");
 const { pool } = require("./src/storage/db");
 
 const app = express();
@@ -736,6 +737,15 @@ app.put("/api/config", authenticate, async (req, res) => {
     console.error("PUT /api/config failed", error);
     res.status(500).json({ error: "Failed to save configuration", detalhe: error?.message || "Erro interno" });
   }
+});
+
+const frontendDistPath = path.join(__dirname, "frontend", "dist");
+app.use(express.static(frontendDistPath));
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    return next();
+  }
+  res.sendFile(path.join(frontendDistPath, "index.html"));
 });
 
 app.listen(PORT, () => {

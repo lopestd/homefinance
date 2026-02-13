@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  homefinance:
+    image: brdocker2020/homefinance:latest
+    container_name: homefinance
+    environment:
+      APP_DOMAIN: app.agendanodia.com.br
+      NODE_ENV: production
+      ENVIRONMENT: production
+      LOG_LEVEL: info
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      JWT_SECRET: ${JWT_SECRET}
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homecontas.rule=Host(`homecontas.agendanodia.com.br`)"
+      - "traefik.http.routers.homecontas.entrypoints=websecure"
+      - "traefik.http.routers.homecontas.tls.certresolver=leresolver"
+      - "traefik.http.services.homecontas.loadbalancer.server.port=3000"
+      - "traefik.http.routers.homecontas.service=homecontas"
+    networks:
+      - agendanodia_finance
+
+networks:
+  agendanodia_finance:
+    external: true
