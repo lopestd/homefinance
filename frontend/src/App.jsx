@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import "./App.css";
 
@@ -357,49 +357,49 @@ const DashboardPage = ({ receitas, despesas, orcamentos }) => {
 
       {/* Bloco 1: Resumo Mensal */}
       <section className="panel">
-        <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '15px' }}>
+        <h3 className="panel-title">
           Resumo financeiro do mês de <span className="badge-month">{effectiveMes}</span>
         </h3>
         <div className="dashboard-grid">
-          <div className="summary-card" style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <h4 style={{ marginTop: 0, marginBottom: '8px', color: '#64748b' }}>Receitas</h4>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <span style={{ color: '#64748b' }}>Previsto:</span>
-              <strong>{formatCurrency(resumoMensal.recLancadas)}</strong>
+          <div className="summary-card">
+            <h4 className="summary-card-title">Receitas</h4>
+            <div className="summary-card-row">
+              <span className="summary-card-label">Previsto:</span>
+              <strong className="summary-card-value">{formatCurrency(resumoMensal.recLancadas)}</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#64748b' }}>Recebido:</span>
-              <strong style={{ color: "#059669" }}>{formatCurrency(resumoMensal.recRecebidas)}</strong>
-            </div>
-          </div>
-
-          <div className="summary-card" style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <h4 style={{ marginTop: 0, marginBottom: '8px', color: '#64748b' }}>Despesas</h4>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <span style={{ color: '#64748b' }}>Previsto:</span>
-              <strong>{formatCurrency(resumoMensal.despLancadas)}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#64748b' }}>Pago:</span>
-              <strong style={{ color: "#dc2626" }}>{formatCurrency(resumoMensal.despPagas)}</strong>
+            <div className="summary-card-row">
+              <span className="summary-card-label">Recebido:</span>
+              <strong className="summary-card-value summary-card-value--positive">{formatCurrency(resumoMensal.recRecebidas)}</strong>
             </div>
           </div>
 
-          <div className="summary-card saldo-mes-card" style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <h4 style={{ marginTop: 0, marginBottom: '8px', color: '#64748b' }}>Saldo do Mês</h4>
-            <div className="saldo-row">
-              <span style={{ color: '#64748b' }}>Saldo do Mês (Previsto):</span>
-              <strong>{formatCurrency(resumoMensal.recLancadas - resumoMensal.despLancadas)}</strong>
+          <div className="summary-card">
+            <h4 className="summary-card-title">Despesas</h4>
+            <div className="summary-card-row">
+              <span className="summary-card-label">Previsto:</span>
+              <strong className="summary-card-value">{formatCurrency(resumoMensal.despLancadas)}</strong>
             </div>
-            <div className="saldo-row">
-              <span style={{ color: '#64748b' }}>Saldo em Conta (Mês):</span>
-              <strong style={{ color: resumoMensal.saldo >= 0 ? "#059669" : "#dc2626" }}>
+            <div className="summary-card-row">
+              <span className="summary-card-label">Pago:</span>
+              <strong className="summary-card-value summary-card-value--negative">{formatCurrency(resumoMensal.despPagas)}</strong>
+            </div>
+          </div>
+
+          <div className="summary-card saldo-mes-card">
+            <h4 className="summary-card-title">Saldo do Mês</h4>
+            <div className="saldo-row summary-card-row">
+              <span className="summary-card-label">Saldo do Mês (Previsto):</span>
+              <strong className="summary-card-value">{formatCurrency(resumoMensal.recLancadas - resumoMensal.despLancadas)}</strong>
+            </div>
+            <div className="saldo-row summary-card-row">
+              <span className="summary-card-label">Saldo em Conta (Mês):</span>
+              <strong className={`summary-card-value ${resumoMensal.saldo >= 0 ? "summary-card-value--positive" : "summary-card-value--negative"}`}>
                 {formatCurrency(resumoMensal.saldo)}
               </strong>
             </div>
-            <div className="saldo-row">
-              <span style={{ color: '#64748b' }}>Saldo Acumulado (Mês):</span>
-              <strong style={{ color: (resumoMensal.recLancadas - resumoMensal.despLancadas) >= 0 ? "#2563eb" : "#dc2626" }}>
+            <div className="saldo-row summary-card-row">
+              <span className="summary-card-label">Saldo Acumulado (Mês):</span>
+              <strong className={`summary-card-value ${resumoMensal.recLancadas - resumoMensal.despLancadas >= 0 ? "summary-card-value--positive" : "summary-card-value--negative"}`}>
                 {formatCurrency(resumoMensal.recLancadas - resumoMensal.despLancadas)}
               </strong>
             </div>
@@ -409,43 +409,43 @@ const DashboardPage = ({ receitas, despesas, orcamentos }) => {
 
       {/* Bloco 2: Resumo Anual */}
       <section className="panel">
-        <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '15px' }}>
+        <h3 className="panel-title">
           Resumo financeiro do orçamento anual <span className="badge-year">{currentOrcamento?.label}</span>
         </h3>
         <div className="dashboard-grid">
-          <div className="summary-card" style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <h4 style={{ marginTop: 0, marginBottom: '8px', color: '#64748b' }}>Receitas do Ano</h4>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <span style={{ color: '#64748b' }}>Previsto:</span>
-              <strong>{formatCurrency(resumoAnual.recPrevisto)}</strong>
+          <div className="summary-card">
+            <h4 className="summary-card-title">Receitas do Ano</h4>
+            <div className="summary-card-row">
+              <span className="summary-card-label">Previsto:</span>
+              <strong className="summary-card-value">{formatCurrency(resumoAnual.recPrevisto)}</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#64748b' }}>Recebido:</span>
-              <strong style={{ color: "#059669" }}>{formatCurrency(resumoAnual.recRecebido)}</strong>
-            </div>
-          </div>
-
-          <div className="summary-card" style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <h4 style={{ marginTop: 0, marginBottom: '8px', color: '#64748b' }}>Despesas do Ano</h4>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <span style={{ color: '#64748b' }}>Previsto:</span>
-              <strong>{formatCurrency(resumoAnual.despPrevisto)}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#64748b' }}>Pago:</span>
-              <strong style={{ color: "#dc2626" }}>{formatCurrency(resumoAnual.despPago)}</strong>
+            <div className="summary-card-row">
+              <span className="summary-card-label">Recebido:</span>
+              <strong className="summary-card-value summary-card-value--positive">{formatCurrency(resumoAnual.recRecebido)}</strong>
             </div>
           </div>
 
-          <div className="summary-card" style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <h4 style={{ marginTop: 0, marginBottom: '8px', color: '#64748b' }}>Saldo Anual</h4>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <span style={{ color: '#64748b' }}>Saldo Anual (Previsão):</span>
-              <strong>{formatCurrency(resumoAnual.saldoPrevisto)}</strong>
+          <div className="summary-card">
+            <h4 className="summary-card-title">Despesas do Ano</h4>
+            <div className="summary-card-row">
+              <span className="summary-card-label">Previsto:</span>
+              <strong className="summary-card-value">{formatCurrency(resumoAnual.despPrevisto)}</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#64748b' }}>Saldo Acumulado (Previsão):</span>
-              <strong style={{ color: resumoAnual.saldoRealizado >= 0 ? "#059669" : "#dc2626" }}>
+            <div className="summary-card-row">
+              <span className="summary-card-label">Pago:</span>
+              <strong className="summary-card-value summary-card-value--negative">{formatCurrency(resumoAnual.despPago)}</strong>
+            </div>
+          </div>
+
+          <div className="summary-card">
+            <h4 className="summary-card-title">Saldo Anual</h4>
+            <div className="summary-card-row">
+              <span className="summary-card-label">Saldo Anual (Previsão):</span>
+              <strong className="summary-card-value">{formatCurrency(resumoAnual.saldoPrevisto)}</strong>
+            </div>
+            <div className="summary-card-row">
+              <span className="summary-card-label">Saldo Acumulado (Previsão):</span>
+              <strong className={`summary-card-value ${resumoAnual.saldoRealizado >= 0 ? "summary-card-value--positive" : "summary-card-value--negative"}`}>
                 {formatCurrency(resumoAnual.saldoRealizado)}
               </strong>
             </div>
@@ -2283,8 +2283,8 @@ const CartaoPage = ({
         </form>
        </section>
 
-       <section className="panel">
-         <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '15px' }}>
+      <section className="panel">
+         <h3 className="panel-title">
             Lançamentos de <span className="badge-month">{selectedMes}</span>
          </h3>
          
@@ -2332,9 +2332,9 @@ const CartaoPage = ({
          </div>
 
          <div className="dashboard-grid">
-            <div className="summary-card" style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <h4 style={{ marginTop: '0', marginBottom: '0', color: '#64748b', fontSize: '0.9em' }}>Limite do Cartão</h4>
+            <div className="summary-card">
+               <div className="summary-card-header">
+                  <h4 className="summary-card-title">Limite do Cartão</h4>
                   <button 
                      type="button"
                      className="icon-button info"
@@ -2347,52 +2347,35 @@ const CartaoPage = ({
                      <IconEdit />
                    </button>
                </div>
-               <strong style={{ fontSize: '1.4em', color: '#0f172a' }}>{formatCurrency(valorAlocado)}</strong>
+               <strong className="summary-card-value">{formatCurrency(valorAlocado)}</strong>
             </div>
             
-            <div className="summary-card" style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-               <h4 style={{ marginTop: '0', marginBottom: '4px', color: '#64748b', fontSize: '0.9em' }}>Fatura Atual</h4>
-               <strong style={{ fontSize: '1.4em', color: '#dc2626' }}>{formatCurrency(totalMes)}</strong>
-              <div style={{ fontSize: '0.8em', fontWeight: '500', color: '#64748b', marginTop: '1px' }}>
+            <div className="summary-card">
+               <h4 className="summary-card-title">Fatura Atual</h4>
+               <strong className="summary-card-value summary-card-value--negative">{formatCurrency(totalMes)}</strong>
+               <div className="summary-card-subtext">
                   Fixo: {formatCurrency(fixoParcelado)} | Var: {formatCurrency(gastosMes)}
                </div>
             </div>
 
-            <div className="summary-card" style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-               <h4 style={{ marginTop: '0', marginBottom: '4px', color: '#64748b', fontSize: '0.9em' }}>Disponível</h4>
-               <strong style={{ fontSize: '1.4em', color: saldoMes >= 0 ? '#16a34a' : '#dc2626' }}>{formatCurrency(saldoMes)}</strong>
+            <div className="summary-card">
+               <h4 className="summary-card-title">Disponível</h4>
+               <strong className={`summary-card-value ${saldoMes >= 0 ? "summary-card-value--positive" : "summary-card-value--negative"}`}>{formatCurrency(saldoMes)}</strong>
             </div>
 
-            <div className="summary-card" style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
-               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                 <h4 style={{ margin: 0, color: '#64748b', fontSize: '0.9em' }}>Status</h4>
-                 <span style={{ 
-                    padding: '2px 8px', 
-                    borderRadius: '12px', 
-                    fontSize: '0.75em', 
-                    fontWeight: 'bold',
-                    background: isFaturaFechada ? '#fee2e2' : '#dcfce7',
-                    color: isFaturaFechada ? '#991b1b' : '#166534'
-                 }}>
-                   {isFaturaFechada ? 'FECHADA' : 'ABERTA'}
+            <div className="summary-card">
+               <div className="summary-card-header">
+                 <h4 className="summary-card-title">Status</h4>
+                 <span className={`status-pill ${isFaturaFechada ? "status-pill--closed" : "status-pill--open"}`}>
+                   {isFaturaFechada ? "FECHADA" : "ABERTA"}
                  </span>
                </div>
                <button 
                  type="button" 
                  onClick={toggleFaturaStatus}
-                 style={{ 
-                    marginTop: 'auto', 
-                    width: '100%', 
-                    padding: '6px', 
-                    fontSize: '0.85em',
-                    background: isFaturaFechada ? '#fff' : '#0f172a',
-                    color: isFaturaFechada ? '#0f172a' : '#fff',
-                    border: '1px solid #0f172a',
-                    cursor: 'pointer',
-                    borderRadius: '4px'
-                 }}
+                 className={`status-action ${isFaturaFechada ? "status-action--closed" : "status-action--open"}`}
                >
-                 {isFaturaFechada ? 'Reabrir Fatura' : 'Fechar Fatura'}
+                 {isFaturaFechada ? "Reabrir Fatura" : "Fechar Fatura"}
                </button>
             </div>
          </div>
@@ -2400,8 +2383,8 @@ const CartaoPage = ({
 
       {/* Seção de Resumo Mensal - NOVA */}
       <section className="panel monthly-summary-section">
-        <h3 style={{ borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '15px' }}>
-          Resumo Mensal das Faturas - Orçamento <span className="badge-year">{effectiveOrcamento?.label || 'Orçamento'}</span>
+        <h3 className="panel-title">
+          Resumo Mensal das Faturas - Orçamento <span className="badge-year">{effectiveOrcamento?.label || "Orçamento"}</span>
         </h3>
         
         {allMonthsSummary.length === 0 ? (
@@ -4139,6 +4122,14 @@ function App() {
   const [cartoes, setCartoes] = useState([]);
   const [lancamentosCartao, setLancamentosCartao] = useState([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastOpen, setToastOpen] = useState(false);
+  const contentRef = useRef(null);
+  const pullStartY = useRef(null);
+  const pullActive = useRef(false);
 
   const clearData = useCallback(() => {
     setCategorias([]);
@@ -4150,6 +4141,18 @@ function App() {
     setCartoes([]);
     setLancamentosCartao([]);
     setIsDataLoaded(false);
+  }, []);
+
+  const applyConfigData = useCallback((data) => {
+    if (!data) return;
+    setCategorias(data.categorias);
+    setGastosPredefinidos(data.gastosPredefinidos);
+    setTiposReceita(data.tiposReceita);
+    setReceitas(data.receitas);
+    setDespesas(data.despesas);
+    setOrcamentos(data.orcamentos);
+    setCartoes(data.cartoes);
+    setLancamentosCartao(data.lancamentosCartao);
   }, []);
 
   useEffect(() => {
@@ -4219,6 +4222,9 @@ function App() {
     { key: "relatorios", label: "Relatórios" },
     { key: "configuracoes", label: "Configurações" }
   ];
+  const bottomNavPages = pages.filter((page) =>
+    ["dashboard", "receitas", "despesas", "cartao"].includes(page.key)
+  );
 
   useEffect(() => {
     let active = true;
@@ -4252,16 +4258,7 @@ function App() {
     const loadData = async () => {
       try {
         const data = await loadConfigFromApi();
-        if (data) {
-          setCategorias(data.categorias);
-          setGastosPredefinidos(data.gastosPredefinidos);
-          setTiposReceita(data.tiposReceita);
-          setReceitas(data.receitas);
-          setDespesas(data.despesas);
-          setOrcamentos(data.orcamentos);
-          setCartoes(data.cartoes);
-          setLancamentosCartao(data.lancamentosCartao);
-        }
+        applyConfigData(data);
         setIsDataLoaded(true);
       } catch (error) {
         if (error?.message === "UNAUTHORIZED") {
@@ -4272,7 +4269,7 @@ function App() {
       }
     };
     loadData();
-  }, [authUser, authToken, handleLogout]);
+  }, [authUser, authToken, handleLogout, applyConfigData]);
 
   useEffect(() => {
     const onHashChange = () => setActiveKey(getHashPage());
@@ -4328,6 +4325,16 @@ function App() {
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 900px)");
     const handleChange = (event) => {
+      setIsMobile(event.matches);
+    };
+    handleChange(mediaQuery);
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 900px)");
+    const handleChange = (event) => {
       if (!event.matches) {
         setIsMobileMenuOpen(false);
       }
@@ -4337,8 +4344,69 @@ function App() {
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
+  useEffect(() => {
+    if (!toastOpen) return;
+    const timeout = setTimeout(() => {
+      setToastOpen(false);
+    }, 2200);
+    return () => clearTimeout(timeout);
+  }, [toastOpen]);
+
   const handleNavClick = () => {
     setIsMobileMenuOpen(false);
+  };
+
+  const refreshData = useCallback(async () => {
+    if (!authUser || !authToken || isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      const data = await loadConfigFromApi();
+      applyConfigData(data);
+      setIsDataLoaded(true);
+      setToastMessage("Dados atualizados");
+      setToastOpen(true);
+    } catch (error) {
+      if (error?.message === "UNAUTHORIZED") {
+        handleLogout();
+        return;
+      }
+      setToastMessage("Falha ao atualizar dados.");
+      setToastOpen(true);
+    } finally {
+      setIsRefreshing(false);
+      setPullDistance(0);
+    }
+  }, [authUser, authToken, isRefreshing, applyConfigData, handleLogout]);
+
+  const handleTouchStart = (event) => {
+    if (!isMobile || isRefreshing) return;
+    if (!contentRef.current) return;
+    if (contentRef.current.scrollTop > 0) return;
+    pullStartY.current = event.touches[0]?.clientY || 0;
+    pullActive.current = true;
+  };
+
+  const handleTouchMove = (event) => {
+    if (!pullActive.current) return;
+    const currentY = event.touches[0]?.clientY || 0;
+    const distance = currentY - (pullStartY.current || 0);
+    if (distance <= 0) {
+      setPullDistance(0);
+      return;
+    }
+    setPullDistance(Math.min(distance, 90));
+  };
+
+  const handleTouchEnd = () => {
+    if (!pullActive.current) return;
+    const shouldRefresh = pullDistance >= 60;
+    pullActive.current = false;
+    pullStartY.current = null;
+    if (shouldRefresh) {
+      refreshData();
+    } else {
+      setPullDistance(0);
+    }
   };
 
   if (!authReady) {
@@ -4367,6 +4435,14 @@ function App() {
   const userName = authUser?.nome || "Usuário";
   const userEmail = authUser?.email || "";
   const userInitial = (userName || userEmail || "U").trim().charAt(0).toUpperCase();
+  const pullLabel = isRefreshing
+    ? "Atualizando..."
+    : pullDistance >= 60
+      ? "Solte para atualizar"
+      : "Puxe para atualizar";
+  const showPull = isMobile && (pullDistance > 0 || isRefreshing);
+  const showSkeleton = isMobile && (isRefreshing || !isDataLoaded);
+  const pullOffset = Math.min(pullDistance, 80);
 
   return (
     <div className={`app ${isMobileMenuOpen ? "mobile-menu-open" : ""}`}>
@@ -4415,7 +4491,41 @@ function App() {
             <h2>{activePage.label}</h2>
           </div>
         </header>
-        <main className="content">
+        <main
+          className="content"
+          ref={contentRef}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
+        >
+          {showPull && (
+            <div className="pull-indicator visible" style={{ transform: `translateY(${pullOffset}px)` }}>
+              <div className="pull-indicator__content">
+                {isRefreshing && <div className="pull-indicator__spinner" />}
+                <span>{pullLabel}</span>
+              </div>
+            </div>
+          )}
+          {showSkeleton && (
+            <div className="mobile-skeleton">
+              <div className="skeleton-card">
+                <div className="skeleton-line" />
+                <div className="skeleton-line short" />
+                <div className="skeleton-line" />
+              </div>
+              <div className="skeleton-card">
+                <div className="skeleton-line" />
+                <div className="skeleton-line short" />
+                <div className="skeleton-line" />
+              </div>
+              <div className="skeleton-card">
+                <div className="skeleton-line" />
+                <div className="skeleton-line short" />
+                <div className="skeleton-line" />
+              </div>
+            </div>
+          )}
           {activeKey === "dashboard" && (
             <DashboardPage 
               receitas={receitas} 
@@ -4484,6 +4594,19 @@ function App() {
             />
           )}
         </main>
+        {isMobile && toastOpen && <div className="mobile-toast">{toastMessage}</div>}
+        <nav className="bottom-nav" aria-label="Navegação rápida">
+          {bottomNavPages.map((page) => (
+            <a
+              key={page.key}
+              href={`#${page.key}`}
+              className={`bottom-nav-item ${page.key === activePage.key ? "active" : ""}`}
+              onClick={handleNavClick}
+            >
+              {page.label}
+            </a>
+          ))}
+        </nav>
         <AlertDialog
           open={saveAlertOpen}
           title="Não foi possível salvar"
