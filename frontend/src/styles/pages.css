@@ -1,0 +1,388 @@
+.page-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.summary {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.summary-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 200px;
+}
+
+.summary-card-title {
+  margin: 0 0 8px;
+  color: #64748b;
+  font-size: 0.95em;
+}
+
+.summary-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.summary-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.summary-card-row:last-child {
+  margin-bottom: 0;
+}
+
+.summary-card-label {
+  color: #64748b;
+}
+
+.summary-card-value {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.summary-card-value--positive {
+  color: #059669;
+}
+
+.summary-card-value--negative {
+  color: #dc2626;
+}
+
+.summary-card-subtext {
+  font-size: 0.8em;
+  font-weight: 500;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+.saldo-mes-card {
+  padding: 8px 10px;
+}
+
+.saldo-mes-card .saldo-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1px;
+  line-height: 1.1;
+}
+
+.saldo-mes-card .saldo-row:last-child {
+  margin-bottom: 0;
+}
+
+.summary-card .summary-title {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.summary-card .summary-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.badge-month,
+.badge-year {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.9em;
+}
+
+.badge-month {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.badge-year {
+  background: #16a34a;
+  color: #ffffff;
+}
+
+.monthly-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.monthly-summary-card {
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 14px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.monthly-summary-card.current-month {
+  border-color: #2563eb;
+  border-width: 2px;
+  background: #eff6ff;
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.15);
+}
+
+.monthly-summary-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.monthly-summary-card.current-month .monthly-summary-card__header {
+  border-bottom-color: #bfdbfe;
+}
+
+.monthly-summary-card__title {
+  margin: 0;
+  font-size: 0.95em;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.monthly-summary-card__badges {
+  display: flex;
+  gap: 4px;
+}
+
+.monthly-summary-card__badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7em;
+  font-weight: 600;
+}
+
+.monthly-summary-card__badge.current {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.monthly-summary-card__badge.closed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.monthly-summary-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.monthly-summary-card__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85em;
+}
+
+.monthly-summary-card__row .label {
+  color: #64748b;
+}
+
+.monthly-summary-card__row .value {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.monthly-summary-card__row .value.positive {
+  color: #16a34a;
+}
+
+.monthly-summary-card__row .value.negative {
+  color: #dc2626;
+}
+
+.monthly-summary-card__row.total {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 2px solid #cbd5e1;
+}
+
+.monthly-summary-card.current-month .monthly-summary-card__row.total {
+  border-top-color: #93c5fd;
+}
+
+.monthly-summary-card__row.total .value {
+  font-size: 1.15em;
+  color: #dc2626;
+}
+
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  background: radial-gradient(circle at top left, #1e293b 0%, #0f172a 45%, #0b1020 100%);
+  color: #e2e8f0;
+}
+
+.auth-screen--loading {
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-card {
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 24px;
+  padding: 36px;
+  width: min(480px, 92%);
+  align-self: center;
+  justify-self: center;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.35);
+}
+
+.auth-card--loading {
+  width: min(360px, 90%);
+  text-align: center;
+}
+
+.auth-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.auth-badge {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.auth-header h1 {
+  font-size: 28px;
+  margin: 0;
+}
+
+.auth-header p {
+  margin: 0;
+  color: #64748b;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.auth-field input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.auth-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0 8px;
+}
+
+.auth-input input {
+  border: none;
+  background: transparent;
+  padding: 10px 4px;
+  flex: 1;
+}
+
+.auth-input input:focus {
+  box-shadow: none;
+}
+
+.auth-toggle {
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+.auth-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.auth-remember input {
+  width: 16px;
+  height: 16px;
+}
+
+.auth-error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.auth-submit {
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 15px;
+}
+
+.auth-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #475569;
+}
+
+.auth-spinner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2563eb;
+  animation: spin 0.8s linear infinite;
+}

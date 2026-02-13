@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import api from "./services/api";
 import { loadConfigFromApi, persistConfigToApi } from "./services/configApi";
-import {
-  getStoredToken,
-  saveStoredToken,
-  clearStoredToken
-} from "./utils/appUtils";
 import { AlertDialog } from "./components/Dialogs";
+import useAuth from "./hooks/useAuth";
+import useCartao from "./hooks/useCartao";
+import useDespesas from "./hooks/useDespesas";
+import useReceitas from "./hooks/useReceitas";
 import { CartaoPage } from "./pages/CartaoPage";
 import { ConfiguracoesPage } from "./pages/ConfiguracoesPage";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -14,7 +12,7 @@ import { DespesasPage } from "./pages/DespesasPage";
 import { LoginScreen } from "./pages/LoginScreen";
 import { ReceitasPage } from "./pages/ReceitasPage";
 import { RelatoriosPage } from "./pages/RelatoriosPage";
-import "./App.css";
+import "./styles/index.css";
 
 const getHashPage = () => {
   const hash = window.location.hash.replace("#", "");
@@ -22,22 +20,16 @@ const getHashPage = () => {
 };
 
 function App() {
-  const [authToken, setAuthToken] = useState(getStoredToken());
-  const [authUser, setAuthUser] = useState(null);
-  const [authReady, setAuthReady] = useState(false);
-  const [authLoading, setAuthLoading] = useState(false);
-  const [authError, setAuthError] = useState("");
   const [saveAlertOpen, setSaveAlertOpen] = useState(false);
   const [saveAlertMessage, setSaveAlertMessage] = useState("");
   const [activeKey, setActiveKey] = useState(getHashPage());
   const [categorias, setCategorias] = useState([]);
   const [gastosPredefinidos, setGastosPredefinidos] = useState([]);
   const [tiposReceita, setTiposReceita] = useState([]);
-  const [receitas, setReceitas] = useState([]);
-  const [despesas, setDespesas] = useState([]);
+  const { receitas, setReceitas } = useReceitas([]);
+  const { despesas, setDespesas } = useDespesas([]);
   const [orcamentos, setOrcamentos] = useState([]);
-  const [cartoes, setCartoes] = useState([]);
-  const [lancamentosCartao, setLancamentosCartao] = useState([]);
+  const { cartoes, setCartoes, lancamentosCartao, setLancamentosCartao } = useCartao([], []);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -51,7 +43,27 @@ function App() {
     setCartoes([]);
     setLancamentosCartao([]);
     setIsDataLoaded(false);
-  }, []);
+  }, [
+    setCategorias,
+    setGastosPredefinidos,
+    setTiposReceita,
+    setReceitas,
+    setDespesas,
+    setOrcamentos,
+    setCartoes,
+    setLancamentosCartao,
+    setIsDataLoaded
+  ]);
+
+  const {
+    authToken,
+    authUser,
+    authReady,
+    authLoading,
+    authError,
+    handleLogin,
+    handleLogout
+  } = useAuth({ onLogoutCleanup: clearData });
 
   const applyConfigData = useCallback((data) => {
     if (!data) return;
@@ -63,66 +75,16 @@ function App() {
     setOrcamentos(data.orcamentos);
     setCartoes(data.cartoes);
     setLancamentosCartao(data.lancamentosCartao);
-  }, []);
-
-  useEffect(() => {
-    if (authToken) {
-      api.defaults.headers.common.Authorization = `Bearer ${authToken}`;
-    } else {
-      delete api.defaults.headers.common.Authorization;
-    }
-  }, [authToken]);
-
-  const handleLogout = useCallback(async () => {
-    try {
-      if (authToken) {
-        await api.post("/auth/logout");
-      }
-    } catch {
-      null;
-    }
-    clearStoredToken();
-    setAuthToken("");
-    setAuthUser(null);
-    setAuthError("");
-    clearData();
-    setAuthReady(true);
-  }, [authToken, clearData]);
-
-  const handleLogin = useCallback(async ({ email, senha, lembrar }) => {
-    setAuthLoading(true);
-    setAuthError("");
-    try {
-      const response = await api.post("/auth/login", {
-        email,
-        senha,
-        lembrar: Boolean(lembrar)
-      });
-      const data = response.data;
-      if (data?.token) {
-        saveStoredToken(data.token);
-        setAuthToken(data.token);
-        setAuthUser(data.usuario || null);
-        setAuthReady(true);
-        return { ok: true };
-      }
-      setAuthError("Não foi possível autenticar.");
-      return { erro: "Não foi possível autenticar." };
-    } catch (error) {
-      const status = error?.response?.status;
-      const serverMessage = error?.response?.data?.mensagem;
-      const message =
-        status === 423
-          ? serverMessage || "Conta temporariamente bloqueada."
-          : status === 401
-            ? "Email ou senha incorretos."
-            : "Falha ao tentar entrar.";
-      setAuthError(message);
-      return { erro: message };
-    } finally {
-      setAuthLoading(false);
-    }
-  }, []);
+  }, [
+    setCategorias,
+    setGastosPredefinidos,
+    setTiposReceita,
+    setReceitas,
+    setDespesas,
+    setOrcamentos,
+    setCartoes,
+    setLancamentosCartao
+  ]);
 
   const pages = [
     { key: "dashboard", label: "Dashboard" },
@@ -135,33 +97,6 @@ function App() {
   const bottomNavPages = pages.filter((page) =>
     ["dashboard", "receitas", "despesas", "cartao"].includes(page.key)
   );
-
-  useEffect(() => {
-    let active = true;
-    const verifyAuth = async () => {
-      setAuthReady(false);
-      if (!authToken) {
-        setAuthReady(true);
-        return;
-      }
-      try {
-        const response = await api.get("/auth/verificar");
-        if (!active) return;
-        setAuthUser(response.data?.usuario || null);
-        setAuthReady(true);
-      } catch {
-        if (!active) return;
-        clearStoredToken();
-        setAuthToken("");
-        setAuthUser(null);
-        setAuthReady(true);
-      }
-    };
-    verifyAuth();
-    return () => {
-      active = false;
-    };
-  }, [authToken]);
 
   useEffect(() => {
     if (!authUser || !authToken) return;

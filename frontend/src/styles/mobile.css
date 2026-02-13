@@ -1,0 +1,536 @@
+@media (max-width: 480px) {
+  .modal--compact {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  html,
+  body {
+    overflow-x: hidden !important;
+  }
+
+  .summary-card[style] {
+    padding: 8px 8px !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .dashboard-grid > div[style] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .dashboard-grid .summary-card[style] {
+    padding: 8px 8px !important;
+  }
+
+  .panel .dashboard-grid > div[style] {
+    padding: 6px 6px !important;
+  }
+
+  .app {
+    --sidebar-width: clamp(280px, 88vw, 360px);
+    --bottom-nav-height: 64px;
+  }
+
+  .sidebar {
+    transform: translateX(-100%) !important;
+    transition: transform 0.3s ease;
+    height: 100dvh;
+  }
+
+  .app.mobile-menu-open .sidebar {
+    transform: translateX(0) !important;
+  }
+
+  .main {
+    margin-left: 0 !important;
+    width: 100% !important;
+    height: 100dvh;
+    padding-top: calc(var(--page-header-height) + env(safe-area-inset-top));
+  }
+
+  .header {
+    left: 0 !important;
+    padding: 0 12px !important;
+    z-index: 40;
+    height: calc(var(--page-header-height) + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .header-left {
+    gap: 12px !important;
+  }
+
+  .header h2 {
+    font-size: clamp(15px, 3.8vw, 18px) !important;
+  }
+
+  .menu-toggle {
+    display: inline-flex !important;
+  }
+
+  .content {
+    padding: 12px 10px calc(12px + env(safe-area-inset-bottom) + var(--bottom-nav-height)) !important;
+    overflow-x: hidden !important;
+    overscroll-behavior-y: contain;
+  }
+
+  .panel {
+    padding: 12px 10px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+  }
+
+  .panel h2 {
+    font-size: clamp(16px, 4vw, 18px) !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  .panel h3 {
+    font-size: clamp(14px, 3.6vw, 16px) !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  .panel-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+
+  .panel-header h2 {
+    font-size: clamp(14px, 3.6vw, 16px) !important;
+    line-height: 1.4 !important;
+  }
+
+  .panel-header p {
+    font-size: clamp(12px, 3.2vw, 14px) !important;
+  }
+
+  .panel-header .actions {
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .panel-header .actions button {
+    flex: 1 !important;
+    min-width: 120px !important;
+    min-height: 44px !important;
+  }
+
+  .form-inline {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  .brand {
+    padding: 14px 12px !important;
+    gap: 4px !important;
+  }
+
+  .brand h1 {
+    font-size: 17px !important;
+  }
+
+  .brand span {
+    font-size: 12px !important;
+  }
+
+  .nav {
+    padding: 10px 8px !important;
+    gap: 6px !important;
+  }
+
+  .nav-item {
+    white-space: normal !important;
+    line-height: 1.4 !important;
+    padding: 10px 12px !important;
+    font-size: 15px !important;
+    min-height: 44px !important;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .summary {
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .summary-card {
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 12px 12px !important;
+    overflow: hidden !important;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.1);
+  }
+
+  .summary-card .summary-title {
+    font-size: 13px !important;
+    word-break: break-word !important;
+  }
+
+  .summary-card .summary-value {
+    font-size: 18px !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  button {
+    padding: 10px 14px !important;
+    font-size: 14px !important;
+    min-height: 44px !important;
+  }
+
+  .field {
+    font-size: 14px !important;
+  }
+
+  input,
+  select {
+    font-size: 15px !important;
+    padding: 10px 12px !important;
+    min-height: 44px !important;
+  }
+
+  .table.list-table-wrapper {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .list-table {
+    min-width: 600px !important;
+    table-layout: auto !important;
+  }
+
+  .list-table th,
+  .list-table td {
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+  }
+
+  .list-table__head th {
+    font-size: 13px !important;
+    padding: 10px 12px !important;
+  }
+
+  .list-table--config-periodos,
+  .list-table--config-cartoes,
+  .list-table--config-categorias,
+  .list-table--config-gastos,
+  .list-table--config-receitas {
+    min-width: 0 !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+  .list-table--config-periodos th,
+  .list-table--config-periodos td,
+  .list-table--config-cartoes th,
+  .list-table--config-cartoes td,
+  .list-table--config-categorias th,
+  .list-table--config-categorias td,
+  .list-table--config-gastos th,
+  .list-table--config-gastos td,
+  .list-table--config-receitas th,
+  .list-table--config-receitas td {
+    white-space: normal !important;
+    word-break: break-word !important;
+  }
+
+  .list-table--config-periodos .list-table__col--acoes,
+  .list-table--config-cartoes .list-table__col--acoes,
+  .list-table--config-categorias .list-table__col--acoes,
+  .list-table--config-gastos .list-table__col--acoes,
+  .list-table--config-receitas .list-table__col--acoes {
+    width: 96px !important;
+  }
+
+  .list-table--config-periodos .list-table__col--periodo {
+    width: 38% !important;
+  }
+
+  .list-table--config-periodos .list-table__col--meses {
+    width: auto !important;
+  }
+
+  .actions .icon-button {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .actions .icon-button svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .modal {
+    max-width: 95% !important;
+    max-height: 95vh !important;
+    border-radius: 18px !important;
+  }
+
+  .modal-header {
+    padding: 12px 16px !important;
+  }
+
+  .modal-header h3 {
+    font-size: 17px !important;
+  }
+
+  .modal-body {
+    padding: 10px !important;
+  }
+
+  .modal input,
+  .modal select {
+    padding: 10px 12px !important;
+    font-size: 15px !important;
+  }
+
+  .months-grid-mini {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6px !important;
+  }
+
+  .checkbox-card.small {
+    font-size: 13px !important;
+    min-height: 38px !important;
+    padding: 6px 10px !important;
+  }
+
+  .status-badge {
+    font-size: 12px !important;
+    padding: 3px 8px !important;
+  }
+
+  .saldo-mes-card .saldo-row {
+    font-size: 13px !important;
+  }
+
+  .bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--bottom-nav-height);
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: center;
+    padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
+    z-index: 45;
+  }
+
+  .bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    text-decoration: none;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 8px;
+    border-radius: 10px;
+    min-height: 44px;
+  }
+
+  .bottom-nav-item.active {
+    color: #2563eb;
+    background: #eff6ff;
+  }
+}
+
+@media (max-width: 600px) {
+  body {
+    font-size: clamp(15px, 4vw, 17px) !important;
+  }
+
+  h1 {
+    font-size: clamp(20px, 5vw, 22px) !important;
+  }
+
+  .header {
+    padding: 0 10px !important;
+  }
+
+  .header h2 {
+    font-size: clamp(14px, 4.2vw, 16px) !important;
+  }
+
+  .content {
+    padding: 12px 10px calc(12px + env(safe-area-inset-bottom) + var(--bottom-nav-height)) !important;
+  }
+
+  .panel {
+    padding: 12px 10px !important;
+  }
+
+  .panel h2 {
+    font-size: clamp(16px, 4.5vw, 18px) !important;
+  }
+
+  .panel h3 {
+    font-size: clamp(14px, 4vw, 16px) !important;
+  }
+
+  .panel-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .panel-header h2 {
+    font-size: clamp(14px, 4vw, 16px) !important;
+    line-height: 1.4 !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    max-width: 100% !important;
+  }
+
+  .panel-header p {
+    font-size: clamp(12px, 3.6vw, 14px) !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  .panel-header .actions {
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    box-sizing: border-box !important;
+  }
+
+  .panel-header .actions button {
+    flex: 1 !important;
+    min-width: 90px !important;
+    font-size: 13px !important;
+    padding: 8px 10px !important;
+    min-height: 44px !important;
+  }
+
+  input,
+  select {
+    font-size: 14px !important;
+    padding: 9px 11px !important;
+    min-height: 44px !important;
+  }
+
+  .summary-card {
+    padding: 12px 12px !important;
+  }
+
+  .summary-card .summary-title {
+    font-size: 12px !important;
+  }
+
+  .summary-card .summary-value {
+    font-size: 17px !important;
+  }
+
+  .list-table th,
+  .list-table td {
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+  }
+
+  .list-table__head th {
+    font-size: 13px !important;
+    padding: 10px 12px !important;
+  }
+
+  .icon-button {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .icon-button svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .modal-header h3 {
+    font-size: 16px !important;
+  }
+
+  .modal input,
+  .modal select {
+    font-size: 14px !important;
+  }
+
+  .checkbox-card.small {
+    font-size: 12px !important;
+    min-height: 36px !important;
+    padding: 6px 8px !important;
+  }
+
+  .status-badge {
+    font-size: 11px !important;
+    padding: 3px 8px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .monthly-summary-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+  }
+
+  .monthly-summary-card {
+    padding: 10px;
+  }
+
+  .monthly-summary-card__title {
+    font-size: 0.9em;
+  }
+
+  .monthly-summary-card__row {
+    font-size: 0.8em;
+  }
+
+  .auth-card {
+    width: calc(100% - 32px);
+    margin: 24px 16px;
+    padding: 24px;
+    border-radius: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .monthly-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .monthly-summary-card {
+    padding: 10px;
+  }
+}
