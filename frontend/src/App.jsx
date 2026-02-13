@@ -1227,13 +1227,22 @@ const DespesasPage = ({
   };
 
   const toggleStatus = (id) => {
-    setDespesas((prev) =>
-      prev.map((d) =>
-        d.id === id
-          ? { ...d, status: d.status === "Pago" ? "Pendente" : "Pago" }
-          : d
-      )
-    );
+    setDespesas((prev) => {
+      const target = prev.find((d) => d.id === id);
+      if (!target) return prev;
+      const nextStatus = target.status === "Pago" ? "Pendente" : "Pago";
+      if (nextStatus === "Pago") {
+        const cartaoVinculado = getCartaoVinculado(target);
+        const faturaFechada = cartaoVinculado?.faturasFechadas?.includes(target.mes);
+        if (cartaoVinculado && !faturaFechada) {
+          showAlert("A fatura está aberta. Feche a fatura para permitir o pagamento.");
+          return prev;
+        }
+      }
+      return prev.map((d) =>
+        d.id === id ? { ...d, status: nextStatus } : d
+      );
+    });
   };
 
   const excluirDespesa = (id) => {
@@ -2008,8 +2017,9 @@ const CartaoPage = ({
     if (!effectiveCartaoId || !selectedMes) return;
     const currentFechadas = selectedCartao.faturasFechadas || [];
     let newFechadas;
+    const isClosing = !currentFechadas.includes(selectedMes);
 
-    if (currentFechadas.includes(selectedMes)) {
+    if (!isClosing) {
       newFechadas = currentFechadas.filter(m => m !== selectedMes);
     } else {
       newFechadas = [...currentFechadas, selectedMes];
@@ -2021,6 +2031,20 @@ const CartaoPage = ({
     setCartoes(updatedCartoes);
 
     syncDespesa(selectedMes, effectiveCartaoId, lancamentosCartao, updatedCartoes);
+
+    if (isClosing) {
+      const cartao = cartoes.find(c => c.id === effectiveCartaoId);
+      if (!cartao) return;
+      const orcamento = orcamentos.find(o => o.meses && o.meses.includes(selectedMes));
+      if (!orcamento) return;
+      const descricaoDespesa = `Fatura do cartão ${cartao.nome}`;
+      const dataAtual = new Date().toISOString().split("T")[0];
+      setDespesas(prev => prev.map(d => (
+        d.descricao === descricaoDespesa && d.mes === selectedMes && d.orcamentoId === orcamento.id
+          ? { ...d, data: dataAtual }
+          : d
+      )));
+    }
   };
 
   const syncDespesa = (mes, cartaoId, currentLancamentos, cartoesList = cartoes) => {
