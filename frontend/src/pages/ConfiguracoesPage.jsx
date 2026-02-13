@@ -3,6 +3,23 @@ import { AlertDialog, ConfirmDialog } from "../components/Dialogs";
 import { IconEdit, IconTrash } from "../components/Icons";
 import Modal from "../components/Modal";
 import { createId } from "../utils/appUtils";
+import {
+  createCategoria,
+  updateCategoria,
+  deleteCategoria,
+  createGastoPredefinido,
+  updateGastoPredefinido,
+  deleteGastoPredefinido,
+  createTipoReceita,
+  updateTipoReceita,
+  deleteTipoReceita
+} from "../services/configApi";
+
+const normalizeCategoriaNome = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
 
 const ConfiguracoesPage = ({
   categorias,
@@ -100,20 +117,35 @@ const ConfiguracoesPage = ({
       showAlert("Esta categoria não pode ser excluída pois possui lançamentos vinculados (Despesas, Receitas ou Cartão).");
       return;
     }
-    showConfirm("Tem certeza que deseja excluir esta categoria?", () => {
-      setCategorias(prev => prev.filter(c => c.id !== id));
+    showConfirm("Tem certeza que deseja excluir esta categoria?", async () => {
+      try {
+        await deleteCategoria(id);
+        setCategorias(prev => prev.filter(c => c.id !== id));
+      } catch (error) {
+        showAlert(error?.message || "Falha ao excluir categoria.");
+      }
     });
   };
 
   const handleDeleteGastoPredefinido = (id) => {
-    showConfirm("Tem certeza que deseja excluir este gasto pré-definido?", () => {
-      setGastosPredefinidos(prev => prev.filter(g => g.id !== id));
+    showConfirm("Tem certeza que deseja excluir este gasto pré-definido?", async () => {
+      try {
+        await deleteGastoPredefinido(id);
+        setGastosPredefinidos(prev => prev.filter(g => g.id !== id));
+      } catch (error) {
+        showAlert(error?.message || "Falha ao excluir gasto pré-definido.");
+      }
     });
   };
 
   const handleDeleteTipoReceita = (id) => {
-    showConfirm("Tem certeza que deseja excluir esta receita pré-definida?", () => {
-      setTiposReceita(prev => prev.filter(t => t.id !== id));
+    showConfirm("Tem certeza que deseja excluir esta receita pré-definida?", async () => {
+      try {
+        await deleteTipoReceita(id);
+        setTiposReceita(prev => prev.filter(t => t.id !== id));
+      } catch (error) {
+        showAlert(error?.message || "Falha ao excluir receita pré-definida.");
+      }
     });
   };
 
@@ -208,76 +240,102 @@ const ConfiguracoesPage = ({
     });
   };
 
-  const handleSubmitCategoria = (event) => {
+  const handleSubmitCategoria = async (event) => {
     event.preventDefault();
     const nome = categoriaForm.nome.trim();
     if (!nome) return;
-    const nextCategorias = categoriaEditId
-      ? categorias.map((categoria) =>
-          categoria.id === categoriaEditId
-            ? { ...categoria, nome, tipo: categoriaForm.tipo }
-            : categoria
-        )
-      : [
-          ...categorias,
-          {
-            id: createId("cat"),
-            nome,
-            tipo: categoriaForm.tipo
-          }
-        ];
-    setCategorias(nextCategorias);
-    setCategoriaEditId(null);
-    setCategoriaForm({ nome: "", tipo: "DESPESA" });
-    setCategoriaModalOpen(false);
+    const normalizedNome = normalizeCategoriaNome(nome);
+    const existing = categorias.find(
+      (categoria) =>
+        categoria.tipo === categoriaForm.tipo &&
+        normalizeCategoriaNome(categoria.nome) === normalizedNome &&
+        String(categoria.id) !== String(categoriaEditId)
+    );
+    if (existing) {
+      showAlert("Já existe uma categoria com esse nome.");
+      return;
+    }
+    try {
+      if (categoriaEditId) {
+        const updated = await updateCategoria(categoriaEditId, { nome, tipo: categoriaForm.tipo });
+        setCategorias(prev =>
+          prev.map((categoria) => (categoria.id === categoriaEditId ? updated : categoria))
+        );
+      } else {
+        const created = await createCategoria({ nome, tipo: categoriaForm.tipo });
+        setCategorias((prev) => {
+          const alreadyExists = prev.some(
+            (categoria) =>
+              categoria.id === created.id ||
+              (categoria.tipo === created.tipo &&
+                normalizeCategoriaNome(categoria.nome) === normalizeCategoriaNome(created.nome))
+          );
+          if (alreadyExists) return prev;
+          return [...prev, created];
+        });
+      }
+      setCategoriaEditId(null);
+      setCategoriaForm({ nome: "", tipo: "DESPESA" });
+      setCategoriaModalOpen(false);
+    } catch (error) {
+      showAlert(error?.message || "Falha ao salvar categoria.");
+    }
   };
 
-  const handleSubmitGasto = (event) => {
+  const handleSubmitGasto = async (event) => {
     event.preventDefault();
     const descricao = gastoForm.descricao.trim();
     if (!descricao || !gastoForm.categoriaId) return;
-    const nextGastos = gastoEditId
-      ? gastosPredefinidos.map((gasto) =>
-          gasto.id === gastoEditId
-            ? { ...gasto, descricao, categoriaId: gastoForm.categoriaId }
-            : gasto
-        )
-      : [
-          ...gastosPredefinidos,
-          {
-            id: createId("gasto"),
-            descricao,
-            categoriaId: gastoForm.categoriaId
-          }
-        ];
-    setGastosPredefinidos(nextGastos);
-    setGastoEditId(null);
-    setGastoForm({ descricao: "", categoriaId: despesasCategorias[0]?.id ?? "" });
-    setGastoModalOpen(false);
+    try {
+      if (gastoEditId) {
+        const updated = await updateGastoPredefinido(gastoEditId, {
+          descricao,
+          categoriaId: gastoForm.categoriaId
+        });
+        setGastosPredefinidos(prev =>
+          prev.map((gasto) => (gasto.id === gastoEditId ? updated : gasto))
+        );
+      } else {
+        const created = await createGastoPredefinido({
+          descricao,
+          categoriaId: gastoForm.categoriaId
+        });
+        setGastosPredefinidos(prev => [...prev, created]);
+      }
+      setGastoEditId(null);
+      setGastoForm({ descricao: "", categoriaId: despesasCategorias[0]?.id ?? "" });
+      setGastoModalOpen(false);
+    } catch (error) {
+      showAlert(error?.message || "Falha ao salvar gasto pré-definido.");
+    }
   };
 
-  const handleSubmitTipo = (event) => {
+  const handleSubmitTipo = async (event) => {
     event.preventDefault();
     const descricao = tipoForm.descricao.trim();
     if (!descricao) return;
-    const nextTipos = tipoEditId
-      ? tiposReceita.map((tipo) =>
-          tipo.id === tipoEditId
-            ? { ...tipo, descricao, recorrente: tipoForm.recorrente ? "true" : "false" }
-            : tipo
-        )
-      : [
-          ...tiposReceita,
-          {
-            id: createId("tipo"),
-            descricao,
-            recorrente: tipoForm.recorrente === "true"
-          }
-        ];
-    setTiposReceita(nextTipos);
-    setTipoEditId(null);
-    setTipoForm({ descricao: "", recorrente: "false" });
-    setTipoModalOpen(false);
+    try {
+      if (tipoEditId) {
+        const updated = await updateTipoReceita(tipoEditId, {
+          descricao,
+          recorrente: tipoForm.recorrente === "true"
+        });
+        setTiposReceita(prev =>
+          prev.map((tipo) => (tipo.id === tipoEditId ? updated : tipo))
+        );
+      } else {
+        const created = await createTipoReceita({
+          descricao,
+          recorrente: tipoForm.recorrente === "true"
+        });
+        setTiposReceita(prev => [...prev, created]);
+      }
+      setTipoEditId(null);
+      setTipoForm({ descricao: "", recorrente: "false" });
+      setTipoModalOpen(false);
+    } catch (error) {
+      showAlert(error?.message || "Falha ao salvar receita pré-definida.");
+    }
   };
 
   const handleSubmitOrcamento = (event) => {

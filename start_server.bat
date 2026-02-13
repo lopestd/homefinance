@@ -7,7 +7,7 @@ echo.
 
 :: Inicia o Backend na porta 3000
 echo [1/2] Iniciando Backend...
-start "HomeFinance Backend" /min cmd /k "cd /d %~dp0 && title HomeFinance Backend && node server.js"
+start "HomeFinance Backend" /min cmd /k "cd /d %~dp0backend && title HomeFinance Backend && node server.js"
 
 :: Aguarda um pouco para o backend subir
 timeout /t 2 /nobreak >nul

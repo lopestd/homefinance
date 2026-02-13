@@ -1,11 +1,19 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertDialog, ConfirmDialog } from "../components/Dialogs";
 import { IconCheck, IconEdit, IconTrash, IconX } from "../components/Icons";
 import Modal from "../components/Modal";
+import { createCategoria } from "../services/configApi";
 import { MONTHS_ORDER, createId, formatCurrency, getCurrentMonthName } from "../utils/appUtils";
+
+const normalizeCategoriaNome = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
 
 const DespesasPage = ({
   categorias,
+  setCategorias,
   gastosPredefinidos,
   orcamentos,
   despesas,
@@ -86,13 +94,41 @@ const DespesasPage = ({
   const confirmPrimaryLabel = "Excluir";
   const confirmSecondaryLabel = "Cancelar";
 
-  const showAlert = (message, options = {}) => {
+  const showAlert = useCallback((message, options = {}) => {
     setAlertMessage(message);
     setAlertVariant(options.variant || "warning");
     setAlertTitle(options.title || "Atenção");
     setAlertPrimaryLabel(options.primaryLabel || "OK");
     setAlertModalOpen(true);
-  };
+  }, [setAlertMessage, setAlertModalOpen, setAlertPrimaryLabel, setAlertTitle, setAlertVariant]);
+
+  const ensureBancosCartoesCategoria = useCallback(async () => {
+    const targetName = "Bancos/Cartões";
+    const targetKey = normalizeCategoriaNome(targetName);
+    const existing = categorias.find(
+      (c) => c.tipo === "DESPESA" && normalizeCategoriaNome(c.nome) === targetKey
+    );
+    if (existing) return existing;
+    try {
+      const created = await createCategoria({ nome: targetName, tipo: "DESPESA" });
+      setCategorias((prev) => {
+        if (!created) return prev;
+        const createdKey = normalizeCategoriaNome(created.nome);
+        const alreadyExists = prev.some(
+          (categoria) =>
+            categoria.id === created.id ||
+            (categoria.tipo === created.tipo &&
+              normalizeCategoriaNome(categoria.nome) === createdKey)
+        );
+        if (alreadyExists) return prev;
+        return [...prev, created];
+      });
+      return created;
+    } catch (error) {
+      showAlert(error?.message || "Falha ao criar categoria Bancos/Cartões.");
+    }
+    return categorias.find((c) => c.tipo === "DESPESA") || null;
+  }, [categorias, setCategorias, showAlert]);
 
   const showConfirm = (message, action) => {
     setConfirmMessage(message);
@@ -206,12 +242,16 @@ const DespesasPage = ({
     });
   };
 
-  const editarDespesa = (despesa) => {
+  const editarDespesa = async (despesa) => {
     setDespesaEditId(despesa.id);
     const matchPredef = gastosPredefinidos.some((g) => g.descricao === despesa.descricao);
     setIsManualDescricao(!matchPredef);
+    const isFaturaCartao = Boolean(getCartaoVinculado(despesa));
+    const targetCategoria = isFaturaCartao ? await ensureBancosCartoesCategoria() : null;
     setManualForm({
-      categoriaId: despesa.categoriaId || despesasCategorias[0]?.id || "",
+      categoriaId: isFaturaCartao
+        ? (targetCategoria?.id || despesa.categoriaId || despesasCategorias[0]?.id || "")
+        : (despesa.categoriaId || despesasCategorias[0]?.id || ""),
       descricao: despesa.descricao,
       complemento: despesa.complemento || "",
       valor: despesa.valor,
@@ -225,8 +265,16 @@ const DespesasPage = ({
     setManualOpen(true);
   };
 
-  const handleSaveManual = (event) => {
+  const handleSaveManual = async (event) => {
     event.preventDefault();
+    const isFaturaCartao = manualForm.descricao?.startsWith("Fatura do cartão ");
+    const targetCategoria = isFaturaCartao ? await ensureBancosCartoesCategoria() : null;
+    const categoriaId = isFaturaCartao
+      ? (targetCategoria?.id || manualForm.categoriaId)
+      : manualForm.categoriaId;
+    const categoriaNome = isFaturaCartao
+      ? (targetCategoria?.nome || "Bancos/Cartões")
+      : (despesasCategorias.find((c) => c.id === manualForm.categoriaId)?.nome || "—");
 
     if (!despesaEditId && manualForm.tipoRecorrencia === "PARCELADO" && parseInt(manualForm.qtdParcelas) > 1) {
       const qtd = parseInt(manualForm.qtdParcelas);
@@ -246,7 +294,7 @@ const DespesasPage = ({
           orcamentoId: effectiveOrcamentoId,
           mes: getNextMonth(manualForm.mesInicial, i),
           data: manualForm.data,
-          categoriaId: manualForm.categoriaId,
+          categoriaId,
           descricao: `${manualForm.descricao} (${i + 1}/${qtd})`,
           complemento: manualForm.complemento || "",
           valor: parcValue,
@@ -256,7 +304,7 @@ const DespesasPage = ({
           qtdParcelas: qtd,
           meses: [],
           status: "Pendente",
-          categoria: despesasCategorias.find((c) => c.id === manualForm.categoriaId)?.nome || "—"
+          categoria: categoriaNome
         });
       }
       setDespesas((prev) => [...prev, ...newEntries]);
@@ -269,7 +317,7 @@ const DespesasPage = ({
       orcamentoId: effectiveOrcamentoId,
       mes: manualForm.mesInicial,
       data: manualForm.data,
-      categoriaId: manualForm.categoriaId,
+      categoriaId,
       descricao: manualForm.descricao,
       complemento: manualForm.complemento || "",
       valor: manualForm.valor,
@@ -277,7 +325,7 @@ const DespesasPage = ({
       qtdParcelas: manualForm.qtdParcelas,
       meses: manualForm.meses,
       status: manualForm.status,
-      categoria: despesasCategorias.find((c) => c.id === manualForm.categoriaId)?.nome || "—"
+      categoria: categoriaNome
     };
 
     if (effectiveMes && novaDespesa.meses && novaDespesa.meses.includes(effectiveMes)) {
@@ -308,6 +356,26 @@ const DespesasPage = ({
     }
     setManualOpen(false);
   };
+
+  useEffect(() => {
+    const syncFaturaCategorias = async () => {
+      const targetDespesas = despesas.filter((d) => d.descricao?.startsWith("Fatura do cartão "));
+      if (targetDespesas.length === 0) return;
+      const categoria = await ensureBancosCartoesCategoria();
+      if (!categoria) return;
+      setDespesas((prev) => {
+        let changed = false;
+        const next = prev.map((d) => {
+          if (!d.descricao?.startsWith("Fatura do cartão ")) return d;
+          if (d.categoriaId === categoria.id && d.categoria === categoria.nome) return d;
+          changed = true;
+          return { ...d, categoriaId: categoria.id, categoria: categoria.nome };
+        });
+        return changed ? next : prev;
+      });
+    };
+    syncFaturaCategorias();
+  }, [despesas, ensureBancosCartoesCategoria, setDespesas]);
 
   return (
     <div className="page-grid">

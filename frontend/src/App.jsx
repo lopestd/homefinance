@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { loadConfigFromApi, persistConfigToApi } from "./services/configApi";
+import { loadConfigFromApi, persistPartialConfigToApi } from "./services/configApi";
 import { AlertDialog } from "./components/Dialogs";
 import useAuth from "./hooks/useAuth";
 import useCartao from "./hooks/useCartao";
@@ -126,10 +126,7 @@ function App() {
     if (!isDataLoaded || !authToken) return;
     const persist = async () => {
       try {
-        await persistConfigToApi({
-          categorias,
-          gastosPredefinidos,
-          tiposReceita,
+        await persistPartialConfigToApi({
           receitas,
           despesas,
           orcamentos,
@@ -146,7 +143,7 @@ function App() {
       }
     };
     persist();
-  }, [categorias, gastosPredefinidos, tiposReceita, receitas, despesas, orcamentos, cartoes, lancamentosCartao, isDataLoaded, authToken, handleLogout]);
+  }, [receitas, despesas, orcamentos, cartoes, lancamentosCartao, isDataLoaded, authToken, handleLogout]);
 
   const activePage = pages.find((p) => p.key === activeKey) || pages[0];
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -307,6 +304,7 @@ function App() {
           {activeKey === "despesas" && (
             <DespesasPage
               categorias={categorias}
+              setCategorias={setCategorias}
               gastosPredefinidos={gastosPredefinidos}
               orcamentos={orcamentos}
               despesas={despesas}
@@ -325,6 +323,7 @@ function App() {
               despesas={despesas}
               setDespesas={setDespesas}
               categorias={categorias}
+              setCategorias={setCategorias}
               gastosPredefinidos={gastosPredefinidos}
             />
           )}

@@ -26,6 +26,10 @@ const LoginScreen = ({ onLogin, loading, errorMessage }) => {
     });
     if (result?.erro) {
       setLocalError(result.erro);
+      return;
+    }
+    if (result?.ok) {
+      window.location.hash = "dashboard";
     }
   };
 

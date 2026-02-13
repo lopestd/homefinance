@@ -2,7 +2,14 @@ import { useCallback, useMemo, useState } from "react";
 import { AlertDialog, ConfirmDialog } from "../components/Dialogs";
 import { IconEdit, IconTrash } from "../components/Icons";
 import Modal from "../components/Modal";
+import { createCategoria } from "../services/configApi";
 import { createId, formatCurrency, getCurrentMonthName } from "../utils/appUtils";
+
+const normalizeCategoriaNome = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
 
 const MonthlySummaryCard = ({ summary, isCurrentMonth }) => {
   const {
@@ -69,6 +76,7 @@ const CartaoPage = ({
   orcamentos,
   setDespesas,
   categorias,
+  setCategorias,
   gastosPredefinidos
 }) => {
   const [selectedCartaoId, setSelectedCartaoId] = useState("");
@@ -196,13 +204,41 @@ const CartaoPage = ({
   const confirmPrimaryLabel = "Excluir";
   const confirmSecondaryLabel = "Cancelar";
 
-  const showAlert = (message, options = {}) => {
+  const showAlert = useCallback((message, options = {}) => {
     setAlertMessage(message);
     setAlertVariant(options.variant || "warning");
     setAlertTitle(options.title || "Atenção");
     setAlertPrimaryLabel(options.primaryLabel || "OK");
     setAlertModalOpen(true);
-  };
+  }, [setAlertMessage, setAlertModalOpen, setAlertPrimaryLabel, setAlertTitle, setAlertVariant]);
+
+  const ensureBancosCartoesCategoria = useCallback(async () => {
+    const targetName = "Bancos/Cartões";
+    const targetKey = normalizeCategoriaNome(targetName);
+    const existing = categorias.find(
+      (c) => c.tipo === "DESPESA" && normalizeCategoriaNome(c.nome) === targetKey
+    );
+    if (existing) return existing;
+    try {
+      const created = await createCategoria({ nome: targetName, tipo: "DESPESA" });
+      setCategorias((prev) => {
+        if (!created) return prev;
+        const createdKey = normalizeCategoriaNome(created.nome);
+        const alreadyExists = prev.some(
+          (categoria) =>
+            categoria.id === created.id ||
+            (categoria.tipo === created.tipo &&
+              normalizeCategoriaNome(categoria.nome) === createdKey)
+        );
+        if (alreadyExists) return prev;
+        return [...prev, created];
+      });
+      return created;
+    } catch (error) {
+      showAlert(error?.message || "Falha ao criar categoria Bancos/Cartões.");
+    }
+    return categorias.find((c) => c.tipo === "DESPESA") || null;
+  }, [categorias, setCategorias, showAlert]);
 
   const showConfirm = (message, action) => {
     setConfirmMessage(message);
@@ -235,7 +271,7 @@ const CartaoPage = ({
     });
   };
 
-  const openModal = (lancamento = null) => {
+  const openModal = async (lancamento = null) => {
     if (isFaturaFechada) {
       showAlert("Fatura do mês está fechada.\nPara lançar ou editar itens, necessário reabrir a fatura.");
       return;
@@ -262,11 +298,7 @@ const CartaoPage = ({
       const temPredefinidos = gastosPredefinidos && gastosPredefinidos.length > 0;
       setIsManualDescricao(!temPredefinidos);
 
-      let targetCat = categorias.find((c) => c.nome.toLowerCase() === "Bancos/Cartões".toLowerCase() && c.tipo === "DESPESA");
-
-      if (!targetCat) {
-        targetCat = categorias.find((c) => c.tipo === "DESPESA");
-      }
+      const targetCat = await ensureBancosCartoesCategoria();
 
       setForm({
         descricao: "",
@@ -341,7 +373,9 @@ const CartaoPage = ({
     let catId = "";
     let catNome = "Bancos/Cartões";
 
-    const existingCat = categorias.find((c) => c.nome.toLowerCase() === catNome.toLowerCase() && c.tipo === "DESPESA");
+    const existingCat = categorias.find(
+      (c) => c.tipo === "DESPESA" && normalizeCategoriaNome(c.nome) === normalizeCategoriaNome(catNome)
+    );
 
     if (existingCat) {
       catId = existingCat.id;

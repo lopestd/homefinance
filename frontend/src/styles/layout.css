@@ -63,6 +63,7 @@
 
 .nav {
   flex: 1;
+  min-height: 0;
   padding: 12px 8px;
   overflow-y: auto;
   display: flex;
@@ -165,6 +166,7 @@
 }
 
 .sidebar-footer {
+  margin-top: auto;
   padding: 12px;
   border-top: 1px solid #1e293b;
   display: flex;
