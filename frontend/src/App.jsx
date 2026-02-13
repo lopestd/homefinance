@@ -362,7 +362,7 @@ const DashboardPage = ({ receitas, despesas, orcamentos }) => {
         </h3>
         <div className="dashboard-grid">
           <div className="summary-card" style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <h4 style={{ marginTop: '-16px', marginBottom: '8px', color: '#64748b' }}>Receitas</h4>
+            <h4 style={{ marginTop: 0, marginBottom: '8px', color: '#64748b' }}>Receitas</h4>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
               <span style={{ color: '#64748b' }}>Previsto:</span>
               <strong>{formatCurrency(resumoMensal.recLancadas)}</strong>
@@ -374,7 +374,7 @@ const DashboardPage = ({ receitas, despesas, orcamentos }) => {
           </div>
 
           <div className="summary-card" style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <h4 style={{ marginTop: '-16px', marginBottom: '8px', color: '#64748b' }}>Despesas</h4>
+            <h4 style={{ marginTop: 0, marginBottom: '8px', color: '#64748b' }}>Despesas</h4>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
               <span style={{ color: '#64748b' }}>Previsto:</span>
               <strong>{formatCurrency(resumoMensal.despLancadas)}</strong>
@@ -386,7 +386,7 @@ const DashboardPage = ({ receitas, despesas, orcamentos }) => {
           </div>
 
           <div className="summary-card saldo-mes-card" style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <h4 style={{ marginTop: '-16px', marginBottom: '2px', color: '#64748b' }}>Saldo do Mês</h4>
+            <h4 style={{ marginTop: 0, marginBottom: '8px', color: '#64748b' }}>Saldo do Mês</h4>
             <div className="saldo-row">
               <span style={{ color: '#64748b' }}>Saldo do Mês (Previsto):</span>
               <strong>{formatCurrency(resumoMensal.recLancadas - resumoMensal.despLancadas)}</strong>
