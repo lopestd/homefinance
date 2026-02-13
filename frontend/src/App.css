@@ -471,7 +471,7 @@ input:focus, select:focus {
 }
 
 .list-table__col--recorrente {
-  width: 20%;
+  width: 28%;
 }
 
 .list-table--config-periodos .list-table__col--acoes,
@@ -1226,6 +1226,46 @@ input:focus, select:focus {
   .list-table__head th {
     font-size: 13px !important;
     padding: 10px 12px !important;
+  }
+
+  .list-table--config-periodos,
+  .list-table--config-cartoes,
+  .list-table--config-categorias,
+  .list-table--config-gastos,
+  .list-table--config-receitas {
+    min-width: 0 !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+  .list-table--config-periodos th,
+  .list-table--config-periodos td,
+  .list-table--config-cartoes th,
+  .list-table--config-cartoes td,
+  .list-table--config-categorias th,
+  .list-table--config-categorias td,
+  .list-table--config-gastos th,
+  .list-table--config-gastos td,
+  .list-table--config-receitas th,
+  .list-table--config-receitas td {
+    white-space: normal !important;
+    word-break: break-word !important;
+  }
+
+  .list-table--config-periodos .list-table__col--acoes,
+  .list-table--config-cartoes .list-table__col--acoes,
+  .list-table--config-categorias .list-table__col--acoes,
+  .list-table--config-gastos .list-table__col--acoes,
+  .list-table--config-receitas .list-table__col--acoes {
+    width: 96px !important;
+  }
+
+  .list-table--config-periodos .list-table__col--periodo {
+    width: 38% !important;
+  }
+
+  .list-table--config-periodos .list-table__col--meses {
+    width: auto !important;
   }
 
   /* Icon Buttons in Tables */
