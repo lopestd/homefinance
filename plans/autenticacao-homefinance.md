@@ -113,13 +113,13 @@ const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@
 
 #### 3.2.3 XSS (Cross-Site Scripting)
 - **Content Security Policy (CSP)** header
-- **HttpOnly** e **Secure** flags nos cookies
 - Sanitização de outputs no frontend
+- Cookies com **HttpOnly** e **Secure** quando utilizados
 
 #### 3.2.4 CSRF (Cross-Site Request Forgery)
-- Tokens CSRF em formulários
-- Validar header `Origin` ou `Referer`
-- SameSite cookie attribute
+- Necessário apenas quando o token for armazenado em cookie
+- Validar header `Origin` ou `Referer` quando aplicável
+- SameSite cookie attribute quando aplicável
 
 #### 3.2.5 Session Hijacking
 - Regenerar ID de sessão após login
@@ -162,7 +162,7 @@ sequenceDiagram
         B->>B: Gera JWT token
         B->>DB: Registra sessao e audit log
         B-->>F: 200 OK + token
-        F->>F: Armazena token em cookie seguro
+        F->>F: Armazena token e envia via Authorization Bearer
         F-->>U: Redireciona para dashboard
     end
 ```
@@ -182,7 +182,7 @@ sequenceDiagram
     B->>DB: Invalida sessao
     B->>DB: Registra audit log
     B-->>F: 200 OK
-    F->>F: Remove cookie/token
+    F->>F: Remove token armazenado
     F-->>U: Redireciona para login
 ```
 
@@ -333,6 +333,12 @@ const jwtPayload = {
 }
 ```
 
+### 6.3 Variáveis de ambiente
+
+- `JWT_SECRET` (obrigatório)
+- `JWT_EXPIRES_MIN` (minutos de expiração da sessão)
+- `JWT_MAX_HOURS` (limite máximo absoluto da sessão)
+
 ---
 
 ## 7. Frontend - Tela de Login
@@ -400,10 +406,7 @@ const validacoes = {
     "jsonwebtoken": "^9.0.0",
     "express-rate-limit": "^7.0.0",
     "helmet": "^7.0.0",
-    "cors": "^2.8.5",
-    "express-validator": "^7.0.0",
-    "cookie-parser": "^1.4.6",
-    "csrf-csrf": "^3.0.0"
+    "cors": "^2.8.5"
   }
 }
 ```

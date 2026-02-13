@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import axios from "axios";
 import "./App.css";
 
 const MONTHS_ORDER = [
@@ -22,6 +23,14 @@ const createId = (prefix) => {
   idSeed += 1;
   return `${prefix}-${idSeed}`;
 };
+
+const EMAIL_REGEX = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+const AUTH_TOKEN_KEY = "hf_token";
+const api = axios.create({ baseURL: "/api" });
+
+const getStoredToken = () => localStorage.getItem(AUTH_TOKEN_KEY) || "";
+const saveStoredToken = (token) => localStorage.setItem(AUTH_TOKEN_KEY, token);
+const clearStoredToken = () => localStorage.removeItem(AUTH_TOKEN_KEY);
 
 const Modal = ({ open, title, children, className = "" }) => {
   if (!open) return null;
@@ -51,7 +60,7 @@ const IconX = () => (
 
 const IconEdit = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path fill="currentColor" d="M3 17.25V21h3.75L17.8 9.95l-3.75-3.75L3 17.25zm2.92 2.33H5v-.92l9.06-9.06.92.92L5.92 19.58zM20.71 7.04a1 1 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+    <path fill="currentColor" d="M3 17.25V21h3.75L17.8 9.95l-3.75-3.75L3 17.25zm2.92 2.33H5v-.92l9.06-9.06.92.92L5.92 19.58zM20.71 7.04a1 1 0 0 0 -1.41 0l-2.34-2.34a1 1 0 0 0 -1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
   </svg>
 );
 
@@ -132,6 +141,92 @@ const ConfirmDialog = ({
     </div>
   </Modal>
 );
+
+const LoginScreen = ({ onLogin, loading, errorMessage }) => {
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [lembrar, setLembrar] = useState(false);
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [localError, setLocalError] = useState("");
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setLocalError("");
+    if (!EMAIL_REGEX.test(email.trim())) {
+      setLocalError("Informe um email válido.");
+      return;
+    }
+    if (!senha) {
+      setLocalError("Informe sua senha.");
+      return;
+    }
+    const result = await onLogin({
+      email: email.trim(),
+      senha,
+      lembrar
+    });
+    if (result?.erro) {
+      setLocalError(result.erro);
+    }
+  };
+
+  return (
+    <div className="auth-screen">
+      <div className="auth-card">
+        <div className="auth-header">
+          <span className="auth-badge">HomeFinance</span>
+          <h1>Controle financeiro simples</h1>
+          <p>Organize receitas, despesas e cartões em um painel leve e responsivo.</p>
+        </div>
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <label className="auth-field">
+            <span>Email</span>
+            <input
+              type="email"
+              value={email}
+              placeholder="voce@email.com"
+              onChange={(event) => setEmail(event.target.value)}
+              autoComplete="username"
+            />
+          </label>
+          <label className="auth-field auth-field--password">
+            <span>Senha</span>
+            <div className="auth-input">
+              <input
+                type={mostrarSenha ? "text" : "password"}
+                value={senha}
+                placeholder="Sua senha"
+                onChange={(event) => setSenha(event.target.value)}
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                className="auth-toggle"
+                onClick={() => setMostrarSenha((prev) => !prev)}
+              >
+                {mostrarSenha ? "Ocultar" : "Mostrar"}
+              </button>
+            </div>
+          </label>
+          <label className="auth-remember">
+            <input
+              type="checkbox"
+              checked={lembrar}
+              onChange={(event) => setLembrar(event.target.checked)}
+            />
+            <span>Lembrar de mim</span>
+          </label>
+          {(localError || errorMessage) && (
+            <div className="auth-error">{localError || errorMessage}</div>
+          )}
+          <button type="submit" className="primary auth-submit" disabled={loading}>
+            {loading ? "Entrando..." : "Entrar"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
 
 const DashboardPage = ({ receitas, despesas, orcamentos }) => {
   const [selectedOrcamentoId, setSelectedOrcamentoId] = useState("");
@@ -3370,7 +3465,7 @@ const ConfiguracoesPage = ({
     const nextGastos = gastoEditId
       ? gastosPredefinidos.map((gasto) =>
           gasto.id === gastoEditId
-            ? { ...gasto, descricao, categoriaId: gasto.categoriaId }
+            ? { ...gasto, descricao, categoriaId: gastoForm.categoriaId }
             : gasto
         )
       : [
@@ -3402,7 +3497,7 @@ const ConfiguracoesPage = ({
           {
             id: createId("tipo"),
             descricao,
-            recorrente: tipoForm.recorrente === "true" ? "true" : "false"
+            recorrente: tipoForm.recorrente === "true"
           }
         ];
     setTiposReceita(nextTipos);
@@ -3426,7 +3521,7 @@ const ConfiguracoesPage = ({
           {
             id: createId("orc"),
             label: nome,
-            meses: allMonths.filter((m) => orcamentoForm.meses.includes(m) ? [m] : [])
+            meses: allMonths.filter((m) => orcamentoForm.meses.includes(m))
           }
       ];
     setOrcamentos(nextOrcamentos);
@@ -3991,9 +4086,8 @@ const getHashPage = () => {
 
 const loadConfigFromApi = async () => {
   try {
-    const response = await fetch("/api/config");
-    if (!response.ok) return null;
-    const data = await response.json();
+    const response = await api.get("/config");
+    const data = response.data;
     return {
       categorias: Array.isArray(data?.categorias) ? data.categorias : [],
       gastosPredefinidos: Array.isArray(data?.gastosPredefinidos) ? data.gastosPredefinidos : [],
@@ -4004,24 +4098,37 @@ const loadConfigFromApi = async () => {
       cartoes: Array.isArray(data?.cartoes) ? data.cartoes : [],
       lancamentosCartao: Array.isArray(data?.lancamentosCartao) ? data.lancamentosCartao : []
     };
-  } catch {
+  } catch (error) {
+    if (error?.response?.status === 401) {
+      throw new Error("UNAUTHORIZED");
+    }
     return null;
   }
 };
 
 const persistConfigToApi = async (payload) => {
   try {
-    await fetch("/api/config", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-  } catch {
-    return;
+    await api.put("/config", payload);
+  } catch (error) {
+    if (error?.response?.status === 401) {
+      throw new Error("UNAUTHORIZED");
+    }
+    const message =
+      error?.response?.data?.detalhe ||
+      error?.response?.data?.error ||
+      "Falha ao salvar configurações.";
+    throw new Error(message);
   }
 };
 
 function App() {
+  const [authToken, setAuthToken] = useState(getStoredToken());
+  const [authUser, setAuthUser] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [saveAlertOpen, setSaveAlertOpen] = useState(false);
+  const [saveAlertMessage, setSaveAlertMessage] = useState("");
   const [activeKey, setActiveKey] = useState(getHashPage());
   const [categorias, setCategorias] = useState([]);
   const [gastosPredefinidos, setGastosPredefinidos] = useState([]);
@@ -4033,6 +4140,77 @@ function App() {
   const [lancamentosCartao, setLancamentosCartao] = useState([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
+  const clearData = useCallback(() => {
+    setCategorias([]);
+    setGastosPredefinidos([]);
+    setTiposReceita([]);
+    setReceitas([]);
+    setDespesas([]);
+    setOrcamentos([]);
+    setCartoes([]);
+    setLancamentosCartao([]);
+    setIsDataLoaded(false);
+  }, []);
+
+  useEffect(() => {
+    if (authToken) {
+      api.defaults.headers.common.Authorization = `Bearer ${authToken}`;
+    } else {
+      delete api.defaults.headers.common.Authorization;
+    }
+  }, [authToken]);
+
+  const handleLogout = useCallback(async () => {
+    try {
+      if (authToken) {
+        await api.post("/auth/logout");
+      }
+    } catch {
+      null;
+    }
+    clearStoredToken();
+    setAuthToken("");
+    setAuthUser(null);
+    setAuthError("");
+    clearData();
+    setAuthReady(true);
+  }, [authToken, clearData]);
+
+  const handleLogin = useCallback(async ({ email, senha, lembrar }) => {
+    setAuthLoading(true);
+    setAuthError("");
+    try {
+      const response = await api.post("/auth/login", {
+        email,
+        senha,
+        lembrar: Boolean(lembrar)
+      });
+      const data = response.data;
+      if (data?.token) {
+        saveStoredToken(data.token);
+        setAuthToken(data.token);
+        setAuthUser(data.usuario || null);
+        setAuthReady(true);
+        return { ok: true };
+      }
+      setAuthError("Não foi possível autenticar.");
+      return { erro: "Não foi possível autenticar." };
+    } catch (error) {
+      const status = error?.response?.status;
+      const serverMessage = error?.response?.data?.mensagem;
+      const message =
+        status === 423
+          ? serverMessage || "Conta temporariamente bloqueada."
+          : status === 401
+            ? "Email ou senha incorretos."
+            : "Falha ao tentar entrar.";
+      setAuthError(message);
+      return { erro: message };
+    } finally {
+      setAuthLoading(false);
+    }
+  }, []);
+
   const pages = [
     { key: "dashboard", label: "Dashboard" },
     { key: "receitas", label: "Receitas" },
@@ -4042,24 +4220,59 @@ function App() {
     { key: "configuracoes", label: "Configurações" }
   ];
 
-  // Load initial data from API
   useEffect(() => {
+    let active = true;
+    const verifyAuth = async () => {
+      setAuthReady(false);
+      if (!authToken) {
+        setAuthReady(true);
+        return;
+      }
+      try {
+        const response = await api.get("/auth/verificar");
+        if (!active) return;
+        setAuthUser(response.data?.usuario || null);
+        setAuthReady(true);
+      } catch {
+        if (!active) return;
+        clearStoredToken();
+        setAuthToken("");
+        setAuthUser(null);
+        setAuthReady(true);
+      }
+    };
+    verifyAuth();
+    return () => {
+      active = false;
+    };
+  }, [authToken]);
+
+  useEffect(() => {
+    if (!authUser || !authToken) return;
     const loadData = async () => {
-      const data = await loadConfigFromApi();
-      if (data) {
-        setCategorias(data.categorias);
-        setGastosPredefinidos(data.gastosPredefinidos);
-        setTiposReceita(data.tiposReceita);
-        setReceitas(data.receitas);
-        setDespesas(data.despesas);
-        setOrcamentos(data.orcamentos);
-        setCartoes(data.cartoes);
-        setLancamentosCartao(data.lancamentosCartao);
+      try {
+        const data = await loadConfigFromApi();
+        if (data) {
+          setCategorias(data.categorias);
+          setGastosPredefinidos(data.gastosPredefinidos);
+          setTiposReceita(data.tiposReceita);
+          setReceitas(data.receitas);
+          setDespesas(data.despesas);
+          setOrcamentos(data.orcamentos);
+          setCartoes(data.cartoes);
+          setLancamentosCartao(data.lancamentosCartao);
+        }
+        setIsDataLoaded(true);
+      } catch (error) {
+        if (error?.message === "UNAUTHORIZED") {
+          handleLogout();
+          return;
+        }
         setIsDataLoaded(true);
       }
     };
     loadData();
-  }, []);
+  }, [authUser, authToken, handleLogout]);
 
   useEffect(() => {
     const onHashChange = () => setActiveKey(getHashPage());
@@ -4068,18 +4281,30 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!isDataLoaded) return;
-    persistConfigToApi({
-      categorias,
-      gastosPredefinidos,
-      tiposReceita,
-      receitas,
-      despesas,
-      orcamentos,
-      cartoes,
-      lancamentosCartao
-    });
-  }, [categorias, gastosPredefinidos, tiposReceita, receitas, despesas, orcamentos, cartoes, lancamentosCartao, isDataLoaded]);
+    if (!isDataLoaded || !authToken) return;
+    const persist = async () => {
+      try {
+        await persistConfigToApi({
+          categorias,
+          gastosPredefinidos,
+          tiposReceita,
+          receitas,
+          despesas,
+          orcamentos,
+          cartoes,
+          lancamentosCartao
+        });
+      } catch (error) {
+        if (error?.message === "UNAUTHORIZED") {
+          handleLogout();
+        } else {
+          setSaveAlertMessage(error?.message || "Falha ao salvar configurações.");
+          setSaveAlertOpen(true);
+        }
+      }
+    };
+    persist();
+  }, [categorias, gastosPredefinidos, tiposReceita, receitas, despesas, orcamentos, cartoes, lancamentosCartao, isDataLoaded, authToken, handleLogout]);
 
   const activePage = pages.find((p) => p.key === activeKey) || pages[0];
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -4116,6 +4341,33 @@ function App() {
     setIsMobileMenuOpen(false);
   };
 
+  if (!authReady) {
+    return (
+      <div className="auth-screen auth-screen--loading">
+        <div className="auth-card auth-card--loading">
+          <div className="auth-loading">
+            <div className="auth-spinner" />
+            <span>Validando sessão...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!authUser) {
+    return (
+      <LoginScreen
+        onLogin={handleLogin}
+        loading={authLoading}
+        errorMessage={authError}
+      />
+    );
+  }
+
+  const userName = authUser?.nome || "Usuário";
+  const userEmail = authUser?.email || "";
+  const userInitial = (userName || userEmail || "U").trim().charAt(0).toUpperCase();
+
   return (
     <div className={`app ${isMobileMenuOpen ? "mobile-menu-open" : ""}`}>
       <aside className="sidebar">
@@ -4135,6 +4387,18 @@ function App() {
             </a>
           ))}
         </nav>
+        <div className="sidebar-footer">
+          <div className="user-card">
+            <div className="user-avatar">{userInitial}</div>
+            <div className="user-meta">
+              <strong>{userName}</strong>
+              <span>{userEmail}</span>
+            </div>
+          </div>
+          <button type="button" className="ghost logout-button" onClick={handleLogout}>
+            Sair
+          </button>
+        </div>
       </aside>
       {isMobileMenuOpen && <div className="mobile-backdrop" onClick={handleNavClick} />}
       <div className="main">
@@ -4220,6 +4484,14 @@ function App() {
             />
           )}
         </main>
+        <AlertDialog
+          open={saveAlertOpen}
+          title="Não foi possível salvar"
+          message={saveAlertMessage}
+          variant="danger"
+          primaryLabel="Ok"
+          onClose={() => setSaveAlertOpen(false)}
+        />
       </div>
     </div>
   );
