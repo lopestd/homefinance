@@ -743,42 +743,53 @@ const CartaoPage = ({
 
       <Modal open={modalOpen} title={editId ? "Editar lançamento" : "Novo lançamento"} onClose={() => setModalOpen(false)}>
         <form className="modal-grid" onSubmit={handleSave}>
-          <label className="field">
-            Descrição
-            {!isManualDescricao && gastosPredefinidos && gastosPredefinidos.length > 0 ? (
-              <select
-                value={form.descricao}
-                onChange={(e) => {
-                  const desc = e.target.value;
-                  const selectedGasto = gastosPredefinidos.find((g) => g.descricao === desc);
-                  setForm((prev) => ({
-                    ...prev,
-                    descricao: desc,
-                    categoriaId: (selectedGasto && selectedGasto.categoriaId) ? selectedGasto.categoriaId : prev.categoriaId
-                  }));
-                }}
-              >
-                <option value="">Selecione...</option>
-                {gastosPredefinidos.map((g) => (
-                  <option key={g.id} value={g.descricao}>{g.descricao}</option>
+          <div className="modal-grid-row">
+            <label className="field">
+              Categoria
+              <select value={form.categoriaId} onChange={(e) => setForm({ ...form, categoriaId: e.target.value })}>
+                <option value="">Sem categoria</option>
+                {categorias.filter((c) => c.tipo === "DESPESA").map((c) => (
+                  <option key={c.id} value={c.id}>{c.nome}</option>
                 ))}
               </select>
-            ) : (
-              <input
-                required
-                value={form.descricao}
-                onChange={(e) => setForm({ ...form, descricao: e.target.value })}
-              />
-            )}
-            <label className="manual-toggle">
-              <input
-                type="checkbox"
-                checked={isManualDescricao}
-                onChange={(e) => setIsManualDescricao(e.target.checked)}
-              />
-              Informar manualmente
             </label>
-          </label>
+            <label className="field">
+              Descrição
+              {!isManualDescricao && gastosPredefinidos && gastosPredefinidos.length > 0 ? (
+                <select
+                  value={form.descricao}
+                  onChange={(e) => {
+                    const desc = e.target.value;
+                    const selectedGasto = gastosPredefinidos.find((g) => g.descricao === desc);
+                    setForm((prev) => ({
+                      ...prev,
+                      descricao: desc,
+                      categoriaId: (selectedGasto && selectedGasto.categoriaId) ? selectedGasto.categoriaId : prev.categoriaId
+                    }));
+                  }}
+                >
+                  <option value="">Selecione...</option>
+                  {gastosPredefinidos.map((g) => (
+                    <option key={g.id} value={g.descricao}>{g.descricao}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  required
+                  value={form.descricao}
+                  onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+                />
+              )}
+              <label className="manual-toggle">
+                <input
+                  type="checkbox"
+                  checked={isManualDescricao}
+                  onChange={(e) => setIsManualDescricao(e.target.checked)}
+                />
+                Informar manualmente
+              </label>
+            </label>
+          </div>
           <label className="field">
             Complemento
             <input
@@ -788,28 +799,32 @@ const CartaoPage = ({
               onChange={(e) => setForm({ ...form, complemento: e.target.value })}
             />
           </label>
-          <label className="field">
-            Valor
-            <input required type="number" step="0.01" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} />
-          </label>
-          <label className="field">
-            Data da Compra
-            <input required type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} />
-          </label>
-          <label className="field">
-            Mês da Fatura
-            <select value={form.mesReferencia} onChange={(e) => setForm({ ...form, mesReferencia: e.target.value })}>
-              {months.map((m) => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </label>
-          <label className="field">
-            Tipo
-            <select value={form.tipoRecorrencia} onChange={(e) => setForm({ ...form, tipoRecorrencia: e.target.value })}>
-              <option value="EVENTUAL">Eventual</option>
-              <option value="FIXO">Fixo</option>
-              <option value="PARCELADO">Parcelado</option>
-            </select>
-          </label>
+          <div className="modal-grid-row">
+            <label className="field">
+              Valor (R$)
+              <input required type="number" step="0.01" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} />
+            </label>
+            <label className="field">
+              Data
+              <input required type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} />
+            </label>
+          </div>
+          <div className="modal-grid-row">
+            <label className="field">
+              Tipo de gasto
+              <select value={form.tipoRecorrencia} onChange={(e) => setForm({ ...form, tipoRecorrencia: e.target.value })}>
+                <option value="EVENTUAL">Eventual</option>
+                <option value="FIXO">Fixo</option>
+                <option value="PARCELADO">Parcelado</option>
+              </select>
+            </label>
+            <label className="field">
+              Mês da fatura
+              <select value={form.mesReferencia} onChange={(e) => setForm({ ...form, mesReferencia: e.target.value })}>
+                {months.map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </label>
+          </div>
           {form.tipoRecorrencia === "PARCELADO" && (
             <label className="field">
               Nº Parcelas
@@ -849,15 +864,6 @@ const CartaoPage = ({
               </div>
             </div>
           )}
-          <label className="field">
-            Categoria
-            <select value={form.categoriaId} onChange={(e) => setForm({ ...form, categoriaId: e.target.value })}>
-              <option value="">Sem categoria</option>
-              {categorias.filter((c) => c.tipo === "DESPESA").map((c) => (
-                <option key={c.id} value={c.id}>{c.nome}</option>
-              ))}
-            </select>
-          </label>
           <div className="modal-actions">
             <button type="button" className="ghost" onClick={() => setModalOpen(false)}>Cancelar</button>
             <button type="submit" className="primary">Salvar</button>

@@ -181,6 +181,28 @@ select:focus {
   white-space: nowrap;
 }
 
+.modal-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal-grid-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.modal-grid-row .field {
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .modal-grid-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .manual-toggle input {
   margin: 0;
 }

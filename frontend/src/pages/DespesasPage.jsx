@@ -513,65 +513,67 @@ const DespesasPage = ({
           className="modal-grid"
           onSubmit={handleSaveManual}
         >
-          <label className="field">
-            Categoria
-            <select
-              value={manualForm.categoriaId}
-              onChange={(event) =>
-                setManualForm((prev) => ({ ...prev, categoriaId: event.target.value }))
-              }
-            >
-              {despesasCategorias.length === 0 ? (
-                <option value="">Sem categorias disponíveis</option>
-              ) : (
-                despesasCategorias.map((categoria) => (
-                  <option key={categoria.id} value={categoria.id}>
-                    {categoria.nome}
-                  </option>
-                ))
-              )}
-            </select>
-          </label>
-          <label className="field">
-            Descrição
-            {!isManualDescricao && gastosPredefinidos.length > 0 ? (
+          <div className="modal-grid-row">
+            <label className="field">
+              Categoria
               <select
-                value={manualForm.descricao}
-                onChange={(event) => {
-                  const desc = event.target.value;
-                  const gasto = gastosPredefinidos.find((g) => g.descricao === desc);
-                  setManualForm((prev) => ({
-                    ...prev,
-                    descricao: desc,
-                    categoriaId: gasto?.categoriaId || prev.categoriaId
-                  }));
-                }}
-              >
-                <option value="">Selecione...</option>
-                {gastosPredefinidos.map((gasto) => (
-                  <option key={gasto.id} value={gasto.descricao}>
-                    {gasto.descricao}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type="text"
-                value={manualForm.descricao}
+                value={manualForm.categoriaId}
                 onChange={(event) =>
-                  setManualForm((prev) => ({ ...prev, descricao: event.target.value }))
+                  setManualForm((prev) => ({ ...prev, categoriaId: event.target.value }))
                 }
-              />
-            )}
-            <label className="manual-toggle">
-              <input
-                type="checkbox"
-                checked={isManualDescricao}
-                onChange={(e) => setIsManualDescricao(e.target.checked)}
-              />
-              Informar manualmente
+              >
+                {despesasCategorias.length === 0 ? (
+                  <option value="">Sem categorias disponíveis</option>
+                ) : (
+                  despesasCategorias.map((categoria) => (
+                    <option key={categoria.id} value={categoria.id}>
+                      {categoria.nome}
+                    </option>
+                  ))
+                )}
+              </select>
             </label>
-          </label>
+            <label className="field">
+              Descrição
+              {!isManualDescricao && gastosPredefinidos.length > 0 ? (
+                <select
+                  value={manualForm.descricao}
+                  onChange={(event) => {
+                    const desc = event.target.value;
+                    const gasto = gastosPredefinidos.find((g) => g.descricao === desc);
+                    setManualForm((prev) => ({
+                      ...prev,
+                      descricao: desc,
+                      categoriaId: gasto?.categoriaId || prev.categoriaId
+                    }));
+                  }}
+                >
+                  <option value="">Selecione...</option>
+                  {gastosPredefinidos.map((gasto) => (
+                    <option key={gasto.id} value={gasto.descricao}>
+                      {gasto.descricao}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={manualForm.descricao}
+                  onChange={(event) =>
+                    setManualForm((prev) => ({ ...prev, descricao: event.target.value }))
+                  }
+                />
+              )}
+              <label className="manual-toggle">
+                <input
+                  type="checkbox"
+                  checked={isManualDescricao}
+                  onChange={(e) => setIsManualDescricao(e.target.checked)}
+                />
+                Informar manualmente
+              </label>
+            </label>
+          </div>
           <label className="field">
             Complemento
             <input
@@ -583,40 +585,63 @@ const DespesasPage = ({
               }
             />
           </label>
-          <label className="field">
-            Valor
-            <input
-              type="number"
-              step="0.01"
-              value={manualForm.valor}
-              onChange={(event) =>
-                setManualForm((prev) => ({ ...prev, valor: event.target.value }))
-              }
-            />
-          </label>
-          <label className="field">
-            Data
-            <input
-              type="date"
-              value={manualForm.data}
-              onChange={(event) =>
-                setManualForm((prev) => ({ ...prev, data: event.target.value }))
-              }
-            />
-          </label>
-          <label className="field">
-            Tipo
-            <select
-              value={manualForm.tipoRecorrencia}
-              onChange={(event) =>
-                setManualForm((prev) => ({ ...prev, tipoRecorrencia: event.target.value }))
-              }
-            >
-              <option value="EVENTUAL">Eventual</option>
-              <option value="FIXO">Fixo</option>
-              <option value="PARCELADO">Parcelado</option>
-            </select>
-          </label>
+          <div className="modal-grid-row">
+            <label className="field">
+              Valor (R$)
+              <input
+                type="number"
+                step="0.01"
+                value={manualForm.valor}
+                onChange={(event) =>
+                  setManualForm((prev) => ({ ...prev, valor: event.target.value }))
+                }
+              />
+            </label>
+            <label className="field">
+              Data
+              <input
+                type="date"
+                value={manualForm.data}
+                onChange={(event) =>
+                  setManualForm((prev) => ({ ...prev, data: event.target.value }))
+                }
+              />
+            </label>
+          </div>
+          <div className="modal-grid-row">
+            <label className="field">
+              Tipo de gasto
+              <select
+                value={manualForm.tipoRecorrencia}
+                onChange={(event) =>
+                  setManualForm((prev) => ({ ...prev, tipoRecorrencia: event.target.value }))
+                }
+              >
+                <option value="EVENTUAL">Eventual</option>
+                <option value="FIXO">Fixo</option>
+                <option value="PARCELADO">Parcelado</option>
+              </select>
+            </label>
+            <label className="field">
+              Mês inicial
+              <select
+                value={manualForm.mesInicial || manualForm.meses[0] || ""}
+                onChange={(event) => {
+                  const mes = event.target.value;
+                  setManualForm((prev) => ({
+                    ...prev,
+                    mesInicial: mes,
+                    meses: mes ? [mes] : []
+                  }));
+                }}
+              >
+                <option value="">Selecione...</option>
+                {mesesDisponiveis.map((mes) => (
+                  <option key={mes} value={mes}>{mes}</option>
+                ))}
+              </select>
+            </label>
+          </div>
           {manualForm.tipoRecorrencia === "PARCELADO" ? (
             <label className="field">
               Nº de parcelas
@@ -662,21 +687,6 @@ const DespesasPage = ({
               </div>
             </div>
           ) : null}
-          <label className="field">
-            Mês inicial
-            <select
-              value={manualForm.mesInicial}
-              onChange={(event) =>
-                setManualForm((prev) => ({ ...prev, mesInicial: event.target.value }))
-              }
-            >
-              {mesesDisponiveis.map((mes) => (
-                <option key={mes} value={mes}>
-                  Mês {mes}
-                </option>
-              ))}
-            </select>
-          </label>
           <label className="field">
             Status
             <select
