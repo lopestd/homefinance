@@ -5,6 +5,110 @@
   }
 }
 
+/* Compact Modal Styles for Mobile */
+@media (max-width: 600px) {
+  .modal {
+    max-width: 100% !important;
+    width: calc(100% - 24px) !important;
+    max-height: 90vh !important;
+    border-radius: 14px !important;
+    margin: 8px auto !important;
+  }
+
+  .modal-header {
+    padding: 8px 12px !important;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .modal-header h3 {
+    font-size: 15px !important;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .modal-body {
+    padding: 8px 10px !important;
+  }
+
+  .modal-grid {
+    gap: 6px !important;
+  }
+
+  .modal-grid-row {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+  }
+
+  .modal input,
+  .modal select {
+    padding: 6px 8px !important;
+    font-size: 13px !important;
+    min-height: 36px !important;
+  }
+
+  .modal .field {
+    gap: 3px !important;
+    font-size: 12px !important;
+    margin: 0 !important;
+  }
+
+  .modal .field label,
+  .modal label.field {
+    font-size: 12px !important;
+    font-weight: 500;
+  }
+
+  .modal-actions {
+    padding: 8px 10px !important;
+    gap: 8px !important;
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
+  .modal-actions button {
+    width: auto;
+    min-width: 80px;
+    padding: 8px 14px !important;
+    font-size: 13px !important;
+    min-height: 38px;
+  }
+
+  .months-grid-mini {
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 4px !important;
+  }
+
+  .checkbox-card.small {
+    font-size: 11px !important;
+    min-height: 28px !important;
+    padding: 3px 5px !important;
+  }
+
+  .checkbox-card.small input {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .manual-toggle {
+    font-size: 11px !important;
+    margin-top: 1px !important;
+  }
+
+  .manual-toggle input {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .select-all {
+    font-size: 11px !important;
+  }
+
+  .select-all input {
+    width: 12px !important;
+    height: 12px !important;
+  }
+}
+
 @media (max-width: 900px) {
   html,
   body {
@@ -307,41 +411,6 @@
     height: 18px !important;
   }
 
-  .modal {
-    max-width: 95% !important;
-    max-height: 95vh !important;
-    border-radius: 18px !important;
-  }
-
-  .modal-header {
-    padding: 12px 16px !important;
-  }
-
-  .modal-header h3 {
-    font-size: 17px !important;
-  }
-
-  .modal-body {
-    padding: 10px !important;
-  }
-
-  .modal input,
-  .modal select {
-    padding: 10px 12px !important;
-    font-size: 15px !important;
-  }
-
-  .months-grid-mini {
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 6px !important;
-  }
-
-  .checkbox-card.small {
-    font-size: 13px !important;
-    min-height: 38px !important;
-    padding: 6px 10px !important;
-  }
-
   .status-badge {
     font-size: 12px !important;
     padding: 3px 8px !important;
@@ -502,21 +571,6 @@
     height: 18px !important;
   }
 
-  .modal-header h3 {
-    font-size: 16px !important;
-  }
-
-  .modal input,
-  .modal select {
-    font-size: 14px !important;
-  }
-
-  .checkbox-card.small {
-    font-size: 12px !important;
-    min-height: 36px !important;
-    padding: 6px 8px !important;
-  }
-
   .status-badge {
     font-size: 11px !important;
     padding: 3px 8px !important;
@@ -556,5 +610,210 @@
 
   .monthly-summary-card {
     padding: 10px;
+  }
+}
+
+/* ===========================================
+   DASHBOARD & REPORTS MOBILE STYLES
+   =========================================== */
+@media (max-width: 900px) {
+  /* Dashboard Header */
+  .dashboard-header__content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dashboard-filters {
+    width: 100%;
+  }
+
+  .dashboard-filters .field {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Dashboard Cards */
+  .dashboard-cards {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Dashboard Categories */
+  .dashboard-categories {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Reports Header */
+  .reports-header__content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .reports-filters {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .reports-filters .field {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 0;
+  }
+
+  /* Tab Navigation */
+  .tab-navigation {
+    padding: 3px;
+  }
+
+  .tab-navigation__item {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  /* Charts Grid */
+  .charts-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* Report Summary Grid */
+  .report-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .report-summary-item {
+    padding: 12px;
+  }
+
+  .report-summary-item__value {
+    font-size: 16px;
+  }
+
+  /* KPI Card */
+  .kpi-card__details {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* Accordion */
+  .accordion__header {
+    padding: 12px;
+  }
+
+  .accordion__content {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 600px) {
+  /* Dashboard Hero */
+  .dashboard-hero .kpi-card {
+    padding: 20px;
+  }
+
+  .dashboard-hero .kpi-card__value {
+    font-size: 28px;
+  }
+
+  /* Summary Card Modern */
+  .summary-card-modern {
+    padding: 12px;
+  }
+
+  .summary-card-modern__chart-container {
+    padding: 4px 0;
+  }
+
+  /* Report Summary Grid Mobile */
+  .report-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Tab Navigation Scrollable */
+  .tab-navigation {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .tab-navigation::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab-navigation__item {
+    flex-shrink: 0;
+  }
+
+  /* Insights */
+  .insight-item {
+    padding: 10px;
+  }
+
+  .insight-item__text {
+    font-size: 12px;
+  }
+
+  /* Hidden Recurring */
+  .hidden-recurring-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  /* Tables in Reports */
+  .reports-page .table {
+    font-size: 12px;
+  }
+
+  .reports-page .table-row span {
+    padding: 6px 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Dashboard Header Title */
+  .dashboard-header__title {
+    font-size: 16px;
+  }
+
+  /* Reports Header Title */
+  .reports-header__title {
+    font-size: 16px;
+  }
+
+  /* Filters */
+  .reports-filters .field {
+    flex: 1 1 100%;
+  }
+
+  /* KPI Card */
+  .kpi-card {
+    padding: 16px;
+  }
+
+  .kpi-card__value {
+    font-size: 24px;
+  }
+
+  .kpi-card__title {
+    font-size: 12px;
+  }
+
+  /* Report Card */
+  .report-card {
+    padding: 14px;
+  }
+
+  .report-card__title {
+    font-size: 14px;
+  }
+
+  /* Panel Titles */
+  .dashboard-chart .panel-title,
+  .dashboard-category .panel-title,
+  .dashboard-annual .panel-title {
+    font-size: 14px;
   }
 }

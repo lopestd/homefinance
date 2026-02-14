@@ -1,6 +1,9 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import useRelatorios from "../hooks/useRelatorios";
 import { formatCurrency } from "../utils/appUtils";
+import { TabNavigation } from "../components/reports";
+import { AreaChart, HorizontalBar, PieChart } from "../components/charts";
+import { KPICard } from "../components/dashboard";
 
 const RelatoriosPage = ({
   orcamentos,
@@ -10,6 +13,8 @@ const RelatoriosPage = ({
   lancamentosCartao,
   categorias
 }) => {
+  const [activeTab, setActiveTab] = useState('resumo');
+  
   const {
     filters,
     setFilters,
@@ -111,6 +116,16 @@ const RelatoriosPage = ({
     });
   }, [evolucaoMensal, filters.visao]);
 
+  // Dados para gráfico de evolução
+  const evolucaoChartData = useMemo(() => {
+    return evolucaoMensalComAcumulado.map((item) => ({
+      name: item.mes.substring(0, 3),
+      receitas: item.recRecebido,
+      despesas: item.despPago,
+      saldo: item.saldoAcumulado
+    }));
+  }, [evolucaoMensalComAcumulado]);
+
   const comparativoPlanejado = useMemo(() => {
     const diffReceitas = resumoConsolidado.recRecebido - resumoConsolidado.recPrevisto;
     const diffDespesas = resumoConsolidado.despPago - resumoConsolidado.despPrevisto;
@@ -172,6 +187,21 @@ const RelatoriosPage = ({
       percentual: totalRecebido ? (item.recebido / totalRecebido) * 100 : 0
     }));
   }, [receitasOrcamento, mesesSelecionados, countOcorrencias, getCategoriaNome]);
+
+  // Dados para gráficos de pizza
+  const despesasPieData = useMemo(() => {
+    return despesasPorCategoria
+      .sort((a, b) => b.pago - a.pago)
+      .slice(0, 5)
+      .map((item) => ({ name: item.categoria, value: item.pago }));
+  }, [despesasPorCategoria]);
+
+  const receitasPieData = useMemo(() => {
+    return receitasPorCategoria
+      .sort((a, b) => b.recebido - a.recebido)
+      .slice(0, 5)
+      .map((item) => ({ name: item.categoria, value: item.recebido }));
+  }, [receitasPorCategoria]);
 
   const gastosPorDescricao = useMemo(() => {
     const map = new Map();
@@ -280,345 +310,451 @@ const RelatoriosPage = ({
 
   const saldoPrevisto = resumoConsolidado.recPrevisto - resumoConsolidado.despPrevisto;
   const saldoEmConta = resumoConsolidado.recRecebido - resumoConsolidado.despPago;
-  const saldoAcumuladoPrevisto = saldoPrevisto;
+
+  // Tabs configuration
+  const tabs = [
+    { id: 'resumo', label: 'Resumo', icon: '📊' },
+    { id: 'evolucao', label: 'Evolução', icon: '📈' },
+    { id: 'categorias', label: 'Categorias', icon: '🏷️' },
+    { id: 'cartoes', label: 'Cartões', icon: '💳' },
+    { id: 'analise', label: 'Análise', icon: '🔍' }
+  ];
+
+  // Series para gráficos
+  const areaSeries = [
+    { dataKey: 'receitas', name: 'Receitas', color: '#10B981' },
+    { dataKey: 'despesas', name: 'Despesas', color: '#EF4444' }
+  ];
+
+  // Calcular variação
+  const variacaoReceitas = resumoConsolidado.recPrevisto > 0 
+    ? ((resumoConsolidado.recRecebido - resumoConsolidado.recPrevisto) / resumoConsolidado.recPrevisto * 100).toFixed(1)
+    : 0;
+  const variacaoDespesas = resumoConsolidado.despPrevisto > 0
+    ? ((resumoConsolidado.despPago - resumoConsolidado.despPrevisto) / resumoConsolidado.despPrevisto * 100).toFixed(1)
+    : 0;
 
   return (
-    <div className="page-grid">
-      <section className="panel filters-panel">
-        <div className="panel-header">
-          <div>
-            <h2>Relatórios Analíticos</h2>
-          </div>
-        </div>
-        <form className="form-inline" onSubmit={(event) => event.preventDefault()}>
-          <label className="field">
-            Orçamento
-            <select
-              value={effectiveOrcamentoId}
-              onChange={(event) => setFilters((prev) => ({ ...prev, orcamentoId: event.target.value }))}
-            >
-              {orcamentos.length === 0 ? (
-                <option value="">Sem orçamentos</option>
-              ) : (
-                orcamentos.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.label}
-                  </option>
-                ))
-              )}
-            </select>
-          </label>
-          <label className="field">
-            Mês inicial
-            <select
-              value={mesInicio || ""}
-              onChange={(event) => setFilters((prev) => ({ ...prev, mesInicio: event.target.value }))}
-            >
-              {mesesOrcamento.length === 0 ? (
-                <option value="">Sem meses configurados</option>
-              ) : (
-                mesesOrcamento.map((mes) => (
-                  <option key={mes} value={mes}>
-                    {mes}
-                  </option>
-                ))
-              )}
-            </select>
-          </label>
-          <label className="field">
-            Mês final
-            <select
-              value={mesFim || ""}
-              onChange={(event) => setFilters((prev) => ({ ...prev, mesFim: event.target.value }))}
-            >
-              {mesesOrcamento.length === 0 ? (
-                <option value="">Sem meses configurados</option>
-              ) : (
-                mesesOrcamento.map((mes) => (
-                  <option key={mes} value={mes}>
-                    {mes}
-                  </option>
-                ))
-              )}
-            </select>
-          </label>
-          <label className="field">
-            Visão
-            <select
-              value={filters.visao}
-              onChange={(event) => setFilters((prev) => ({ ...prev, visao: event.target.value }))}
-            >
-              <option value="Mensal">Mensal</option>
-              <option value="Acumulada">Acumulada</option>
-            </select>
-          </label>
-        </form>
-      </section>
-
-      <section className="panel">
-        <h3>Resumo Financeiro Consolidado</h3>
-        <div className="dashboard-grid">
-          <div className="summary-card">
-            <span className="summary-title">Receitas</span>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>Previsto:</span>
-              <strong>{formatCurrency(resumoConsolidado.recPrevisto)}</strong>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>Recebido:</span>
-              <strong>{formatCurrency(resumoConsolidado.recRecebido)}</strong>
-            </div>
-          </div>
-          <div className="summary-card">
-            <span className="summary-title">Despesas</span>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>Previsto:</span>
-              <strong>{formatCurrency(resumoConsolidado.despPrevisto)}</strong>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>Pago:</span>
-              <strong>{formatCurrency(resumoConsolidado.despPago)}</strong>
-            </div>
-          </div>
-          <div className="summary-card">
-            <span className="summary-title">Saldo</span>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>Previsto:</span>
-              <strong>{formatCurrency(saldoPrevisto)}</strong>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>Em conta:</span>
-              <strong>{formatCurrency(saldoEmConta)}</strong>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>Acumulado (previsão):</span>
-              <strong>{formatCurrency(saldoAcumuladoPrevisto)}</strong>
-            </div>
-          </div>
+    <div className="page-grid reports-page">
+      {/* Header com filtros */}
+      <section className="panel reports-header">
+        <div className="reports-header__content">
+          <h2 className="reports-header__title">📋 Relatórios</h2>
+          <form className="form-inline reports-filters" onSubmit={(event) => event.preventDefault()}>
+            <label className="field">
+              Orçamento
+              <select
+                value={effectiveOrcamentoId}
+                onChange={(event) => setFilters((prev) => ({ ...prev, orcamentoId: event.target.value }))}
+              >
+                {orcamentos.length === 0 ? (
+                  <option value="">Sem orçamentos</option>
+                ) : (
+                  orcamentos.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.label}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+            <label className="field">
+              Início
+              <select
+                value={mesInicio || ""}
+                onChange={(event) => setFilters((prev) => ({ ...prev, mesInicio: event.target.value }))}
+              >
+                {mesesOrcamento.map((mes) => (
+                  <option key={mes} value={mes}>{mes}</option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              Fim
+              <select
+                value={mesFim || ""}
+                onChange={(event) => setFilters((prev) => ({ ...prev, mesFim: event.target.value }))}
+              >
+                {mesesOrcamento.map((mes) => (
+                  <option key={mes} value={mes}>{mes}</option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              Visão
+              <select
+                value={filters.visao}
+                onChange={(event) => setFilters((prev) => ({ ...prev, visao: event.target.value }))}
+              >
+                <option value="Mensal">Mensal</option>
+                <option value="Acumulada">Acumulada</option>
+              </select>
+            </label>
+          </form>
         </div>
       </section>
 
+      {/* Tab Navigation */}
       <section className="panel">
-        <h3>Evolução Mensal do Orçamento</h3>
-        <div className="table">
-          <div className="table-row table-header cols-7">
-            <span>Mês</span>
-            <span>Rec. Previsto</span>
-            <span>Rec. Recebido</span>
-            <span>Desp. Previsto</span>
-            <span>Desp. Pago</span>
-            <span>Saldo do Mês</span>
-            <span>Saldo Acumulado</span>
-          </div>
-          {evolucaoMensalComAcumulado.length === 0 ? (
-            <div className="table-row empty cols-7">
-              <span>Sem dados para o período selecionado.</span>
-            </div>
-          ) : (
-            evolucaoMensalComAcumulado.map((item) => (
-              <div className="table-row cols-7" key={item.mes}>
-                <span>{item.mes}</span>
-                <span>{formatCurrency(item.recPrevisto)}</span>
-                <span>{formatCurrency(item.recRecebido)}</span>
-                <span>{formatCurrency(item.despPrevisto)}</span>
-                <span>{formatCurrency(item.despPago)}</span>
-                <span>{formatCurrency(item.saldoMes)}</span>
-                <span>{formatCurrency(item.saldoAcumulado)}</span>
+        <TabNavigation tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+      </section>
+
+      {/* Tab Content */}
+      <div className="tab-content">
+        {/* Tab Resumo */}
+        {activeTab === 'resumo' && (
+          <>
+            <section className="panel">
+              <KPICard
+                title="Saldo do Período"
+                value={formatCurrency(saldoEmConta)}
+                subtitle={`${mesesSelecionados.length} mês(es) selecionado(s)`}
+                color={saldoEmConta >= 0 ? 'positive' : 'negative'}
+              >
+                <div className="kpi-card__details">
+                  <div className="kpi-card__detail-row">
+                    <span>Previsto:</span>
+                    <strong>{formatCurrency(saldoPrevisto)}</strong>
+                  </div>
+                </div>
+              </KPICard>
+            </section>
+
+            <section className="panel">
+              <div className="report-summary-grid">
+                <div className="report-summary-item">
+                  <div className="report-summary-item__label">Total Receitas</div>
+                  <div className="report-summary-item__value report-summary-item__value--positive">
+                    {formatCurrency(resumoConsolidado.recRecebido)}
+                  </div>
+                  <div className="report-summary-item__sub">
+                    Previsto: {formatCurrency(resumoConsolidado.recPrevisto)}
+                  </div>
+                </div>
+                <div className="report-summary-item">
+                  <div className="report-summary-item__label">Total Despesas</div>
+                  <div className="report-summary-item__value report-summary-item__value--negative">
+                    {formatCurrency(resumoConsolidado.despPago)}
+                  </div>
+                  <div className="report-summary-item__sub">
+                    Previsto: {formatCurrency(resumoConsolidado.despPrevisto)}
+                  </div>
+                </div>
+                <div className="report-summary-item">
+                  <div className="report-summary-item__label">Variação Receitas</div>
+                  <div className={`report-summary-item__value ${parseFloat(variacaoReceitas) >= 0 ? 'report-summary-item__value--positive' : 'report-summary-item__value--negative'}`}>
+                    {parseFloat(variacaoReceitas) >= 0 ? '+' : ''}{variacaoReceitas}%
+                  </div>
+                </div>
+                <div className="report-summary-item">
+                  <div className="report-summary-item__label">Variação Despesas</div>
+                  <div className={`report-summary-item__value ${parseFloat(variacaoDespesas) <= 0 ? 'report-summary-item__value--positive' : 'report-summary-item__value--negative'}`}>
+                    {parseFloat(variacaoDespesas) >= 0 ? '+' : ''}{variacaoDespesas}%
+                  </div>
+                </div>
               </div>
-            ))
-          )}
-        </div>
-      </section>
+            </section>
 
-      <section className="panel">
-        <h3>Comparativo Planejado x Realizado</h3>
-        <div className="table">
-          <div className="table-row table-header cols-3">
-            <span>Tipo</span>
-            <span>Diferença (R$)</span>
-            <span>Diferença (%)</span>
-          </div>
-          {comparativoPlanejado.map((item) => (
-            <div className="table-row cols-3" key={item.tipo}>
-              <span>{item.tipo}</span>
-              <span>{formatCurrency(item.diff)}</span>
-              <span>{formatPercent(item.percent)}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="panel">
-        <h3>Despesas por Categoria</h3>
-        <div className="table">
-          <div className="table-row table-header cols-4">
-            <span>Categoria</span>
-            <span>Total previsto</span>
-            <span>Total pago</span>
-            <span>Diferença</span>
-          </div>
-          {despesasPorCategoria.length === 0 ? (
-            <div className="table-row empty cols-4">
-              <span>Sem despesas no período selecionado.</span>
-            </div>
-          ) : (
-            despesasPorCategoria.map((item) => (
-              <div className="table-row cols-4" key={item.categoria}>
-                <span>{item.categoria}</span>
-                <span>{formatCurrency(item.previsto)}</span>
-                <span>{formatCurrency(item.pago)}</span>
-                <span>{formatCurrency(item.diferenca)}</span>
+            <section className="panel">
+              <h3 className="panel-title">Comparativo Previsto x Realizado</h3>
+              <div className="charts-grid charts-grid--single">
+                <HorizontalBar
+                  data={[
+                    { name: 'Receitas Previsto', value: resumoConsolidado.recPrevisto },
+                    { name: 'Receitas Realizado', value: resumoConsolidado.recRecebido },
+                    { name: 'Despesas Previsto', value: resumoConsolidado.despPrevisto },
+                    { name: 'Despesas Realizado', value: resumoConsolidado.despPago }
+                  ]}
+                  height={150}
+                  colors={['#86EFAC', '#10B981', '#FCA5A5', '#EF4444']}
+                />
               </div>
-            ))
-          )}
-        </div>
-      </section>
+            </section>
+          </>
+        )}
 
-      <section className="panel">
-        <h3>Receitas por Categoria</h3>
-        <div className="table">
-          <div className="table-row table-header cols-4">
-            <span>Categoria</span>
-            <span>Total previsto</span>
-            <span>Total recebido</span>
-            <span>Percentual</span>
-          </div>
-          {receitasPorCategoria.length === 0 ? (
-            <div className="table-row empty cols-4">
-              <span>Sem receitas no período selecionado.</span>
-            </div>
-          ) : (
-            receitasPorCategoria.map((item) => (
-              <div className="table-row cols-4" key={item.categoria}>
-                <span>{item.categoria}</span>
-                <span>{formatCurrency(item.previsto)}</span>
-                <span>{formatCurrency(item.recebido)}</span>
-                <span>{formatPercent(item.percentual)}</span>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
+        {/* Tab Evolução */}
+        {activeTab === 'evolucao' && (
+          <>
+            <section className="panel">
+              <h3 className="panel-title">Evolução Mensal</h3>
+              <AreaChart
+                data={evolucaoChartData}
+                series={areaSeries}
+                height={300}
+                showGrid={true}
+                showLegend={true}
+              />
+            </section>
 
-      <section className="panel">
-        <h3>Gastos por Descrição (Gastos Idênticos)</h3>
-        <div className="table">
-          <div className="table-row table-header cols-5-report">
-            <span>Descrição</span>
-            <span>Ocorrências</span>
-            <span>Total previsto</span>
-            <span>Total pago</span>
-            <span>Valor médio</span>
-          </div>
-          {gastosPorDescricao.length === 0 ? (
-            <div className="table-row empty cols-5-report">
-              <span>Sem gastos no período selecionado.</span>
-            </div>
-          ) : (
-            gastosPorDescricao.map((item) => (
-              <div className="table-row cols-5-report" key={item.descricao}>
-                <span>{item.descricao}</span>
-                <span>{item.ocorrencias}</span>
-                <span>{formatCurrency(item.previsto)}</span>
-                <span>{formatCurrency(item.pago)}</span>
-                <span>{formatCurrency(item.media)}</span>
+            <section className="panel">
+              <h3 className="panel-title">Detalhes por Mês</h3>
+              <div className="table">
+                <div className="table-row table-header cols-7">
+                  <span>Mês</span>
+                  <span>Rec. Previsto</span>
+                  <span>Rec. Recebido</span>
+                  <span>Desp. Previsto</span>
+                  <span>Desp. Pago</span>
+                  <span>Saldo</span>
+                  <span>Acumulado</span>
+                </div>
+                {evolucaoMensalComAcumulado.length === 0 ? (
+                  <div className="table-row empty cols-7">
+                    <span>Sem dados para o período.</span>
+                  </div>
+                ) : (
+                  evolucaoMensalComAcumulado.map((item) => (
+                    <div className="table-row cols-7" key={item.mes}>
+                      <span>{item.mes}</span>
+                      <span>{formatCurrency(item.recPrevisto)}</span>
+                      <span className="summary-card-value--positive">{formatCurrency(item.recRecebido)}</span>
+                      <span>{formatCurrency(item.despPrevisto)}</span>
+                      <span className="summary-card-value--negative">{formatCurrency(item.despPago)}</span>
+                      <span className={item.saldoMes >= 0 ? "summary-card-value--positive" : "summary-card-value--negative"}>
+                        {formatCurrency(item.saldoMes)}
+                      </span>
+                      <span className={item.saldoAcumulado >= 0 ? "summary-card-value--positive" : "summary-card-value--negative"}>
+                        {formatCurrency(item.saldoAcumulado)}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
-            ))
-          )}
-        </div>
-      </section>
+            </section>
+          </>
+        )}
 
-      <section className="panel">
-        <h3>Gastos Recorrentes Ocultos</h3>
-        <div className="table">
-          <div className="table-row table-header cols-4">
-            <span>Descrição</span>
-            <span>Meses distintos</span>
-            <span>Ocorrências</span>
-            <span>Total previsto</span>
-          </div>
-          {recorrentesOcultos.length === 0 ? (
-            <div className="table-row empty cols-4">
-              <span>Sem gastos recorrentes ocultos no período.</span>
-            </div>
-          ) : (
-            recorrentesOcultos.map((item) => (
-              <div className="table-row cols-4" key={item.descricao}>
-                <span>{item.descricao}</span>
-                <span>{item.meses}</span>
-                <span>{item.ocorrencias}</span>
-                <span>{formatCurrency(item.previsto)}</span>
+        {/* Tab Categorias */}
+        {activeTab === 'categorias' && (
+          <section className="panel">
+            <h3 className="panel-title">Análise por Categorias</h3>
+            <div className="charts-grid">
+              <div className="report-card">
+                <h4 className="report-card__title">Despesas por Categoria</h4>
+                {despesasPieData.length > 0 ? (
+                  <PieChart
+                    data={despesasPieData}
+                    height={250}
+                    showLegend={true}
+                  />
+                ) : (
+                  <div className="chart-empty" style={{ height: 250 }}>
+                    <p>Sem despesas no período</p>
+                  </div>
+                )}
               </div>
-            ))
-          )}
-        </div>
-      </section>
+              <div className="report-card">
+                <h4 className="report-card__title">Receitas por Categoria</h4>
+                {receitasPieData.length > 0 ? (
+                  <PieChart
+                    data={receitasPieData}
+                    height={250}
+                    showLegend={true}
+                    colors={['#10B981', '#14B8A6', '#06B6D4', '#0EA5E9', '#3B82F6']}
+                  />
+                ) : (
+                  <div className="chart-empty" style={{ height: 250 }}>
+                    <p>Sem receitas no período</p>
+                  </div>
+                )}
+              </div>
+            </div>
 
-      <section className="panel">
-        <h3>Análise do Cartão de Crédito</h3>
-        <div className="table">
-          <div className="table-row table-header cols-8">
-            <span>Cartão</span>
-            <span>Mês</span>
-            <span>Valor alocado</span>
-            <span>Fixo/Parcelado</span>
-            <span>Gastos do mês</span>
-            <span>Total do mês</span>
-            <span>Saldo do mês</span>
-            <span>Situação</span>
-          </div>
-          {analiseCartao.length === 0 ? (
-            <div className="table-row empty cols-8">
-              <span>Sem dados de cartão no período selecionado.</span>
-            </div>
-          ) : (
-            analiseCartao.map((item, index) => (
-              <div className="table-row cols-8" key={`${item.cartao}-${item.mes}-${index}`}>
-                <span>{item.cartao}</span>
-                <span>{item.mes}</span>
-                <span>{formatCurrency(item.valorAlocado)}</span>
-                <span>{formatCurrency(item.fixoParcelado)}</span>
-                <span>{formatCurrency(item.gastosMes)}</span>
-                <span>{formatCurrency(item.totalMes)}</span>
-                <span>{formatCurrency(item.saldoMes)}</span>
-                <span>{item.situacao}</span>
+            <div className="accordion accordion--open">
+              <div className="accordion__header">
+                <h4 className="accordion__title">Ver todas as categorias de despesas</h4>
+                <span className="accordion__icon">▼</span>
               </div>
-            ))
-          )}
-        </div>
-      </section>
+              <div className="accordion__content">
+                <div className="table">
+                  <div className="table-row table-header cols-4">
+                    <span>Categoria</span>
+                    <span>Previsto</span>
+                    <span>Pago</span>
+                    <span>Diferença</span>
+                  </div>
+                  {despesasPorCategoria.map((item) => (
+                    <div className="table-row cols-4" key={item.categoria}>
+                      <span>{item.categoria}</span>
+                      <span>{formatCurrency(item.previsto)}</span>
+                      <span>{formatCurrency(item.pago)}</span>
+                      <span className={item.diferenca >= 0 ? "summary-card-value--positive" : "summary-card-value--negative"}>
+                        {formatCurrency(item.diferenca)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
-      <section className="panel">
-        <h3>Resumo Anual por Mês</h3>
-        <div className="table">
-          <div className="table-row table-header cols-7">
-            <span>Mês</span>
-            <span>Rec. Previsto</span>
-            <span>Rec. Recebido</span>
-            <span>Desp. Previsto</span>
-            <span>Desp. Pago</span>
-            <span>Saldo do Mês</span>
-            <span>Saldo Acumulado</span>
-          </div>
-          {resumoAnual.length === 0 ? (
-            <div className="table-row empty cols-7">
-              <span>Sem dados para o orçamento selecionado.</span>
-            </div>
-          ) : (
-            resumoAnual.map((item) => (
-              <div className="table-row cols-7" key={`anual-${item.mes}`}>
-                <span>{item.mes}</span>
-                <span>{formatCurrency(item.recPrevisto)}</span>
-                <span>{formatCurrency(item.recRecebido)}</span>
-                <span>{formatCurrency(item.despPrevisto)}</span>
-                <span>{formatCurrency(item.despPago)}</span>
-                <span>{formatCurrency(item.saldoMes)}</span>
-                <span>{formatCurrency(item.saldoAcumulado)}</span>
+        {/* Tab Cartões */}
+        {activeTab === 'cartoes' && (
+          <section className="panel">
+            <h3 className="panel-title">Análise de Cartões de Crédito</h3>
+            
+            {analiseCartao.length > 0 ? (
+              <>
+                <div className="report-summary-grid">
+                  <div className="report-summary-item">
+                    <div className="report-summary-item__label">Total Utilizado</div>
+                    <div className="report-summary-item__value report-summary-item__value--negative">
+                      {formatCurrency(analiseCartao.reduce((acc, item) => acc + item.totalMes, 0))}
+                    </div>
+                  </div>
+                  <div className="report-summary-item">
+                    <div className="report-summary-item__label">Total Alocado</div>
+                    <div className="report-summary-item__value">
+                      {formatCurrency(analiseCartao.reduce((acc, item) => acc + item.valorAlocado, 0))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="table">
+                  <div className="table-row table-header cols-8">
+                    <span>Cartão</span>
+                    <span>Mês</span>
+                    <span>Alocado</span>
+                    <span>Fixo/Parcelado</span>
+                    <span>Gastos</span>
+                    <span>Total</span>
+                    <span>Saldo</span>
+                    <span>Status</span>
+                  </div>
+                  {analiseCartao.map((item, index) => (
+                    <div className="table-row cols-8" key={`${item.cartao}-${item.mes}-${index}`}>
+                      <span>{item.cartao}</span>
+                      <span>{item.mes}</span>
+                      <span>{formatCurrency(item.valorAlocado)}</span>
+                      <span>{formatCurrency(item.fixoParcelado)}</span>
+                      <span>{formatCurrency(item.gastosMes)}</span>
+                      <span>{formatCurrency(item.totalMes)}</span>
+                      <span className={item.saldoMes >= 0 ? "summary-card-value--positive" : "summary-card-value--negative"}>
+                        {formatCurrency(item.saldoMes)}
+                      </span>
+                      <span>
+                        <span className={`status-badge ${item.situacao === 'Fechada' ? 'status-badge--closed' : 'status-badge--open'}`}>
+                          {item.situacao}
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="chart-empty" style={{ height: 200 }}>
+                <p>Sem dados de cartão no período selecionado</p>
               </div>
-            ))
-          )}
-        </div>
-      </section>
+            )}
+          </section>
+        )}
+
+        {/* Tab Análise */}
+        {activeTab === 'analise' && (
+          <section className="panel">
+            <h3 className="panel-title">Análises Especiais</h3>
+            
+            {/* Gastos Recorrentes Ocultos */}
+            {recorrentesOcultos.length > 0 && (
+              <div className="report-card">
+                <h4 className="report-card__title">⚠️ Gastos Recorrentes Ocultos</h4>
+                <p className="report-card__subtitle">
+                  Identificamos {recorrentesOcultos.length} gastos que aparecem em múltiplos meses mas não estão marcados como recorrentes:
+                </p>
+                <div className="hidden-recurring-list">
+                  {recorrentesOcultos.slice(0, 5).map((item) => (
+                    <div className="hidden-recurring-item" key={item.descricao}>
+                      <div>
+                        <span className="hidden-recurring-item__description">{item.descricao}</span>
+                        <span className="report-summary-item__sub"> - {item.meses} meses</span>
+                      </div>
+                      <span className="hidden-recurring-item__value">{formatCurrency(item.previsto)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Insights */}
+            <div className="report-card">
+              <h4 className="report-card__title">💡 Insights</h4>
+              <div className="insights-list">
+                {resumoConsolidado.recRecebido > resumoConsolidado.recPrevisto && (
+                  <div className="insight-item">
+                    <span className="insight-item__icon">📈</span>
+                    <span className="insight-item__text">
+                      Você recebeu {formatPercent(Math.abs(variacaoReceitas))} a mais do que o previsto em receitas
+                    </span>
+                  </div>
+                )}
+                {resumoConsolidado.despPago < resumoConsolidado.despPrevisto && (
+                  <div className="insight-item">
+                    <span className="insight-item__icon">📉</span>
+                    <span className="insight-item__text">
+                      Você gastou {formatPercent(Math.abs(variacaoDespesas))} a menos do que o previsto em despesas
+                    </span>
+                  </div>
+                )}
+                {despesasPorCategoria.length > 0 && (
+                  <div className="insight-item">
+                    <span className="insight-item__icon">🏷️</span>
+                    <span className="insight-item__text">
+                      Sua maior categoria de despesa é <strong>{despesasPorCategoria[0]?.categoria}</strong> 
+                      com {formatCurrency(despesasPorCategoria[0]?.pago)}
+                    </span>
+                  </div>
+                )}
+                {saldoEmConta >= 0 && (
+                  <div className="insight-item">
+                    <span className="insight-item__icon">✅</span>
+                    <span className="insight-item__text">
+                      Seu saldo está positivo no período: {formatCurrency(saldoEmConta)}
+                    </span>
+                  </div>
+                )}
+                {saldoEmConta < 0 && (
+                  <div className="insight-item">
+                    <span className="insight-item__icon">⚠️</span>
+                    <span className="insight-item__text">
+                      Atenção: seu saldo está negativo no período: {formatCurrency(saldoEmConta)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Gastos por Descrição */}
+            <div className="accordion">
+              <div className="accordion__header">
+                <h4 className="accordion__title">Ver todos os gastos por descrição</h4>
+                <span className="accordion__icon">▼</span>
+              </div>
+              <div className="accordion__content">
+                <div className="table">
+                  <div className="table-row table-header cols-5-report">
+                    <span>Descrição</span>
+                    <span>Ocorrências</span>
+                    <span>Previsto</span>
+                    <span>Pago</span>
+                    <span>Média</span>
+                  </div>
+                  {gastosPorDescricao.slice(0, 20).map((item) => (
+                    <div className="table-row cols-5-report" key={item.descricao}>
+                      <span>{item.descricao}</span>
+                      <span>{item.ocorrencias}</span>
+                      <span>{formatCurrency(item.previsto)}</span>
+                      <span>{formatCurrency(item.pago)}</span>
+                      <span>{formatCurrency(item.media)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+      </div>
     </div>
   );
 };

@@ -1,0 +1,411 @@
+/* ===========================================
+   CHART COMPONENTS STYLES
+   =========================================== */
+
+/* Chart Tooltip */
+.chart-tooltip {
+  background: #ffffff;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  font-size: 12px;
+}
+
+.chart-tooltip__title {
+  font-weight: 600;
+  color: #0F172A;
+  margin: 0 0 4px;
+}
+
+.chart-tooltip__text {
+  color: #64748B;
+  margin: 0;
+}
+
+.chart-tooltip__value {
+  font-weight: 600;
+  margin: 2px 0;
+}
+
+.chart-tooltip__percent {
+  color: #64748B;
+  font-size: 11px;
+  margin: 2px 0 0;
+}
+
+.chart-tooltip--area {
+  min-width: 120px;
+}
+
+.chart-tooltip--pie {
+  min-width: 100px;
+}
+
+/* Chart Empty State */
+.chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #F8FAFC;
+  border: 1px dashed #CBD5E1;
+  border-radius: 8px;
+  color: #64748B;
+  font-size: 14px;
+}
+
+/* ===========================================
+   DONUT CHART
+   =========================================== */
+.donut-chart {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.donut-chart__center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.donut-chart__percent {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+/* ===========================================
+   PIE CHART
+   =========================================== */
+.pie-chart {
+  display: flex;
+  align-items: center;
+}
+
+.pie-chart__legend-item {
+  color: #64748B;
+  font-size: 12px;
+}
+
+/* ===========================================
+   AREA CHART
+   =========================================== */
+.area-chart {
+  width: 100%;
+}
+
+/* ===========================================
+   HORIZONTAL BAR CHART
+   =========================================== */
+.horizontal-bar {
+  width: 100%;
+}
+
+/* ===========================================
+   KPI CARD
+   =========================================== */
+.kpi-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #E2E8F0;
+  transition: all 0.2s ease;
+}
+
+.kpi-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.kpi-card--positive {
+  border-color: #10B981;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+}
+
+.kpi-card--negative {
+  border-color: #EF4444;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+}
+
+.kpi-card--neutral {
+  border-color: #3B82F6;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.kpi-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.kpi-card__icon {
+  font-size: 20px;
+}
+
+.kpi-card__title {
+  font-size: 14px;
+  color: #64748B;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.kpi-card__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.kpi-card__value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.kpi-card__subtitle {
+  font-size: 13px;
+  color: #64748B;
+  margin-top: 4px;
+}
+
+.kpi-card__trend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.kpi-card__trend--up {
+  color: #10B981;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.kpi-card__trend--down {
+  color: #EF4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.kpi-card__trend--neutral {
+  color: #64748B;
+  background: rgba(100, 116, 139, 0.1);
+}
+
+.kpi-card__footer {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #E2E8F0;
+  width: 100%;
+}
+
+/* ===========================================
+   SUMMARY CARD MODERN
+   =========================================== */
+.summary-card-modern {
+  background: #ffffff;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.summary-card-modern:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #CBD5E1;
+}
+
+.summary-card-modern__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.summary-card-modern__icon {
+  font-size: 18px;
+}
+
+.summary-card-modern__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0F172A;
+  margin: 0;
+}
+
+.summary-card-modern__chart-container {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.summary-card-modern__values {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.summary-card-modern__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summary-card-modern__label {
+  font-size: 12px;
+  color: #64748B;
+}
+
+.summary-card-modern__value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+.summary-card-modern__progress-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-card-modern__progress {
+  height: 6px;
+  background: #E2E8F0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.summary-card-modern__progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.summary-card-modern__progress-text {
+  font-size: 11px;
+  color: #64748B;
+  text-align: right;
+}
+
+.summary-card-modern__difference {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.summary-card-modern__difference.positive {
+  color: #10B981;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.summary-card-modern__difference.negative {
+  color: #EF4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* ===========================================
+   PROGRESS BAR
+   =========================================== */
+.progress-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.progress-bar__track {
+  flex: 1;
+  background: #E2E8F0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar__fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-bar__fill--animated {
+  animation: progress-pulse 2s ease-in-out infinite;
+}
+
+@keyframes progress-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.progress-bar__label {
+  font-size: 11px;
+  color: #64748B;
+  font-weight: 500;
+  min-width: 40px;
+  text-align: right;
+}
+
+/* ===========================================
+   RESPONSIVE STYLES
+   =========================================== */
+@media (max-width: 768px) {
+  .kpi-card {
+    padding: 16px;
+  }
+
+  .kpi-card__value {
+    font-size: 24px;
+  }
+
+  .kpi-card__title {
+    font-size: 12px;
+  }
+
+  .summary-card-modern {
+    padding: 12px;
+  }
+
+  .summary-card-modern__title {
+    font-size: 13px;
+  }
+
+  .summary-card-modern__value {
+    font-size: 13px;
+  }
+
+  .donut-chart__percent {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .kpi-card {
+    padding: 12px;
+  }
+
+  .kpi-card__value {
+    font-size: 20px;
+  }
+
+  .summary-card-modern {
+    padding: 10px;
+  }
+}
