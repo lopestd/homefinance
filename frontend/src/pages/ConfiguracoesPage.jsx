@@ -432,7 +432,7 @@ const ConfiguracoesPage = ({
                         <button type="button" className="icon-button info" onClick={() => editarOrcamento(orcamento)} title="Editar">
                           <IconEdit />
                         </button>
-                        <button type="button" className="icon-button danger" onClick={() => handleDeleteOrcamento(orcamento.id)} title="Excluir">
+                        <button type="button" className="icon-button delete" onClick={() => handleDeleteOrcamento(orcamento.id)} title="Excluir">
                           <IconTrash />
                         </button>
                       </div>
@@ -483,7 +483,7 @@ const ConfiguracoesPage = ({
                         <button type="button" className="icon-button info" onClick={() => editarCartao(cartao)} title="Editar">
                           <IconEdit />
                         </button>
-                        <button type="button" className="icon-button danger" onClick={() => handleDeleteCartao(cartao.id)} title="Excluir">
+                        <button type="button" className="icon-button delete" onClick={() => handleDeleteCartao(cartao.id)} title="Excluir">
                           <IconTrash />
                         </button>
                       </div>
@@ -537,7 +537,7 @@ const ConfiguracoesPage = ({
                         <button type="button" className="icon-button info" onClick={() => editarCategoria(categoria)} title="Editar">
                           <IconEdit />
                         </button>
-                        <button type="button" className="icon-button danger" onClick={() => handleDeleteCategoria(categoria.id)} title="Excluir">
+                        <button type="button" className="icon-button delete" onClick={() => handleDeleteCategoria(categoria.id)} title="Excluir">
                           <IconTrash />
                         </button>
                       </div>
@@ -591,7 +591,7 @@ const ConfiguracoesPage = ({
                         <button type="button" className="icon-button info" onClick={() => editarGasto(gasto)} title="Editar">
                           <IconEdit />
                         </button>
-                        <button type="button" className="icon-button danger" onClick={() => handleDeleteGastoPredefinido(gasto.id)} title="Excluir">
+                        <button type="button" className="icon-button delete" onClick={() => handleDeleteGastoPredefinido(gasto.id)} title="Excluir">
                           <IconTrash />
                         </button>
                       </div>
@@ -645,7 +645,7 @@ const ConfiguracoesPage = ({
                         <button type="button" className="icon-button info" onClick={() => editarTipo(tipo)} title="Editar">
                           <IconEdit />
                         </button>
-                        <button type="button" className="icon-button danger" onClick={() => handleDeleteTipoReceita(tipo.id)} title="Excluir">
+                        <button type="button" className="icon-button delete" onClick={() => handleDeleteTipoReceita(tipo.id)} title="Excluir">
                           <IconTrash />
                         </button>
                       </div>

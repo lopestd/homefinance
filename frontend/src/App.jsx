@@ -90,7 +90,7 @@ function App() {
     { key: "dashboard", label: "Dashboard" },
     { key: "receitas", label: "Receitas" },
     { key: "despesas", label: "Despesas" },
-    { key: "cartao", label: "Cartão" },
+    { key: "cartao", label: "Cartões" },
     { key: "relatorios", label: "Relatórios" },
     { key: "configuracoes", label: "Configurações" }
   ];

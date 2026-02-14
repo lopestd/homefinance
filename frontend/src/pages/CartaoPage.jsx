@@ -249,8 +249,9 @@ const CartaoPage = ({
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState({
     descricao: "",
+    complemento: "",
     valor: "",
-    data: new Date().toISOString().split("T")[0],
+    data: new Date().toLocaleDateString('en-CA'),
     mesReferencia: "",
     categoriaId: "",
     tipoRecorrencia: "EVENTUAL",
@@ -284,6 +285,7 @@ const CartaoPage = ({
 
       setForm({
         descricao: lancamento.descricao,
+        complemento: lancamento.complemento || "",
         valor: lancamento.valor,
         data: lancamento.data,
         mesReferencia: lancamento.mesReferencia,
@@ -302,8 +304,9 @@ const CartaoPage = ({
 
       setForm({
         descricao: "",
+        complemento: "",
         valor: "",
-        data: new Date().toISOString().split("T")[0],
+        data: new Date().toLocaleDateString('en-CA'),
         mesReferencia: selectedMes,
         categoriaId: targetCat ? targetCat.id : "",
         tipoRecorrencia: "EVENTUAL",
@@ -339,7 +342,7 @@ const CartaoPage = ({
       const orcamento = orcamentos.find((o) => o.meses && o.meses.includes(selectedMes));
       if (!orcamento) return;
       const descricaoDespesa = `Fatura do cartão ${cartao.nome}`;
-      const dataAtual = new Date().toISOString().split("T")[0];
+      const dataAtual = new Date().toLocaleDateString('en-CA');
       setDespesas((prev) => prev.map((d) => (
         d.descricao === descricaoDespesa && d.mes === selectedMes && d.orcamentoId === orcamento.id
           ? { ...d, data: dataAtual }
@@ -404,7 +407,7 @@ const CartaoPage = ({
             id: createId("desp-auto"),
             orcamentoId: orcamento.id,
             mes: mes,
-            data: new Date().toISOString().split("T")[0],
+            data: new Date().toLocaleDateString('en-CA'),
             categoriaId: catId,
             descricao: despesaDescricao,
             valor: valorFinal,
@@ -467,6 +470,7 @@ const CartaoPage = ({
           id: createId("lanc-card-parc"),
           cartaoId: effectiveCartaoId,
           descricao: `${form.descricao} (${i + 1}/${qtd})`,
+          complemento: form.complemento || "",
           valor: parcValue,
           data: form.data,
           mesReferencia: getNextMonth(form.mesReferencia, i),
@@ -482,6 +486,7 @@ const CartaoPage = ({
         id: editId || createId("lanc-card"),
         cartaoId: effectiveCartaoId,
         descricao: form.descricao,
+        complemento: form.complemento || "",
         valor: val,
         data: form.data,
         mesReferencia: form.mesReferencia,
@@ -650,13 +655,13 @@ const CartaoPage = ({
                 filteredLancamentos.map((l) => (
                   <tr className="list-table__row" key={l.id}>
                     <td>{new Date(l.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}</td>
-                    <td>{l.descricao}</td>
+                    <td>{l.complemento ? `${l.descricao} - ${l.complemento}` : l.descricao}</td>
                     <td>{l.tipoRecorrencia === "FIXO" ? "Fixo" : l.tipoRecorrencia === "PARCELADO" ? "Parcelado" : "Eventual"}</td>
                     <td>{formatCurrency(l.valor)}</td>
                     <td className="list-table__cell list-table__cell--acoes">
                       <div className="actions">
                         <button className="icon-button info" onClick={() => openModal(l)} title="Editar"><IconEdit /></button>
-                        <button className="icon-button danger" onClick={() => handleDelete(l.id)} title="Excluir"><IconTrash /></button>
+                        <button className="icon-button delete" onClick={() => handleDelete(l.id)} title="Excluir"><IconTrash /></button>
                       </div>
                     </td>
                   </tr>
@@ -702,7 +707,7 @@ const CartaoPage = ({
             <div className="summary-card-header">
               <h4 className="summary-card-title">Status</h4>
               <span className={`status-pill ${isFaturaFechada ? "status-pill--closed" : "status-pill--open"}`}>
-                {isFaturaFechada ? "FECHADA" : "ABERTA"}
+                {isFaturaFechada ? "Fechada" : "Aberta"}
               </span>
             </div>
             <button
@@ -773,6 +778,15 @@ const CartaoPage = ({
               />
               Informar manualmente
             </label>
+          </label>
+          <label className="field">
+            Complemento
+            <input
+              type="text"
+              value={form.complemento}
+              placeholder="Opcional"
+              onChange={(e) => setForm({ ...form, complemento: e.target.value })}
+            />
           </label>
           <label className="field">
             Valor

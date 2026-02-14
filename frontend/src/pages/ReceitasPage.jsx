@@ -101,7 +101,7 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
       valor: "",
       tipoRecorrencia: "EVENTUAL",
       qtdParcelas: "",
-      data: new Date().toISOString().split("T")[0],
+      data: new Date().toLocaleDateString('en-CA'),
       mesInicial: effectiveMes || mesesDisponiveis[0] || "",
       meses: [],
       status: "Pendente"
@@ -377,7 +377,7 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
                         </button>
                         <button
                           type="button"
-                          className="icon-button danger"
+                          className="icon-button delete"
                           onClick={() => excluirReceita(receita.id)}
                           title="Excluir esta receita"
                           aria-label="Excluir esta receita"

@@ -110,20 +110,22 @@
 .badge-month,
 .badge-year {
   display: inline-block;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-weight: 700;
-  font-size: 0.9em;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-weight: 900;
+  font-size: 1em;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  color: #ffffff !important;
 }
 
 .badge-month {
   background: #2563eb;
-  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .badge-year {
   background: #16a34a;
-  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .monthly-summary-grid {
@@ -234,6 +236,102 @@
 .monthly-summary-card__row.total .value {
   font-size: 1.15em;
   color: #dc2626;
+}
+
+/* ===========================================
+   STATUS PILL - Fatura Aberta/Fechada
+   =========================================== */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.9em;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+}
+
+.status-pill--open {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.status-pill--open::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+  animation: pulse-open 2s infinite;
+}
+
+.status-pill--closed {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.status-pill--closed::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+}
+
+@keyframes pulse-open {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.2);
+  }
+}
+
+/* ===========================================
+   STATUS ACTION BUTTON
+   =========================================== */
+.status-action {
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 0.9em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.status-action--open {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.status-action--open:hover {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4);
+  transform: translateY(-1px);
+}
+
+.status-action--closed {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.status-action--closed:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+  transform: translateY(-1px);
 }
 
 .auth-screen {
