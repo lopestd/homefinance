@@ -219,7 +219,6 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias }) => {
       {/* Header com filtros */}
       <section className="panel dashboard-header">
         <div className="dashboard-header__content">
-          <h2 className="dashboard-header__title">📊 Dashboard</h2>
           <form className="form-inline dashboard-filters" onSubmit={(e) => e.preventDefault()}>
             <label className="field">
               Orçamento
@@ -280,27 +279,6 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias }) => {
           labelPrevisto="Previsto"
           labelRealizado="Pago"
         />
-        <SummaryCard
-          title="Balanço Anual"
-          icon="📊"
-          previsto={resumoAnual.recPrevisto - resumoAnual.despPrevisto}
-          realizado={resumoAnual.saldoRealizado}
-          color={resumoAnual.saldoRealizado >= 0 ? '#10B981' : '#EF4444'}
-          labelPrevisto="Previsto"
-          labelRealizado="Realizado"
-        />
-      </section>
-
-      {/* Gráfico de Evolução Mensal */}
-      <section className="panel dashboard-chart">
-        <h3 className="panel-title">Evolução Mensal</h3>
-        <AreaChart
-          data={evolucaoMensalData}
-          series={areaSeries}
-          height={280}
-          showGrid={true}
-          showLegend={true}
-        />
       </section>
 
       {/* Top Categorias */}
@@ -335,6 +313,18 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias }) => {
             </div>
           )}
         </div>
+      </section>
+
+      {/* Gráfico de Evolução Mensal */}
+      <section className="panel dashboard-chart">
+        <h3 className="panel-title">Evolução Mensal</h3>
+        <AreaChart
+          data={evolucaoMensalData}
+          series={areaSeries}
+          height={280}
+          showGrid={true}
+          showLegend={true}
+        />
       </section>
 
       {/* Resumo Anual */}

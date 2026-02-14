@@ -87,12 +87,12 @@ function App() {
   ]);
 
   const pages = [
-    { key: "dashboard", label: "Dashboard" },
-    { key: "receitas", label: "Receitas" },
-    { key: "despesas", label: "Despesas" },
-    { key: "cartao", label: "Cartões" },
-    { key: "relatorios", label: "Relatórios" },
-    { key: "configuracoes", label: "Configurações" }
+    { key: "dashboard", label: "📊 Dashboard" },
+    { key: "receitas", label: "💰 Receitas" },
+    { key: "despesas", label: "💸 Despesas" },
+    { key: "cartao", label: "💳 Cartões" },
+    { key: "relatorios", label: "📋 Relatórios" },
+    { key: "configuracoes", label: "⚙️ Configurações" }
   ];
   const bottomNavPages = pages.filter((page) =>
     ["dashboard", "receitas", "despesas", "cartao"].includes(page.key)

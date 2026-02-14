@@ -339,7 +339,6 @@ const RelatoriosPage = ({
       {/* Header com filtros */}
       <section className="panel reports-header">
         <div className="reports-header__content">
-          <h2 className="reports-header__title">📋 Relatórios</h2>
           <form className="form-inline reports-filters" onSubmit={(event) => event.preventDefault()}>
             <label className="field">
               Orçamento
