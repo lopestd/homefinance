@@ -200,7 +200,7 @@
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
   }
 
@@ -762,13 +762,47 @@
     gap: 4px;
   }
 
-  /* Tables in Reports */
+  /* Tables in Reports - Reestruturação completa para Mobile */
   .reports-page .table {
-    font-size: 12px;
+    font-size: 11px;
+    display: block;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .reports-page .table-row {
+    display: grid;
+    min-width: max-content;
+    padding: 8px 10px;
+    gap: 4px;
   }
 
   .reports-page .table-row span {
-    padding: 6px 4px;
+    padding: 3px 5px;
+    white-space: nowrap;
+    font-size: 10px;
+  }
+
+  /* Tabela de Categorias - 4 colunas */
+  .reports-page .table-row.cols-4 {
+    grid-template-columns: 1.5fr repeat(3, 1fr);
+    min-width: 350px;
+  }
+
+  /* Tabela de Evolução - 7 colunas */
+  .reports-page .table-row.cols-7 {
+    grid-template-columns: 60px repeat(6, 65px);
+    min-width: 450px;
+  }
+
+  /* Tabela de Cartões - 8 colunas - Colunas Cartão e Mês maiores */
+  .reports-page .table-row.cols-8 {
+    grid-template-columns: 90px 70px repeat(6, 60px);
+    min-width: 520px;
   }
 }
 
@@ -815,5 +849,28 @@
   .dashboard-category .panel-title,
   .dashboard-annual .panel-title {
     font-size: 14px;
+  }
+
+  /* Reports Tables - Ajustes finos para telas muito pequenas */
+  .reports-page .table-row span {
+    font-size: 9px;
+    padding: 2px 4px;
+  }
+
+  /* Tabela de Categorias - 4 colunas */
+  .reports-page .table-row.cols-4 {
+    grid-template-columns: 1.4fr repeat(3, 1fr);
+    min-width: 320px;
+  }
+
+  .reports-page .table-row.cols-7 {
+    grid-template-columns: 55px repeat(6, 60px);
+    min-width: 415px;
+  }
+
+  /* Tabela de Cartões - Colunas Cartão e Mês maiores */
+  .reports-page .table-row.cols-8 {
+    grid-template-columns: 80px 60px repeat(6, 55px);
+    min-width: 470px;
   }
 }

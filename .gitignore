@@ -37,6 +37,7 @@ plans
 # OS files
 Thumbs.db
 Desktop.ini
+create_first_user.bat
 
 # Kiro
 .kiro/

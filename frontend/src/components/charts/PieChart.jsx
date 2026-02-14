@@ -1,13 +1,9 @@
-import React from 'react';
-import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import React, { useRef, useState, useEffect } from 'react';
+import { PieChart as RechartsPieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 
 /**
  * PieChart - Gráfico de pizza para distribuição de categorias
- * @param {Array} data - Dados no formato [{ name: 'Moradia', value: 1500 }, ...]
- * @param {number} height - Altura do gráfico
- * @param {Array} colors - Array de cores para as fatias
- * @param {boolean} showLegend - Mostrar legenda
- * @param {boolean} showLabels - Mostrar labels nas fatias
+ * SEM ResponsiveContainer para evitar warnings de dimensões negativas
  */
 const PieChart = ({
   data = [],
@@ -18,6 +14,31 @@ const PieChart = ({
   currencyFormat = true,
   innerRadius = 0
 }) => {
+  const containerRef = useRef(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const { offsetWidth, offsetHeight } = containerRef.current;
+        if (offsetWidth > 0 && offsetHeight > 0) {
+          setDimensions({ width: offsetWidth, height: offsetHeight });
+        }
+      }
+    };
+
+    const rafId = requestAnimationFrame(() => {
+      updateDimensions();
+    });
+
+    window.addEventListener('resize', updateDimensions);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', updateDimensions);
+    };
+  }, []);
+
   const formatCurrency = (value) => {
     if (!currencyFormat) return value;
     return new Intl.NumberFormat('pt-BR', {
@@ -46,7 +67,7 @@ const PieChart = ({
   };
 
   const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
-    if (percent < 0.05) return null; // Não mostrar labels para fatias muito pequenas
+    if (percent < 0.05) return null;
     
     const RADIAN = Math.PI / 180;
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
@@ -76,16 +97,18 @@ const PieChart = ({
     );
   }
 
+  const { width, height: computedHeight } = dimensions;
+
   return (
-    <div className="pie-chart" style={{ width: '100%', height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <RechartsPieChart>
+    <div className="pie-chart" ref={containerRef} style={{ width: '100%', height }}>
+      {width > 0 && computedHeight > 0 && (
+        <RechartsPieChart width={width} height={computedHeight}>
           <Pie
             data={data}
             cx="50%"
             cy="50%"
             innerRadius={innerRadius}
-            outerRadius={height * 0.32}
+            outerRadius={computedHeight * 0.32}
             dataKey="value"
             paddingAngle={2}
             label={showLabels ? renderCustomLabel : false}
@@ -116,7 +139,7 @@ const PieChart = ({
             />
           )}
         </RechartsPieChart>
-      </ResponsiveContainer>
+      )}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   BarChart,
   Bar,
@@ -6,17 +6,12 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
   Cell
 } from 'recharts';
 
 /**
  * HorizontalBar - Gráfico de barras horizontais
- * @param {Array} data - Dados no formato [{ name: 'Moradia', value: 1500 }, ...]
- * @param {number} height - Altura do gráfico
- * @param {Array} colors - Array de cores para as barras
- * @param {boolean} showGrid - Mostrar grid
- * @param {boolean} showValues - Mostrar valores ao lado das barras
+ * SEM ResponsiveContainer para evitar warnings de dimensões negativas
  */
 const HorizontalBar = ({
   data = [],
@@ -27,6 +22,31 @@ const HorizontalBar = ({
   currencyFormat = true,
   maxValue = null
 }) => {
+  const containerRef = useRef(null);
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const { offsetWidth } = containerRef.current;
+        if (offsetWidth > 0) {
+          setWidth(offsetWidth);
+        }
+      }
+    };
+
+    const rafId = requestAnimationFrame(() => {
+      updateDimensions();
+    });
+
+    window.addEventListener('resize', updateDimensions);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', updateDimensions);
+    };
+  }, []);
+
   const formatCurrency = (value) => {
     if (!currencyFormat) return value;
     return new Intl.NumberFormat('pt-BR', {
@@ -64,9 +84,11 @@ const HorizontalBar = ({
   }
 
   return (
-    <div className="horizontal-bar" style={{ width: '100%', height }}>
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="horizontal-bar" ref={containerRef} style={{ width: '100%', height }}>
+      {width > 0 && (
         <BarChart
+          width={width}
+          height={height}
           data={data}
           layout="vertical"
           margin={{ top: 0, right: 60, left: 0, bottom: 0 }}
@@ -107,7 +129,7 @@ const HorizontalBar = ({
             ))}
           </Bar>
         </BarChart>
-      </ResponsiveContainer>
+      )}
     </div>
   );
 };

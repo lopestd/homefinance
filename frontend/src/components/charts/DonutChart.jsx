@@ -1,13 +1,9 @@
-import React from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import React, { useRef, useState, useEffect } from 'react';
+import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 
 /**
  * DonutChart - Gráfico de rosca reutilizável
- * @param {number} value - Valor atual (ex: realizado)
- * @param {number} total - Valor total (ex: previsto)
- * @param {string} color - Cor do preenchimento
- * @param {number} size - Tamanho do gráfico
- * @param {boolean} showPercentage - Mostrar percentual no centro
+ * SEM ResponsiveContainer para evitar warnings de dimensões negativas
  */
 const DonutChart = ({
   value = 0,
@@ -17,6 +13,31 @@ const DonutChart = ({
   showPercentage = true,
   tooltipFormatter
 }) => {
+  const containerRef = useRef(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const { offsetWidth, offsetHeight } = containerRef.current;
+        if (offsetWidth > 0 && offsetHeight > 0) {
+          setDimensions({ width: offsetWidth, height: offsetHeight });
+        }
+      }
+    };
+
+    const rafId = requestAnimationFrame(() => {
+      updateDimensions();
+    });
+
+    window.addEventListener('resize', updateDimensions);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', updateDimensions);
+    };
+  }, []);
+
   const percent = total > 0 ? Math.min((value / total) * 100, 100) : 0;
   const remaining = 100 - percent;
   
@@ -38,10 +59,12 @@ const DonutChart = ({
     return null;
   };
 
+  const { width, height: computedHeight } = dimensions;
+
   return (
-    <div className="donut-chart" style={{ width: size, height: size }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
+    <div className="donut-chart" ref={containerRef} style={{ width: size, height: size }}>
+      {width > 0 && computedHeight > 0 && (
+        <PieChart width={width} height={computedHeight}>
           <Pie
             data={data}
             cx="50%"
@@ -58,7 +81,7 @@ const DonutChart = ({
           </Pie>
           <Tooltip content={<CustomTooltip />} />
         </PieChart>
-      </ResponsiveContainer>
+      )}
       {showPercentage && (
         <div className="donut-chart__center">
           <span className="donut-chart__percent">{percent.toFixed(0)}%</span>

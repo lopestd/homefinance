@@ -563,6 +563,7 @@
 
 .dashboard-chart {
   padding: 20px;
+  min-height: 320px;
 }
 
 .dashboard-categories {
@@ -573,6 +574,7 @@
 
 .dashboard-category {
   padding: 16px;
+  min-height: 240px;
 }
 
 .dashboard-annual {
@@ -673,6 +675,7 @@
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 16px;
+  min-height: 300px;
 }
 
 .report-card__header {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   AreaChart as RechartsAreaChart,
   Area,
@@ -6,17 +6,12 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
   Legend
 } from 'recharts';
 
 /**
  * AreaChart - Gráfico de área para evolução temporal
- * @param {Array} data - Dados no formato [{ name: 'Jan', value1: 100, value2: 50 }, ...]
- * @param {Array} series - Configuração das séries [{ dataKey: 'receitas', name: 'Receitas', color: '#10B981' }]
- * @param {number} height - Altura do gráfico
- * @param {boolean} showGrid - Mostrar grid
- * @param {boolean} showLegend - Mostrar legenda
+ * SEM ResponsiveContainer para evitar warnings de dimensões negativas
  */
 const AreaChart = ({
   data = [],
@@ -26,6 +21,33 @@ const AreaChart = ({
   showLegend = true,
   currencyFormat = true
 }) => {
+  const containerRef = useRef(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const { offsetWidth, offsetHeight } = containerRef.current;
+        if (offsetWidth > 0 && offsetHeight > 0) {
+          setDimensions({ width: offsetWidth, height: offsetHeight });
+        }
+      }
+    };
+
+    // Atualizar dimensões após mount
+    const rafId = requestAnimationFrame(() => {
+      updateDimensions();
+    });
+
+    // Listener para resize
+    window.addEventListener('resize', updateDimensions);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', updateDimensions);
+    };
+  }, []);
+
   const formatCurrency = (value) => {
     if (!currencyFormat) return value;
     return new Intl.NumberFormat('pt-BR', {
@@ -64,10 +86,14 @@ const AreaChart = ({
     );
   }
 
+  const { width, height: computedHeight } = dimensions;
+
   return (
-    <div className="area-chart" style={{ width: '100%', height }}>
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="area-chart" ref={containerRef} style={{ width: '100%', height }}>
+      {width > 0 && computedHeight > 0 && (
         <RechartsAreaChart
+          width={width}
+          height={computedHeight}
           data={data}
           margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
         >
@@ -107,7 +133,7 @@ const AreaChart = ({
             />
           ))}
         </RechartsAreaChart>
-      </ResponsiveContainer>
+      )}
     </div>
   );
 };
