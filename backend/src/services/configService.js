@@ -106,78 +106,54 @@ const loadConfig = async (userId) => {
       limitesMensais: limitesByCartao.get(row.id) || {},
       faturasFechadas: faturasByCartao.get(row.id) || []
     })),
-    receitas: receitasRes.rows.map((row) => {
-      // DIAGNOSTIC LOG: Check date conversion
-      if (row.data) {
-        console.log('[DIAGNOSTIC] Receita ID:', row.id, '- Original date from DB:', row.data, '- Type:', typeof row.data);
-        console.log('[DIAGNOSTIC] Receita ID:', row.id, '- toISOString():', row.data.toISOString());
-        console.log('[DIAGNOSTIC] Receita ID:', row.id, '- Final date string:', row.data.toISOString().slice(0, 10));
-      }
-      return {
-        id: toId(row.id),
-        orcamentoId: toId(row.orcamento_id),
-        mes: monthNumberToName(row.mes_referencia),
-        data: row.data ? row.data.toISOString().slice(0, 10) : null,
-        categoriaId: toId(row.categoria_id),
-        descricao: row.descricao,
-        complemento: row.complemento || "",
-        valor: Number(row.valor),
-        tipoRecorrencia: row.tipo_recorrencia,
-        qtdParcelas: row.total_parcelas ?? "",
-        parcela: row.parcela_atual ?? null,
-        totalParcelas: row.total_parcelas ?? null,
-        meses: (receitasMesesMap.get(row.id) || []).map(monthNumberToName),
-        status: row.status,
-        categoria: categoriasById.get(row.categoria_id) || "—"
-      };
-    }),
-    despesas: despesasRes.rows.map((row) => {
-      // DIAGNOSTIC LOG: Check date conversion
-      if (row.data) {
-        console.log('[DIAGNOSTIC] Despesa ID:', row.id, '- Original date from DB:', row.data, '- Type:', typeof row.data);
-        console.log('[DIAGNOSTIC] Despesa ID:', row.id, '- toISOString():', row.data.toISOString());
-        console.log('[DIAGNOSTIC] Despesa ID:', row.id, '- Final date string:', row.data.toISOString().slice(0, 10));
-      }
-      return {
-        id: toId(row.id),
-        orcamentoId: toId(row.orcamento_id),
-        mes: monthNumberToName(row.mes_referencia),
-        data: row.data ? row.data.toISOString().slice(0, 10) : null,
-        categoriaId: toId(row.categoria_id),
-        descricao: row.descricao,
-        complemento: row.complemento || "",
-        valor: Number(row.valor),
-        tipoRecorrencia: row.tipo_recorrencia,
-        qtdParcelas: row.total_parcelas ?? "",
-        parcela: row.parcela_atual ?? null,
-        totalParcelas: row.total_parcelas ?? null,
-        meses: (despesasMesesMap.get(row.id) || []).map(monthNumberToName),
-        status: row.status,
-        categoria: categoriasById.get(row.categoria_id) || "—"
-      };
-    }),
-    lancamentosCartao: lancamentosRes.rows.map((row) => {
-      // DIAGNOSTIC LOG: Check date conversion
-      if (row.data) {
-        console.log('[DIAGNOSTIC] Lancamento ID:', row.id, '- Original date from DB:', row.data, '- Type:', typeof row.data);
-        console.log('[DIAGNOSTIC] Lancamento ID:', row.id, '- toISOString():', row.data.toISOString());
-        console.log('[DIAGNOSTIC] Lancamento ID:', row.id, '- Final date string:', row.data.toISOString().slice(0, 10));
-      }
-      return {
-        id: toId(row.id),
-        cartaoId: toId(row.cartao_id),
-        descricao: row.descricao,
-        complemento: row.complemento || "",
-        valor: Number(row.valor),
-        data: row.data ? row.data.toISOString().slice(0, 10) : null,
-        mesReferencia: monthNumberToName(row.mes_referencia),
-        categoriaId: toId(row.categoria_id),
-        tipoRecorrencia: row.tipo_recorrencia,
-        parcela: row.parcela_atual ?? null,
-        totalParcelas: row.total_parcelas ?? null,
-        meses: (lancamentosMesesMap.get(row.id) || []).map(monthNumberToName)
-      };
-    })
+    receitas: receitasRes.rows.map((row) => ({
+      id: toId(row.id),
+      orcamentoId: toId(row.orcamento_id),
+      mes: monthNumberToName(row.mes_referencia),
+      data: row.data ? row.data.toISOString().slice(0, 10) : null,
+      categoriaId: toId(row.categoria_id),
+      descricao: row.descricao,
+      complemento: row.complemento || "",
+      valor: Number(row.valor),
+      tipoRecorrencia: row.tipo_recorrencia,
+      qtdParcelas: row.total_parcelas ?? "",
+      parcela: row.parcela_atual ?? null,
+      totalParcelas: row.total_parcelas ?? null,
+      meses: (receitasMesesMap.get(row.id) || []).map(monthNumberToName),
+      status: row.status,
+      categoria: categoriasById.get(row.categoria_id) || "—"
+    })),
+    despesas: despesasRes.rows.map((row) => ({
+      id: toId(row.id),
+      orcamentoId: toId(row.orcamento_id),
+      mes: monthNumberToName(row.mes_referencia),
+      data: row.data ? row.data.toISOString().slice(0, 10) : null,
+      categoriaId: toId(row.categoria_id),
+      descricao: row.descricao,
+      complemento: row.complemento || "",
+      valor: Number(row.valor),
+      tipoRecorrencia: row.tipo_recorrencia,
+      qtdParcelas: row.total_parcelas ?? "",
+      parcela: row.parcela_atual ?? null,
+      totalParcelas: row.total_parcelas ?? null,
+      meses: (despesasMesesMap.get(row.id) || []).map(monthNumberToName),
+      status: row.status,
+      categoria: categoriasById.get(row.categoria_id) || "—"
+    })),
+    lancamentosCartao: lancamentosRes.rows.map((row) => ({
+      id: toId(row.id),
+      cartaoId: toId(row.cartao_id),
+      descricao: row.descricao,
+      complemento: row.complemento || "",
+      valor: Number(row.valor),
+      data: row.data ? row.data.toISOString().slice(0, 10) : null,
+      mesReferencia: monthNumberToName(row.mes_referencia),
+      categoriaId: toId(row.categoria_id),
+      tipoRecorrencia: row.tipo_recorrencia,
+      parcela: row.parcela_atual ?? null,
+      totalParcelas: row.total_parcelas ?? null,
+      meses: (lancamentosMesesMap.get(row.id) || []).map(monthNumberToName)
+    }))
   };
 };
 
@@ -355,8 +331,6 @@ const saveConfig = async (payload, userId) => {
       if (!mesReferencia) continue;
       const totalParcelas =
         receita.totalParcelas ?? (receita.qtdParcelas ? Number(receita.qtdParcelas) : null);
-      // DIAGNOSTIC LOG: Check date being saved
-      console.log('[DIAGNOSTIC] Saving Receita - ID:', receita.id, '- data value:', receita.data, '- Type:', typeof receita.data);
       const result = await configRepository.insertReceita(client, {
         orcamentoId,
         categoriaId,
@@ -391,8 +365,6 @@ const saveConfig = async (payload, userId) => {
       if (!mesReferencia) continue;
       const totalParcelas =
         despesa.totalParcelas ?? (despesa.qtdParcelas ? Number(despesa.qtdParcelas) : null);
-      // DIAGNOSTIC LOG: Check date being saved
-      console.log('[DIAGNOSTIC] Saving Despesa - ID:', despesa.id, '- data value:', despesa.data, '- Type:', typeof despesa.data);
       const result = await configRepository.insertDespesa(client, {
         orcamentoId,
         categoriaId,
@@ -425,8 +397,6 @@ const saveConfig = async (payload, userId) => {
         monthNameToNumber(lancamento.mesReferencia) ||
         monthNameToNumber(lancamento.mes);
       if (!mesReferencia) continue;
-      // DIAGNOSTIC LOG: Check date being saved
-      console.log('[DIAGNOSTIC] Saving Lancamento - ID:', lancamento.id, '- data value:', lancamento.data, '- Type:', typeof lancamento.data);
       const result = await configRepository.insertLancamentoCartao(client, {
         cartaoId,
         categoriaId,

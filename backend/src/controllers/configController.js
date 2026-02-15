@@ -1,22 +1,41 @@
 const configService = require("../services/configService");
+const {
+  idParamSchema,
+  categoriaSchema,
+  gastoPredefinidoSchema,
+  tipoReceitaSchema,
+  configSchema,
+  validate
+} = require("../validators/schemas");
+
+// Função auxiliar para respostas de erro seguras
+const errorResponse = (message, error) => {
+  const isDev = process.env.NODE_ENV === "development";
+  return {
+    error: message,
+    ...(isDev && { detalhe: error?.message })
+  };
+};
 
 const getConfig = async (req, res) => {
   try {
     const config = await configService.loadConfig(req.user.id);
     return res.json(config);
   } catch (error) {
-    console.error("GET /api/config failed", error);
-    return res.status(500).json({ error: "Failed to load configuration", detalhe: error?.message || "Erro interno" });
+    return res.status(500).json(errorResponse("Failed to load configuration", error));
   }
 };
 
 const saveConfig = async (req, res) => {
+  const { valid, error, value } = validate(configSchema, req.body);
+  if (!valid) {
+    return res.status(400).json({ error: `Dados inválidos: ${error}` });
+  }
   try {
-    await configService.saveConfig(req.body || {}, req.user.id);
+    await configService.saveConfig(value, req.user.id);
     return res.sendStatus(204);
   } catch (error) {
-    console.error("PUT /api/config failed", error);
-    return res.status(500).json({ error: "Failed to save configuration", detalhe: error?.message || "Erro interno" });
+    return res.status(500).json(errorResponse("Failed to save configuration", error));
   }
 };
 
@@ -25,37 +44,42 @@ const getCategorias = async (req, res) => {
     const categorias = await configService.listCategorias(req.user.id);
     return res.json(categorias);
   } catch (error) {
-    console.error("GET /api/config/categorias failed", error);
-    return res.status(500).json({ error: "Failed to load categories", detalhe: error?.message || "Erro interno" });
+    return res.status(500).json(errorResponse("Failed to load categories", error));
   }
 };
 
 const createCategoria = async (req, res) => {
-  const nome = req.body?.nome?.trim();
-  const tipo = req.body?.tipo;
-  if (!nome || !tipo) {
-    return res.status(400).json({ error: "Dados inválidos" });
+  const { valid, error, value } = validate(categoriaSchema, req.body);
+  if (!valid) {
+    return res.status(400).json({ error: `Dados inválidos: ${error}` });
   }
   try {
-    const categoria = await configService.createCategoria({ nome, tipo }, req.user.id);
+    const categoria = await configService.createCategoria(value, req.user.id);
     return res.status(201).json(categoria);
   } catch (error) {
     if (error?.status) {
       return res.status(error.status).json({ error: error.message });
     }
-    console.error("POST /api/config/categorias failed", error);
-    return res.status(500).json({ error: "Failed to create category", detalhe: error?.message || "Erro interno" });
+    return res.status(500).json(errorResponse("Failed to create category", error));
   }
 };
 
 const updateCategoria = async (req, res) => {
-  const nome = req.body?.nome?.trim();
-  const tipo = req.body?.tipo;
-  if (!nome || !tipo) {
-    return res.status(400).json({ error: "Dados inválidos" });
+  const { valid: idValid, error: idError } = validate(idParamSchema, req.params);
+  if (!idValid) {
+    return res.status(400).json({ error: `ID inválido: ${idError}` });
+  }
+  
+  const { valid, error, value } = validate(categoriaSchema, req.body);
+  if (!valid) {
+    return res.status(400).json({ error: `Dados inválidos: ${error}` });
   }
   try {
-    const categoria = await configService.updateCategoria(req.params.id, { nome, tipo }, req.user.id);
+    const categoria = await configService.updateCategoria(
+      parseInt(req.params.id, 10),
+      value,
+      req.user.id
+    );
     if (!categoria) {
       return res.status(404).json({ error: "Categoria não encontrada" });
     }
@@ -64,21 +88,26 @@ const updateCategoria = async (req, res) => {
     if (error?.status) {
       return res.status(error.status).json({ error: error.message });
     }
-    console.error("PUT /api/config/categorias failed", error);
-    return res.status(500).json({ error: "Failed to update category", detalhe: error?.message || "Erro interno" });
+    return res.status(500).json(errorResponse("Failed to update category", error));
   }
 };
 
 const deleteCategoria = async (req, res) => {
+  const { valid: idValid, error: idError } = validate(idParamSchema, req.params);
+  if (!idValid) {
+    return res.status(400).json({ error: `ID inválido: ${idError}` });
+  }
   try {
-    const deleted = await configService.deleteCategoria(req.params.id, req.user.id);
+    const deleted = await configService.deleteCategoria(
+      parseInt(req.params.id, 10),
+      req.user.id
+    );
     if (!deleted) {
       return res.status(404).json({ error: "Categoria não encontrada" });
     }
     return res.sendStatus(204);
   } catch (error) {
-    console.error("DELETE /api/config/categorias failed", error);
-    return res.status(500).json({ error: "Failed to delete category", detalhe: error?.message || "Erro interno" });
+    return res.status(500).json(errorResponse("Failed to delete category", error));
   }
 };
 
@@ -87,36 +116,37 @@ const getGastosPredefinidos = async (req, res) => {
     const gastos = await configService.listGastosPredefinidos(req.user.id);
     return res.json(gastos);
   } catch (error) {
-    console.error("GET /api/config/gastos-predefinidos failed", error);
-    return res.status(500).json({ error: "Failed to load default expenses", detalhe: error?.message || "Erro interno" });
+    return res.status(500).json(errorResponse("Failed to load default expenses", error));
   }
 };
 
 const createGastoPredefinido = async (req, res) => {
-  const descricao = req.body?.descricao?.trim();
-  const categoriaId = req.body?.categoriaId;
-  if (!descricao || !categoriaId) {
-    return res.status(400).json({ error: "Dados inválidos" });
+  const { valid, error, value } = validate(gastoPredefinidoSchema, req.body);
+  if (!valid) {
+    return res.status(400).json({ error: `Dados inválidos: ${error}` });
   }
   try {
-    const gasto = await configService.createGastoPredefinido({ descricao, categoriaId }, req.user.id);
+    const gasto = await configService.createGastoPredefinido(value, req.user.id);
     return res.status(201).json(gasto);
   } catch (error) {
-    console.error("POST /api/config/gastos-predefinidos failed", error);
-    return res.status(500).json({ error: "Failed to create default expense", detalhe: error?.message || "Erro interno" });
+    return res.status(500).json(errorResponse("Failed to create default expense", error));
   }
 };
 
 const updateGastoPredefinido = async (req, res) => {
-  const descricao = req.body?.descricao?.trim();
-  const categoriaId = req.body?.categoriaId;
-  if (!descricao || !categoriaId) {
-    return res.status(400).json({ error: "Dados inválidos" });
+  const { valid: idValid, error: idError } = validate(idParamSchema, req.params);
+  if (!idValid) {
+    return res.status(400).json({ error: `ID inválido: ${idError}` });
+  }
+  
+  const { valid, error, value } = validate(gastoPredefinidoSchema, req.body);
+  if (!valid) {
+    return res.status(400).json({ error: `Dados inválidos: ${error}` });
   }
   try {
     const gasto = await configService.updateGastoPredefinido(
-      req.params.id,
-      { descricao, categoriaId },
+      parseInt(req.params.id, 10),
+      value,
       req.user.id
     );
     if (!gasto) {
@@ -124,21 +154,26 @@ const updateGastoPredefinido = async (req, res) => {
     }
     return res.json(gasto);
   } catch (error) {
-    console.error("PUT /api/config/gastos-predefinidos failed", error);
-    return res.status(500).json({ error: "Failed to update default expense", detalhe: error?.message || "Erro interno" });
+    return res.status(500).json(errorResponse("Failed to update default expense", error));
   }
 };
 
 const deleteGastoPredefinido = async (req, res) => {
+  const { valid: idValid, error: idError } = validate(idParamSchema, req.params);
+  if (!idValid) {
+    return res.status(400).json({ error: `ID inválido: ${idError}` });
+  }
   try {
-    const deleted = await configService.deleteGastoPredefinido(req.params.id, req.user.id);
+    const deleted = await configService.deleteGastoPredefinido(
+      parseInt(req.params.id, 10),
+      req.user.id
+    );
     if (!deleted) {
       return res.status(404).json({ error: "Gasto pré-definido não encontrado" });
     }
     return res.sendStatus(204);
   } catch (error) {
-    console.error("DELETE /api/config/gastos-predefinidos failed", error);
-    return res.status(500).json({ error: "Failed to delete default expense", detalhe: error?.message || "Erro interno" });
+    return res.status(500).json(errorResponse("Failed to delete default expense", error));
   }
 };
 
@@ -147,37 +182,37 @@ const getTiposReceita = async (req, res) => {
     const tipos = await configService.listTiposReceita(req.user.id);
     return res.json(tipos);
   } catch (error) {
-    console.error("GET /api/config/tipos-receita failed", error);
-    return res.status(500).json({ error: "Failed to load income types", detalhe: error?.message || "Erro interno" });
+    return res.status(500).json(errorResponse("Failed to load income types", error));
   }
 };
 
 const createTipoReceita = async (req, res) => {
-  const descricao = req.body?.descricao?.trim();
-  if (!descricao) {
-    return res.status(400).json({ error: "Dados inválidos" });
+  const { valid, error, value } = validate(tipoReceitaSchema, req.body);
+  if (!valid) {
+    return res.status(400).json({ error: `Dados inválidos: ${error}` });
   }
   try {
-    const tipo = await configService.createTipoReceita(
-      { descricao, recorrente: req.body?.recorrente },
-      req.user.id
-    );
+    const tipo = await configService.createTipoReceita(value, req.user.id);
     return res.status(201).json(tipo);
   } catch (error) {
-    console.error("POST /api/config/tipos-receita failed", error);
-    return res.status(500).json({ error: "Failed to create income type", detalhe: error?.message || "Erro interno" });
+    return res.status(500).json(errorResponse("Failed to create income type", error));
   }
 };
 
 const updateTipoReceita = async (req, res) => {
-  const descricao = req.body?.descricao?.trim();
-  if (!descricao) {
-    return res.status(400).json({ error: "Dados inválidos" });
+  const { valid: idValid, error: idError } = validate(idParamSchema, req.params);
+  if (!idValid) {
+    return res.status(400).json({ error: `ID inválido: ${idError}` });
+  }
+  
+  const { valid, error, value } = validate(tipoReceitaSchema, req.body);
+  if (!valid) {
+    return res.status(400).json({ error: `Dados inválidos: ${error}` });
   }
   try {
     const tipo = await configService.updateTipoReceita(
-      req.params.id,
-      { descricao, recorrente: req.body?.recorrente },
+      parseInt(req.params.id, 10),
+      value,
       req.user.id
     );
     if (!tipo) {
@@ -185,21 +220,26 @@ const updateTipoReceita = async (req, res) => {
     }
     return res.json(tipo);
   } catch (error) {
-    console.error("PUT /api/config/tipos-receita failed", error);
-    return res.status(500).json({ error: "Failed to update income type", detalhe: error?.message || "Erro interno" });
+    return res.status(500).json(errorResponse("Failed to update income type", error));
   }
 };
 
 const deleteTipoReceita = async (req, res) => {
+  const { valid: idValid, error: idError } = validate(idParamSchema, req.params);
+  if (!idValid) {
+    return res.status(400).json({ error: `ID inválido: ${idError}` });
+  }
   try {
-    const deleted = await configService.deleteTipoReceita(req.params.id, req.user.id);
+    const deleted = await configService.deleteTipoReceita(
+      parseInt(req.params.id, 10),
+      req.user.id
+    );
     if (!deleted) {
       return res.status(404).json({ error: "Tipo de receita não encontrado" });
     }
     return res.sendStatus(204);
   } catch (error) {
-    console.error("DELETE /api/config/tipos-receita failed", error);
-    return res.status(500).json({ error: "Failed to delete income type", detalhe: error?.message || "Erro interno" });
+    return res.status(500).json(errorResponse("Failed to delete income type", error));
   }
 };
 
