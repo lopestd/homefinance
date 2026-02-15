@@ -4,6 +4,8 @@ set SCRIPT_DIR=%~dp0
 set ROOT_DIR=%SCRIPT_DIR%..
 set IMAGE_NAME=brdocker2020/homefinance
 set VERSION=1.0.0
+set DOCKER_USER=lopestd@gmail.com
+
 set /p VERSION_INPUT=Versao da imagem (ENTER para 1.0.0):
 if not "%VERSION_INPUT%"=="" set VERSION=%VERSION_INPUT%
 set TAG_VERSION=%IMAGE_NAME%:%VERSION%
@@ -25,15 +27,11 @@ docker info 2>nul | findstr /i "Username" >nul
 if errorlevel 1 (
     echo.
     echo ============================================
-    echo  ERRO: Voce precisa estar logado no Docker Hub
+    echo  Login no Docker Hub
+    echo  Usuario: %DOCKER_USER%
     echo ============================================
     echo.
-    set /p DOCKER_USER=Digite seu usuario do Docker Hub: 
-    if "!DOCKER_USER!"=="" (
-        echo Usuario nao informado. Abortando.
-        exit /b 1
-    )
-    docker login -u !DOCKER_USER!
+    docker login -u %DOCKER_USER%
     if errorlevel 1 (
         echo Falha no login. Abortando.
         exit /b 1
@@ -59,15 +57,11 @@ docker info 2>nul | findstr /i "Username" >nul
 if errorlevel 1 (
     echo.
     echo ============================================
-    echo  ERRO: Voce precisa estar logado no Docker Hub
+    echo  Login no Docker Hub
+    echo  Usuario: %DOCKER_USER%
     echo ============================================
     echo.
-    set /p DOCKER_USER=Digite seu usuario do Docker Hub: 
-    if "!DOCKER_USER!"=="" (
-        echo Usuario nao informado. Abortando.
-        exit /b 1
-    )
-    docker login -u !DOCKER_USER!
+    docker login -u %DOCKER_USER%
     if errorlevel 1 (
         echo Falha no login. Abortando.
         exit /b 1
