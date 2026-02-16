@@ -1,8 +1,14 @@
 import { useMemo, useState } from "react";
+import DatePicker, { registerLocale } from "react-datepicker";
+import { ptBR } from "date-fns/locale/pt-BR";
+import { NumericFormat } from "react-number-format";
+import "react-datepicker/dist/react-datepicker.css";
 import { AlertDialog, ConfirmDialog } from "../components/Dialogs";
 import { IconCheck, IconEdit, IconTrash, IconX } from "../components/Icons";
 import Modal from "../components/Modal";
 import { MONTHS_ORDER, createId, formatCurrency, getCurrentMonthName } from "../utils/appUtils";
+
+registerLocale("pt-BR", ptBR);
 
 const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setReceitas }) => {
   const receitasCategorias = categorias.filter((categoria) => categoria.tipo === "RECEITA");
@@ -121,29 +127,7 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
 
   const excluirReceita = (id) => {
     showConfirm("Tem certeza que deseja excluir esta receita?", () => {
-      setReceitas((prev) => {
-        const item = prev.find((r) => r.id === id);
-        if (!item) return prev;
-
-        if (effectiveMes && item.meses && item.meses.includes(effectiveMes)) {
-          const newMeses = item.meses.filter((m) => m !== effectiveMes);
-          if (newMeses.length === 0) {
-            return prev.filter((r) => r.id !== id);
-          }
-          return prev.map((r) => {
-            if (r.id === id) {
-              return {
-                ...r,
-                meses: newMeses,
-                mes: (r.mes === effectiveMes) ? newMeses[0] : r.mes
-              };
-            }
-            return r;
-          });
-        }
-
-        return prev.filter((r) => r.id !== id);
-      });
+      setReceitas((prev) => prev.filter((r) => r.id !== id));
     });
   };
 
@@ -159,8 +143,8 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
       tipoRecorrencia: receita.tipoRecorrencia || "EVENTUAL",
       qtdParcelas: receita.qtdParcelas || "",
       data: receita.data,
-      mesInicial: effectiveMes || receita.mes || "",
-      meses: effectiveMes ? [effectiveMes] : (receita.meses || []),
+      mesInicial: receita.mes || effectiveMes || "",
+      meses: [],
       status: receita.status || "Pendente"
     });
     setManualOpen(true);
@@ -214,6 +198,29 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
           tipoRecorrencia: "PARCELADO",
           parcela: i + 1,
           totalParcelas: qtd,
+          meses: [],
+          status: "Pendente",
+          categoria: receitasCategorias.find((c) => c.id === manualForm.categoriaId)?.nome || "—"
+        });
+      }
+      setReceitas((prev) => [...prev, ...newEntries]);
+      setManualOpen(false);
+      return;
+    }
+
+    if (!receitaEditId && manualForm.tipoRecorrencia === "FIXO" && manualForm.meses?.length > 0) {
+      let newEntries = [];
+      for (const mes of manualForm.meses) {
+        newEntries.push({
+          id: createId("rec-fixo"),
+          orcamentoId: effectiveOrcamentoId,
+          mes: mes,
+          data: manualForm.data,
+          categoriaId: manualForm.categoriaId,
+          descricao: manualForm.descricao,
+          complemento: manualForm.complemento || "",
+          valor: manualForm.valor,
+          tipoRecorrencia: "FIXO",
           meses: [],
           status: "Pendente",
           categoria: receitasCategorias.find((c) => c.id === manualForm.categoriaId)?.nome || "—"
@@ -499,23 +506,30 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
           <div className="modal-grid-row">
             <label className="field">
               Valor (R$)
-              <input
-                type="number"
-                step="0.01"
+              <NumericFormat
                 value={manualForm.valor}
-                onChange={(event) =>
-                  setManualForm((prev) => ({ ...prev, valor: event.target.value }))
-                }
+                onValueChange={(values) => {
+                  setManualForm((prev) => ({ ...prev, valor: values.value }));
+                }}
+                thousandSeparator="."
+                decimalSeparator=","
+                decimalScale={2}
+                fixedDecimalScale
+                allowNegative={false}
+                placeholder="0,00"
               />
             </label>
             <label className="field">
               Data
-              <input
-                type="date"
-                value={manualForm.data}
-                onChange={(event) =>
-                  setManualForm((prev) => ({ ...prev, data: event.target.value }))
-                }
+              <DatePicker
+                selected={manualForm.data ? new Date(manualForm.data + "T00:00:00") : null}
+                onChange={(date) => {
+                  const formattedDate = date ? date.toISOString().split("T")[0] : "";
+                  setManualForm((prev) => ({ ...prev, data: formattedDate }));
+                }}
+                dateFormat="dd/MM/yyyy"
+                locale="pt-BR"
+                placeholderText="DD/MM/AAAA"
               />
             </label>
           </div>

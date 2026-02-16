@@ -8,6 +8,12 @@ const useAuth = ({ onLogoutCleanup } = {}) => {
   const [authReady, setAuthReady] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [showSessionWarning, setShowSessionWarning] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(0);
+  
+  // Configurações de timeout (30 minutos de sessão, 2 minutos de aviso)
+  const SESSION_TIMEOUT = 30 * 60 * 1000;
+  const WARNING_TIMEOUT = 2 * 60 * 1000;
 
   useEffect(() => {
     if (authToken) {
@@ -99,6 +105,72 @@ const useAuth = ({ onLogoutCleanup } = {}) => {
     };
   }, [authToken]);
 
+  // Timer de inatividade
+  useEffect(() => {
+    if (!authToken) return;
+
+    let inactivityTimer;
+    let warningTimer;
+    let countdownTimer;
+
+    const resetTimers = () => {
+      clearTimeout(inactivityTimer);
+      clearTimeout(warningTimer);
+      clearTimeout(countdownTimer);
+      setShowSessionWarning(false);
+      setTimeRemaining(SESSION_TIMEOUT);
+
+      // Aviso antes de expirar
+      warningTimer = setTimeout(() => {
+        setShowSessionWarning(true);
+        setTimeRemaining(WARNING_TIMEOUT);
+
+        // Countdown
+        countdownTimer = setInterval(() => {
+          setTimeRemaining((prev) => {
+            if (prev <= 1000) {
+              clearInterval(countdownTimer);
+              handleLogout();
+              return 0;
+            }
+            return prev - 1000;
+          });
+        }, 1000);
+      }, SESSION_TIMEOUT - WARNING_TIMEOUT);
+
+      // Expiração da sessão
+      inactivityTimer = setTimeout(() => {
+        handleLogout();
+      }, SESSION_TIMEOUT);
+    };
+
+    // Eventos que resetam o timer
+    const activityEvents = [
+      "mousedown", "mousemove", "keypress", "scroll", "touchstart", "click"
+    ];
+
+    const handleActivity = () => {
+      resetTimers();
+    };
+
+    // Iniciar timer inicial
+    resetTimers();
+
+    // Adicionar listeners de atividade
+    activityEvents.forEach((event) => {
+      window.addEventListener(event, handleActivity);
+    });
+
+    return () => {
+      clearTimeout(inactivityTimer);
+      clearTimeout(warningTimer);
+      clearTimeout(countdownTimer);
+      activityEvents.forEach((event) => {
+        window.removeEventListener(event, handleActivity);
+      });
+    };
+  }, [authToken, handleLogout]);
+
   return {
     authToken,
     authUser,
@@ -106,7 +178,9 @@ const useAuth = ({ onLogoutCleanup } = {}) => {
     authLoading,
     authError,
     handleLogin,
-    handleLogout
+    handleLogout,
+    showSessionWarning,
+    timeRemaining
   };
 };
 

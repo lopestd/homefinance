@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import DatePicker, { registerLocale } from "react-datepicker";
+import { ptBR } from "date-fns/locale/pt-BR";
+import { NumericFormat } from "react-number-format";
+import "react-datepicker/dist/react-datepicker.css";
 import { AlertDialog, ConfirmDialog } from "../components/Dialogs";
 import { IconCheck, IconEdit, IconTrash, IconX } from "../components/Icons";
 import Modal from "../components/Modal";
 import { createCategoria } from "../services/configApi";
 import { MONTHS_ORDER, createId, formatCurrency, getCurrentMonthName } from "../utils/appUtils";
+
+registerLocale("pt-BR", ptBR);
 
 const normalizeCategoriaNome = (value) =>
   String(value || "")
@@ -171,7 +177,7 @@ const DespesasPage = ({
     const temPredefinidos = gastosPredefinidos.length > 0;
     setIsManualDescricao(!temPredefinidos);
     setManualForm({
-      categoriaId: despesasCategorias[0]?.id ?? "",
+      categoriaId: "",
       descricao: "",
       complemento: "",
       valor: "",
@@ -216,29 +222,7 @@ const DespesasPage = ({
     }
 
     showConfirm("Tem certeza que deseja excluir esta despesa?", () => {
-      setDespesas((prev) => {
-        const item = prev.find((d) => d.id === id);
-        if (!item) return prev;
-
-        if (effectiveMes && item.meses && item.meses.includes(effectiveMes)) {
-          const newMeses = item.meses.filter((m) => m !== effectiveMes);
-          if (newMeses.length === 0) {
-            return prev.filter((d) => d.id !== id);
-          }
-          return prev.map((d) => {
-            if (d.id === id) {
-              return {
-                ...d,
-                meses: newMeses,
-                mes: (d.mes === effectiveMes) ? newMeses[0] : d.mes
-              };
-            }
-            return d;
-          });
-        }
-
-        return prev.filter((d) => d.id !== id);
-      });
+      setDespesas((prev) => prev.filter((d) => d.id !== id));
     });
   };
 
@@ -258,8 +242,8 @@ const DespesasPage = ({
       tipoRecorrencia: despesa.tipoRecorrencia || "EVENTUAL",
       qtdParcelas: despesa.qtdParcelas || "",
       data: despesa.data,
-      mesInicial: effectiveMes || despesa.mes || "",
-      meses: effectiveMes ? [effectiveMes] : (despesa.meses || []),
+      mesInicial: despesa.mes || effectiveMes || "",
+      meses: [],
       status: despesa.status || "Pendente"
     });
     setManualOpen(true);
@@ -302,6 +286,29 @@ const DespesasPage = ({
           parcela: i + 1,
           totalParcelas: qtd,
           qtdParcelas: qtd,
+          meses: [],
+          status: "Pendente",
+          categoria: categoriaNome
+        });
+      }
+      setDespesas((prev) => [...prev, ...newEntries]);
+      setManualOpen(false);
+      return;
+    }
+
+    if (!despesaEditId && manualForm.tipoRecorrencia === "FIXO" && manualForm.meses?.length > 0) {
+      let newEntries = [];
+      for (const mes of manualForm.meses) {
+        newEntries.push({
+          id: createId("desp-fixo"),
+          orcamentoId: effectiveOrcamentoId,
+          mes: mes,
+          data: manualForm.data,
+          categoriaId,
+          descricao: manualForm.descricao,
+          complemento: manualForm.complemento || "",
+          valor: manualForm.valor,
+          tipoRecorrencia: "FIXO",
           meses: [],
           status: "Pendente",
           categoria: categoriaNome
@@ -518,18 +525,34 @@ const DespesasPage = ({
               Categoria
               <select
                 value={manualForm.categoriaId}
-                onChange={(event) =>
-                  setManualForm((prev) => ({ ...prev, categoriaId: event.target.value }))
-                }
+                onChange={(event) => {
+                  const newCategoriaId = event.target.value;
+                  setManualForm((prev) => {
+                    const gastosDaCategoria = gastosPredefinidos.filter(
+                      (g) => g.categoriaId === newCategoriaId
+                    );
+                    const descricaoStillValid = gastosDaCategoria.some(
+                      (g) => g.descricao === prev.descricao
+                    );
+                    return {
+                      ...prev,
+                      categoriaId: newCategoriaId,
+                      descricao: descricaoStillValid ? prev.descricao : ""
+                    };
+                  });
+                }}
               >
                 {despesasCategorias.length === 0 ? (
                   <option value="">Sem categorias disponíveis</option>
                 ) : (
-                  despesasCategorias.map((categoria) => (
-                    <option key={categoria.id} value={categoria.id}>
-                      {categoria.nome}
-                    </option>
-                  ))
+                  <>
+                    <option value="">Selecione a Categoria</option>
+                    {despesasCategorias.map((categoria) => (
+                      <option key={categoria.id} value={categoria.id}>
+                        {categoria.nome}
+                      </option>
+                    ))}
+                  </>
                 )}
               </select>
             </label>
@@ -540,20 +563,23 @@ const DespesasPage = ({
                   value={manualForm.descricao}
                   onChange={(event) => {
                     const desc = event.target.value;
-                    const gasto = gastosPredefinidos.find((g) => g.descricao === desc);
                     setManualForm((prev) => ({
                       ...prev,
-                      descricao: desc,
-                      categoriaId: gasto?.categoriaId || prev.categoriaId
+                      descricao: desc
                     }));
                   }}
+                  disabled={!manualForm.categoriaId}
                 >
-                  <option value="">Selecione...</option>
-                  {gastosPredefinidos.map((gasto) => (
-                    <option key={gasto.id} value={gasto.descricao}>
-                      {gasto.descricao}
-                    </option>
-                  ))}
+                  <option value="">
+                    {manualForm.categoriaId ? "Selecione..." : "Selecione uma categoria primeiro"}
+                  </option>
+                  {gastosPredefinidos
+                    .filter((gasto) => gasto.categoriaId === manualForm.categoriaId)
+                    .map((gasto) => (
+                      <option key={gasto.id} value={gasto.descricao}>
+                        {gasto.descricao}
+                      </option>
+                    ))}
                 </select>
               ) : (
                 <input
@@ -588,23 +614,30 @@ const DespesasPage = ({
           <div className="modal-grid-row">
             <label className="field">
               Valor (R$)
-              <input
-                type="number"
-                step="0.01"
+              <NumericFormat
                 value={manualForm.valor}
-                onChange={(event) =>
-                  setManualForm((prev) => ({ ...prev, valor: event.target.value }))
-                }
+                onValueChange={(values) => {
+                  setManualForm((prev) => ({ ...prev, valor: values.value }));
+                }}
+                thousandSeparator="."
+                decimalSeparator=","
+                decimalScale={2}
+                fixedDecimalScale
+                allowNegative={false}
+                placeholder="0,00"
               />
             </label>
             <label className="field">
               Data
-              <input
-                type="date"
-                value={manualForm.data}
-                onChange={(event) =>
-                  setManualForm((prev) => ({ ...prev, data: event.target.value }))
-                }
+              <DatePicker
+                selected={manualForm.data ? new Date(manualForm.data + "T00:00:00") : null}
+                onChange={(date) => {
+                  const formattedDate = date ? date.toISOString().split("T")[0] : "";
+                  setManualForm((prev) => ({ ...prev, data: formattedDate }));
+                }}
+                dateFormat="dd/MM/yyyy"
+                locale="pt-BR"
+                placeholderText="DD/MM/AAAA"
               />
             </label>
           </div>

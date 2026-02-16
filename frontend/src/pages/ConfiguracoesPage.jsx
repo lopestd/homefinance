@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { NumericFormat } from "react-number-format";
 import { AlertDialog, ConfirmDialog } from "../components/Dialogs";
 import { IconEdit, IconTrash } from "../components/Icons";
 import Modal from "../components/Modal";
@@ -740,13 +741,17 @@ const ConfiguracoesPage = ({
           </label>
           <label className="field">
             Limite / Valor Alocado
-            <input
-              type="number"
-              step="0.01"
+            <NumericFormat
               value={cartaoForm.limite}
-              onChange={(event) =>
-                setCartaoForm((prev) => ({ ...prev, limite: event.target.value }))
-              }
+              onValueChange={(values) => {
+                setCartaoForm((prev) => ({ ...prev, limite: values.value }));
+              }}
+              thousandSeparator="."
+              decimalSeparator=","
+              decimalScale={2}
+              fixedDecimalScale
+              allowNegative={false}
+              placeholder="0,00"
             />
           </label>
           <div className="modal-actions">

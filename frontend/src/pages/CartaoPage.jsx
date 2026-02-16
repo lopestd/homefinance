@@ -1,9 +1,15 @@
 import { useCallback, useMemo, useState } from "react";
+import DatePicker, { registerLocale } from "react-datepicker";
+import { ptBR } from "date-fns/locale/pt-BR";
+import { NumericFormat } from "react-number-format";
+import "react-datepicker/dist/react-datepicker.css";
 import { AlertDialog, ConfirmDialog } from "../components/Dialogs";
 import { IconEdit, IconTrash } from "../components/Icons";
 import Modal from "../components/Modal";
 import { createCategoria } from "../services/configApi";
 import { createId, formatCurrency, getCurrentMonthName } from "../utils/appUtils";
+
+registerLocale("pt-BR", ptBR);
 
 const normalizeCategoriaNome = (value) =>
   String(value || "")
@@ -300,15 +306,13 @@ const CartaoPage = ({
       const temPredefinidos = gastosPredefinidos && gastosPredefinidos.length > 0;
       setIsManualDescricao(!temPredefinidos);
 
-      const targetCat = await ensureBancosCartoesCategoria();
-
       setForm({
         descricao: "",
         complemento: "",
         valor: "",
         data: new Date().toLocaleDateString('en-CA'),
         mesReferencia: selectedMes,
-        categoriaId: targetCat ? targetCat.id : "",
+        categoriaId: "",
         tipoRecorrencia: "EVENTUAL",
         qtdParcelas: "",
         meses: []
@@ -746,8 +750,26 @@ const CartaoPage = ({
           <div className="modal-grid-row">
             <label className="field">
               Categoria
-              <select value={form.categoriaId} onChange={(e) => setForm({ ...form, categoriaId: e.target.value })}>
-                <option value="">Sem categoria</option>
+              <select 
+                value={form.categoriaId} 
+                onChange={(e) => {
+                  const newCategoriaId = e.target.value;
+                  setForm((prev) => {
+                    const gastosDaCategoria = (gastosPredefinidos || []).filter(
+                      (g) => g.categoriaId === newCategoriaId
+                    );
+                    const descricaoStillValid = gastosDaCategoria.some(
+                      (g) => g.descricao === prev.descricao
+                    );
+                    return {
+                      ...prev,
+                      categoriaId: newCategoriaId,
+                      descricao: descricaoStillValid ? prev.descricao : ""
+                    };
+                  });
+                }}
+              >
+                <option value="">Selecione a Categoria</option>
                 {categorias.filter((c) => c.tipo === "DESPESA").map((c) => (
                   <option key={c.id} value={c.id}>{c.nome}</option>
                 ))}
@@ -760,18 +782,21 @@ const CartaoPage = ({
                   value={form.descricao}
                   onChange={(e) => {
                     const desc = e.target.value;
-                    const selectedGasto = gastosPredefinidos.find((g) => g.descricao === desc);
                     setForm((prev) => ({
                       ...prev,
-                      descricao: desc,
-                      categoriaId: (selectedGasto && selectedGasto.categoriaId) ? selectedGasto.categoriaId : prev.categoriaId
+                      descricao: desc
                     }));
                   }}
+                  disabled={!form.categoriaId}
                 >
-                  <option value="">Selecione...</option>
-                  {gastosPredefinidos.map((g) => (
-                    <option key={g.id} value={g.descricao}>{g.descricao}</option>
-                  ))}
+                  <option value="">
+                    {form.categoriaId ? "Selecione..." : "Selecione uma categoria primeiro"}
+                  </option>
+                  {gastosPredefinidos
+                    .filter((g) => g.categoriaId === form.categoriaId)
+                    .map((g) => (
+                      <option key={g.id} value={g.descricao}>{g.descricao}</option>
+                    ))}
                 </select>
               ) : (
                 <input
@@ -802,11 +827,31 @@ const CartaoPage = ({
           <div className="modal-grid-row">
             <label className="field">
               Valor (R$)
-              <input required type="number" step="0.01" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} />
+              <NumericFormat
+                value={form.valor}
+                onValueChange={(values) => {
+                  setForm({ ...form, valor: values.value });
+                }}
+                thousandSeparator="."
+                decimalSeparator=","
+                decimalScale={2}
+                fixedDecimalScale
+                allowNegative={false}
+                placeholder="0,00"
+              />
             </label>
             <label className="field">
               Data
-              <input required type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} />
+              <DatePicker
+                selected={form.data ? new Date(form.data + "T00:00:00") : null}
+                onChange={(date) => {
+                  const formattedDate = date ? date.toISOString().split("T")[0] : "";
+                  setForm({ ...form, data: formattedDate });
+                }}
+                dateFormat="dd/MM/yyyy"
+                locale="pt-BR"
+                placeholderText="DD/MM/AAAA"
+              />
             </label>
           </div>
           <div className="modal-grid-row">
@@ -879,12 +924,17 @@ const CartaoPage = ({
           </p>
           <label className="field">
             Valor do Limite
-            <input
-              type="number"
-              step="0.01"
-              required
+            <NumericFormat
               value={limiteEditValue}
-              onChange={(e) => setLimiteEditValue(e.target.value)}
+              onValueChange={(values) => {
+                setLimiteEditValue(values.value);
+              }}
+              thousandSeparator="."
+              decimalSeparator=","
+              decimalScale={2}
+              fixedDecimalScale
+              allowNegative={false}
+              placeholder="0,00"
               autoFocus
             />
           </label>
