@@ -7,7 +7,7 @@ import { AlertDialog, ConfirmDialog } from "../components/Dialogs";
 import { IconCheck, IconEdit, IconTrash, IconX } from "../components/Icons";
 import Modal from "../components/Modal";
 import { createCategoria } from "../services/configApi";
-import { MONTHS_ORDER, createId, formatCurrency, getCurrentMonthName } from "../utils/appUtils";
+import { MONTHS_ORDER, createId, formatCurrency, getCurrentMonthName, calculateDateForMonth } from "../utils/appUtils";
 
 registerLocale("pt-BR", ptBR);
 
@@ -303,7 +303,7 @@ const DespesasPage = ({
           id: createId("desp-fixo"),
           orcamentoId: effectiveOrcamentoId,
           mes: mes,
-          data: manualForm.data,
+          data: calculateDateForMonth(mes, manualForm.data),
           categoriaId,
           descricao: manualForm.descricao,
           complemento: manualForm.complemento || "",

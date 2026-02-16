@@ -2,18 +2,30 @@ import { useCallback, useEffect, useState } from "react";
 import api from "../services/api";
 import { clearStoredToken, getStoredToken, saveStoredToken } from "../utils/appUtils";
 
+const getTokenExpiration = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => 
+      '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    ).join(''));
+    const payload = JSON.parse(jsonPayload);
+    return payload.exp * 1000; // Converter para milissegundos
+  } catch {
+    return null;
+  }
+};
+
 const useAuth = ({ onLogoutCleanup } = {}) => {
   const [authToken, setAuthToken] = useState(getStoredToken());
   const [authUser, setAuthUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
-  const [showSessionWarning, setShowSessionWarning] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(0);
-  
-  // Configurações de timeout (30 minutos de sessão, 2 minutos de aviso)
-  const SESSION_TIMEOUT = 30 * 60 * 1000;
-  const WARNING_TIMEOUT = 2 * 60 * 1000;
+  const [tokenExpirationTime, setTokenExpirationTime] = useState(null);
+  const [tokenIssuedTime, setTokenIssuedTime] = useState(null);
+  const [LastApiRequestTime, setLastApiRequestTime] = useState(Date.now());
+  const [isUserActive, setIsUserActive] = useState(false);
 
   useEffect(() => {
     if (authToken) {
@@ -38,9 +50,13 @@ const useAuth = ({ onLogoutCleanup } = {}) => {
         await api.post("/auth/logout");
       }
     } catch {
-      null;
+      // Ignorar erros ao fazer logout
     }
     clearAuth();
+    setTokenExpirationTime(null);
+    setTokenIssuedTime(null);
+    setLastApiRequestTime(Date.now());
+    setIsUserActive(false);
   }, [authToken, clearAuth]);
 
   const handleLogin = useCallback(async ({ email, senha, lembrar }) => {
@@ -57,6 +73,13 @@ const useAuth = ({ onLogoutCleanup } = {}) => {
         saveStoredToken(data.token);
         setAuthToken(data.token);
         setAuthUser(data.usuario || null);
+        
+        // Extrair data de expiração e criação do token JWT
+        const expiration = getTokenExpiration(data.token);
+        setTokenExpirationTime(expiration);
+        setTokenIssuedTime(Date.now());
+        setLastApiRequestTime(Date.now());
+        
         setAuthReady(true);
         return { ok: true };
       }
@@ -105,56 +128,74 @@ const useAuth = ({ onLogoutCleanup } = {}) => {
     };
   }, [authToken]);
 
-  // Timer de inatividade
+  // Renovação inteligente do token com verificação de atividade
+  useEffect(() => {
+    if (!authToken || !tokenExpirationTime || !tokenIssuedTime) return;
+
+    const now = Date.now();
+    const tokenDuration = tokenExpirationTime - tokenIssuedTime;
+    const renewalThreshold = tokenDuration * 0.9; // 90% do tempo do token
+    const timeSinceIssued = now - tokenIssuedTime;
+
+    // Função para renovar a sessão
+    const renewSession = async () => {
+      try {
+        // Fazer requisição para renovar a sessão
+        await api.get("/auth/verificar");
+        // A sessão foi renovada pelo backend
+        setLastApiRequestTime(Date.now());
+      } catch {
+        // Se a sessão expirou, o interceptor vai tratar o erro 401
+      }
+    };
+
+    // Verificar se transcorreu 90% do tempo do token
+    if (timeSinceIssued >= renewalThreshold) {
+      // Se usuário estiver ativo, fazer renovação
+      if (isUserActive) {
+        // Fazer renovação imediatamente
+        renewSession();
+        
+        // Configurar timer para verificar novamente após 10% do tempo restante
+        const remainingTime = tokenDuration - timeSinceIssued;
+        const checkTimer = setTimeout(() => {
+          if (isUserActive) {
+            renewSession();
+          }
+        }, remainingTime * 0.5); // Verificar novamente após metade do tempo restante
+        
+        return () => clearTimeout(checkTimer);
+      }
+      // Se usuário não estiver ativo, deixar a sessão expirar
+    } else {
+      // Configurar timer para verificar após 90% do tempo do token
+      const timeUntilRenewal = renewalThreshold - timeSinceIssued;
+      const checkTimer = setTimeout(() => {
+        if (isUserActive) {
+          renewSession();
+        }
+      }, timeUntilRenewal);
+      
+      return () => clearTimeout(checkTimer);
+    }
+  }, [authToken, tokenExpirationTime, tokenIssuedTime, isUserActive]);
+
+  // Monitorar atividade do usuário
   useEffect(() => {
     if (!authToken) return;
 
-    let inactivityTimer;
-    let warningTimer;
-    let countdownTimer;
-
-    const resetTimers = () => {
-      clearTimeout(inactivityTimer);
-      clearTimeout(warningTimer);
-      clearTimeout(countdownTimer);
-      setShowSessionWarning(false);
-      setTimeRemaining(SESSION_TIMEOUT);
-
-      // Aviso antes de expirar
-      warningTimer = setTimeout(() => {
-        setShowSessionWarning(true);
-        setTimeRemaining(WARNING_TIMEOUT);
-
-        // Countdown
-        countdownTimer = setInterval(() => {
-          setTimeRemaining((prev) => {
-            if (prev <= 1000) {
-              clearInterval(countdownTimer);
-              handleLogout();
-              return 0;
-            }
-            return prev - 1000;
-          });
-        }, 1000);
-      }, SESSION_TIMEOUT - WARNING_TIMEOUT);
-
-      // Expiração da sessão
-      inactivityTimer = setTimeout(() => {
-        handleLogout();
-      }, SESSION_TIMEOUT);
-    };
-
-    // Eventos que resetam o timer
     const activityEvents = [
       "mousedown", "mousemove", "keypress", "scroll", "touchstart", "click"
     ];
 
     const handleActivity = () => {
-      resetTimers();
+      setIsUserActive(true);
+      
+      // Resetar flag de atividade após 30 segundos de inatividade
+      setTimeout(() => {
+        setIsUserActive(false);
+      }, 30 * 1000);
     };
-
-    // Iniciar timer inicial
-    resetTimers();
 
     // Adicionar listeners de atividade
     activityEvents.forEach((event) => {
@@ -162,14 +203,11 @@ const useAuth = ({ onLogoutCleanup } = {}) => {
     });
 
     return () => {
-      clearTimeout(inactivityTimer);
-      clearTimeout(warningTimer);
-      clearTimeout(countdownTimer);
       activityEvents.forEach((event) => {
         window.removeEventListener(event, handleActivity);
       });
     };
-  }, [authToken, handleLogout]);
+  }, [authToken]);
 
   return {
     authToken,
@@ -178,9 +216,7 @@ const useAuth = ({ onLogoutCleanup } = {}) => {
     authLoading,
     authError,
     handleLogin,
-    handleLogout,
-    showSessionWarning,
-    timeRemaining
+    handleLogout
   };
 };
 

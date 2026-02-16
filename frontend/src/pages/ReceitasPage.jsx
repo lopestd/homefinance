@@ -6,7 +6,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { AlertDialog, ConfirmDialog } from "../components/Dialogs";
 import { IconCheck, IconEdit, IconTrash, IconX } from "../components/Icons";
 import Modal from "../components/Modal";
-import { MONTHS_ORDER, createId, formatCurrency, getCurrentMonthName } from "../utils/appUtils";
+import { MONTHS_ORDER, createId, formatCurrency, getCurrentMonthName, calculateDateForMonth } from "../utils/appUtils";
 
 registerLocale("pt-BR", ptBR);
 
@@ -215,7 +215,7 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
           id: createId("rec-fixo"),
           orcamentoId: effectiveOrcamentoId,
           mes: mes,
-          data: manualForm.data,
+          data: calculateDateForMonth(mes, manualForm.data),
           categoriaId: manualForm.categoriaId,
           descricao: manualForm.descricao,
           complemento: manualForm.complemento || "",

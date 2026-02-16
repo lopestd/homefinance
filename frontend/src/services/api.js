@@ -10,7 +10,7 @@ api.interceptors.response.use(
       // Limpar token e redirecionar para login
       localStorage.removeItem("authToken");
       window.location.hash = "#login";
-      window.location.reload();
+      window.location.reload(); // Recarregar a página para login
     }
     return Promise.reject(error);
   }

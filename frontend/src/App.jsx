@@ -62,9 +62,7 @@ function App() {
     authLoading,
     authError,
     handleLogin,
-    handleLogout,
-    showSessionWarning,
-    timeRemaining
+    handleLogout
   } = useAuth({ onLogoutCleanup: clearData });
 
   const applyConfigData = useCallback((data) => {
@@ -107,7 +105,7 @@ function App() {
         const data = await loadConfigFromApi();
         applyConfigData(data);
         setIsDataLoaded(true);
-      } catch (error) {
+      } catch {
         setIsDataLoaded(true);
       }
     };
@@ -369,34 +367,6 @@ function App() {
           primaryLabel="Ok"
           onClose={() => setSaveAlertOpen(false)}
         />
-        {showSessionWarning && (
-          <div className="session-warning-overlay">
-            <div className="session-warning-modal">
-              <h3>⚠️ Sessão Expirando</h3>
-              <p>Sua sessão expirará em <strong>{Math.ceil(timeRemaining / 1000)} segundos</strong>.</p>
-              <p>Por favor, salve seu trabalho ou clique em continuar para estender a sessão.</p>
-              <div className="session-warning-actions">
-                <button
-                  type="button"
-                  className="primary"
-                  onClick={() => {
-                    // Resetar timer de inatividade
-                    window.dispatchEvent(new Event("mousedown"));
-                  }}
-                >
-                  Continuar
-                </button>
-                <button
-                  type="button"
-                  className="ghost"
-                  onClick={handleLogout}
-                >
-                  Sair
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

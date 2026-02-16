@@ -7,7 +7,7 @@ import { AlertDialog, ConfirmDialog } from "../components/Dialogs";
 import { IconEdit, IconTrash } from "../components/Icons";
 import Modal from "../components/Modal";
 import { createCategoria } from "../services/configApi";
-import { createId, formatCurrency, getCurrentMonthName } from "../utils/appUtils";
+import { createId, formatCurrency, getCurrentMonthName, calculateDateForMonth } from "../utils/appUtils";
 
 registerLocale("pt-BR", ptBR);
 
