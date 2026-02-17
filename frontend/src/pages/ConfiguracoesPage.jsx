@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { NumericFormat } from "react-number-format";
 import { AlertDialog, ConfirmDialog } from "../components/Dialogs";
 import { IconEdit, IconTrash } from "../components/Icons";
@@ -59,6 +59,19 @@ const ConfiguracoesPage = ({
     [orcamentos]
   );
   const despesasCategorias = categorias.filter((categoria) => categoria.tipo === "DESPESA");
+  const resolveOrcamentoLabel = useCallback((saldo) => {
+    const normalizedId = normalizeOrcamentoId(saldo?.orcamentoId);
+    const labelFromId = orcamentosMap.get(normalizedId);
+    if (labelFromId) return labelFromId;
+    const labelFromAno = orcamentos.find((orcamento) => String(orcamento.label) === String(saldo?.ano))?.label;
+    return labelFromAno || "";
+  }, [orcamentos, orcamentosMap]);
+  const resolveOrcamentoId = useCallback((saldo) => {
+    const normalizedId = normalizeOrcamentoId(saldo?.orcamentoId);
+    if (orcamentosMap.has(normalizedId)) return normalizedId;
+    const match = orcamentos.find((orcamento) => String(orcamento.label) === String(saldo?.ano));
+    return normalizeOrcamentoId(match?.id ?? normalizedId);
+  }, [orcamentos, orcamentosMap]);
 
   const [alertModalOpen, setAlertModalOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
@@ -192,12 +205,12 @@ const ConfiguracoesPage = ({
   const [saldosIniciais, setSaldosIniciais] = useState([]);
   const saldosIniciaisOrdenados = useMemo(() => {
     return [...saldosIniciais].sort((a, b) => {
-      const labelA = orcamentosMap.get(a.orcamentoId) || "";
-      const labelB = orcamentosMap.get(b.orcamentoId) || "";
+      const labelA = resolveOrcamentoLabel(a);
+      const labelB = resolveOrcamentoLabel(b);
       if (labelA !== labelB) return labelA.localeCompare(labelB, "pt-BR");
       return Number(a.ano) - Number(b.ano);
     });
-  }, [saldosIniciais, orcamentosMap]);
+  }, [saldosIniciais, resolveOrcamentoLabel]);
 
   const abrirCategoriaModal = () => {
     setCategoriaEditId(null);
@@ -276,9 +289,10 @@ const ConfiguracoesPage = ({
   };
 
   const editarSaldoInicial = (saldo) => {
-    setSaldoInicialEditKey(`${saldo.orcamentoId}-${saldo.ano}`);
+    const resolvedOrcamentoId = resolveOrcamentoId(saldo);
+    setSaldoInicialEditKey(`${resolvedOrcamentoId}-${saldo.ano}`);
     setSaldoInicialForm({
-      orcamentoId: saldo.orcamentoId,
+      orcamentoId: resolvedOrcamentoId,
       ano: String(saldo.ano ?? ""),
       saldoInicial: String(saldo.saldoInicial ?? "")
     });
@@ -586,7 +600,7 @@ const ConfiguracoesPage = ({
               ) : (
                 saldosIniciaisOrdenados.map((saldo) => (
                   <tr className="list-table__row" key={`${saldo.orcamentoId}-${saldo.ano}`}>
-                    <td>{orcamentosMap.get(normalizeOrcamentoId(saldo.orcamentoId)) || "—"}</td>
+                    <td>{resolveOrcamentoLabel(saldo) || "—"}</td>
                     <td>{saldo.ano}</td>
                     <td>{formatCurrency(saldo.saldoInicial)}</td>
                     <td className="list-table__cell list-table__cell--acoes">
