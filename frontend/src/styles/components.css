@@ -1437,3 +1437,221 @@ select:focus {
 .react-datepicker__navigation:hover .react-datepicker__navigation-icon::before {
   border-color: #0f172a;
 }
+
+/* === TABLE FILTERS === */
+/* Células do cabeçalho da tabela com filtros */
+.list-table__header-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 8px;
+  min-width: 120px;
+}
+
+.list-table__header-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s;
+}
+
+.list-table__header-label:hover {
+  color: #2563eb;
+}
+
+.list-table__header-label span {
+  flex: 1;
+}
+
+.sort-indicator {
+  margin-left: 8px;
+  font-size: 14px;
+  color: #2563eb;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+/* Componente de filtro na tabela */
+.table-filter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+}
+
+.table-filter__input,
+.table-filter__select,
+.table-filter__date {
+  width: 100%;
+  padding: 4px 8px;
+  font-size: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background: white;
+  transition: all 0.2s;
+}
+
+.table-filter__input:focus,
+.table-filter__select:focus,
+.table-filter__date:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.table-filter__input::placeholder {
+  color: #94a3b8;
+}
+
+.table-filter__select {
+  cursor: pointer;
+}
+
+.table-filter__date {
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+/* DatePicker personalizado para filtros */
+.table-filter .react-datepicker-wrapper {
+  width: 100%;
+}
+
+.table-filter .react-datepicker__input-container {
+  width: 100%;
+}
+
+.table-filter .react-datepicker__input-container input {
+  width: 100%;
+  padding: 4px 8px;
+  font-size: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background: white;
+}
+
+/* Botão para limpar filtro */
+.table-filter__clear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 18px;
+  line-height: 1;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.table-filter__clear-btn:hover {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.table-filter__clear-btn:active {
+  background: #e2e8f0;
+}
+
+/* Indicador de filtro ativo */
+.list-table__header-cell.has-filter .list-table__header-label {
+  color: #2563eb;
+}
+
+.list-table__header-cell.has-filter .table-filter__input,
+.list-table__header-cell.has-filter .table-filter__select,
+.list-table__header-cell.has-filter .table-filter__date {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+/* Barra de filtros global */
+.filters-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.filters-bar__label {
+  font-weight: 500;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.filters-bar__clear-btn {
+  margin-left: auto;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* Badge de filtros ativos */
+.active-filters-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: #dbeafe;
+  color: #1e40af;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  gap: 6px;
+}
+
+.active-filters-badge__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  background: #1e40af;
+  color: white;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Responsividade para filtros em telas pequenas */
+@media (max-width: 768px) {
+  .list-table__header-cell {
+    min-width: 100px;
+    padding: 4px 6px;
+    gap: 4px;
+  }
+
+  .list-table__header-label {
+    font-size: 12px;
+  }
+
+  .table-filter__input,
+  .table-filter__select,
+  .table-filter__date {
+    font-size: 11px;
+    padding: 3px 6px;
+  }
+
+  .sort-indicator {
+    font-size: 12px;
+    margin-left: 4px;
+  }
+
+  .table-filter__clear-btn {
+    width: 18px;
+    height: 18px;
+    font-size: 16px;
+  }
+}

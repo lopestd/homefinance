@@ -6,6 +6,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import { AlertDialog, ConfirmDialog } from "../components/Dialogs";
 import { IconCheck, IconEdit, IconTrash, IconX } from "../components/Icons";
 import Modal from "../components/Modal";
+import TableFilter from "../components/TableFilter";
+import useTableFilters from "../hooks/useTableFilters";
 import { MONTHS_ORDER, createId, formatCurrency, getCurrentMonthName, calculateDateForMonth } from "../utils/appUtils";
 
 registerLocale("pt-BR", ptBR);
@@ -40,10 +42,64 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
     });
   }, [receitas, effectiveOrcamentoId, effectiveMes]);
 
+  // Configuração de colunas para filtros e ordenação
+  const receitasColumnConfigs = useMemo(() => ({
+    data: {
+      key: 'data',
+      type: 'date',
+      label: 'Data',
+      sortable: true,
+      filterable: true
+    },
+    descricao: {
+      key: 'descricao',
+      type: 'text',
+      label: 'Descrição',
+      sortable: true,
+      filterable: true
+    },
+    categoria: {
+      key: 'categoria',
+      type: 'select',
+      label: 'Categoria',
+      sortable: true,
+      filterable: true,
+      options: receitasCategorias.map(c => c.nome)
+    },
+    valor: {
+      key: 'valor',
+      type: 'number',
+      label: 'Valor',
+      sortable: true,
+      filterable: true
+    },
+    status: {
+      key: 'status',
+      type: 'select',
+      label: 'Status',
+      sortable: true,
+      filterable: true,
+      options: ['Pendente', 'Recebido']
+    }
+  }), [receitasCategorias]);
+
+  // Hook para gerenciar filtros e ordenação
+  const {
+    filteredAndSortedItems: filteredSortedReceitas,
+    filters: tableFilters,
+    sortConfig,
+    setColumnFilter,
+    clearColumnFilter,
+    clearAllFilters,
+    toggleSort,
+    hasActiveFilters,
+    activeFiltersCount
+  } = useTableFilters(filteredReceitas, receitasColumnConfigs);
+
   const totals = useMemo(() => {
     let lancado = 0;
     let recebido = 0;
-    filteredReceitas.forEach((r) => {
+    filteredSortedReceitas.forEach((r) => {
       const val = parseFloat(r.valor) || 0;
       lancado += val;
       if (r.status === "Recebido") recebido += val;
@@ -58,7 +114,7 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
       pendenteNum: pendente,
       tudoRecebido: pendente === 0
     };
-  }, [filteredReceitas]);
+  }, [filteredSortedReceitas]);
 
   const [manualOpen, setManualOpen] = useState(false);
   const [isManualDescricao, setIsManualDescricao] = useState(false);
@@ -329,6 +385,21 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
       </section>
       <section className="panel">
         <h2>Lista de Receitas</h2>
+        {hasActiveFilters && (
+          <div className="filters-bar">
+            <span className="filters-bar__label">Filtros ativos:</span>
+            <div className="active-filters-badge">
+              {activeFiltersCount} filtro{activeFiltersCount !== 1 ? 's' : ''} ativo{activeFiltersCount !== 1 ? 's' : ''}
+            </div>
+            <button
+              type="button"
+              className="ghost filters-bar__clear-btn"
+              onClick={clearAllFilters}
+            >
+              Limpar todos
+            </button>
+          </div>
+        )}
         <div className="table list-table-wrapper">
           <table className="list-table" aria-label="Lista de Receitas">
             <colgroup>
@@ -341,21 +412,29 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
             </colgroup>
             <thead className="list-table__head">
               <tr>
-                <th scope="col">Data</th>
-                <th scope="col">Descrição</th>
-                <th scope="col">Categoria</th>
-                <th scope="col">Valor</th>
-                <th scope="col">Status</th>
+                {Object.values(receitasColumnConfigs).map(config => (
+                  <th key={config.key} scope="col">
+                    <TableFilter
+                      columnConfig={config}
+                      filterValue={tableFilters[config.key]}
+                      onFilterChange={(value) => setColumnFilter(config.key, value)}
+                      onClearFilter={() => clearColumnFilter(config.key)}
+                      sortConfig={sortConfig}
+                      onSortToggle={toggleSort}
+                      onSortDirectionChange={(direction) => toggleSort(config.key)}
+                    />
+                  </th>
+                ))}
                 <th scope="col" className="list-table__head-actions">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {filteredReceitas.length === 0 ? (
+              {filteredSortedReceitas.length === 0 ? (
                 <tr className="list-table__row list-table__row--empty">
-                  <td colSpan={6}>Sem receitas para o mês selecionado.</td>
+                  <td colSpan={6}>{hasActiveFilters ? 'Nenhuma receita encontrada com os filtros ativos.' : 'Sem receitas para o mês selecionado.'}</td>
                 </tr>
               ) : (
-                filteredReceitas.map((receita) => (
+                filteredSortedReceitas.map((receita) => (
                   <tr className="list-table__row" key={receita.id}>
                     <td>{new Date(receita.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}</td>
                     <td>{receita.complemento ? `${receita.descricao} - ${receita.complemento}` : receita.descricao}</td>

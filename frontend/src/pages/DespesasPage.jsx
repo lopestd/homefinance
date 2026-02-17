@@ -6,6 +6,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import { AlertDialog, ConfirmDialog } from "../components/Dialogs";
 import { IconCheck, IconEdit, IconTrash, IconX } from "../components/Icons";
 import Modal from "../components/Modal";
+import TableFilter from "../components/TableFilter";
+import useTableFilters from "../hooks/useTableFilters";
 import { createCategoria } from "../services/configApi";
 import { MONTHS_ORDER, createId, formatCurrency, getCurrentMonthName, calculateDateForMonth } from "../utils/appUtils";
 
@@ -56,10 +58,64 @@ const DespesasPage = ({
     });
   }, [despesas, effectiveOrcamentoId, effectiveMes]);
 
+  // Configuração de colunas para filtros e ordenação
+  const despesasColumnConfigs = useMemo(() => ({
+    data: {
+      key: 'data',
+      type: 'date',
+      label: 'Data',
+      sortable: true,
+      filterable: true
+    },
+    descricao: {
+      key: 'descricao',
+      type: 'text',
+      label: 'Descrição',
+      sortable: true,
+      filterable: true
+    },
+    categoria: {
+      key: 'categoria',
+      type: 'select',
+      label: 'Categoria',
+      sortable: true,
+      filterable: true,
+      options: despesasCategorias.map(c => c.nome)
+    },
+    valor: {
+      key: 'valor',
+      type: 'number',
+      label: 'Valor',
+      sortable: true,
+      filterable: true
+    },
+    status: {
+      key: 'status',
+      type: 'select',
+      label: 'Status',
+      sortable: true,
+      filterable: true,
+      options: ['Pendente', 'Pago']
+    }
+  }), [despesasCategorias]);
+
+  // Hook para gerenciar filtros e ordenação
+  const {
+    filteredAndSortedItems: filteredSortedDespesas,
+    filters: tableFilters,
+    sortConfig,
+    setColumnFilter,
+    clearColumnFilter,
+    clearAllFilters,
+    toggleSort,
+    hasActiveFilters,
+    activeFiltersCount
+  } = useTableFilters(filteredDespesas, despesasColumnConfigs);
+
   const totals = useMemo(() => {
     let lancado = 0;
     let pago = 0;
-    filteredDespesas.forEach((d) => {
+    filteredSortedDespesas.forEach((d) => {
       const val = parseFloat(d.valor) || 0;
       lancado += val;
       if (d.status === "Pago") pago += val;
@@ -68,7 +124,7 @@ const DespesasPage = ({
       lancado: formatCurrency(lancado),
       pago: formatCurrency(pago)
     };
-  }, [filteredDespesas]);
+  }, [filteredSortedDespesas]);
 
   const [manualOpen, setManualOpen] = useState(false);
   const [isManualDescricao, setIsManualDescricao] = useState(false);
@@ -434,6 +490,21 @@ const DespesasPage = ({
       </section>
       <section className="panel">
         <h2>Lista de Despesas</h2>
+        {hasActiveFilters && (
+          <div className="filters-bar">
+            <span className="filters-bar__label">Filtros ativos:</span>
+            <div className="active-filters-badge">
+              {activeFiltersCount} filtro{activeFiltersCount !== 1 ? 's' : ''} ativo{activeFiltersCount !== 1 ? 's' : ''}
+            </div>
+            <button
+              type="button"
+              className="ghost filters-bar__clear-btn"
+              onClick={clearAllFilters}
+            >
+              Limpar todos
+            </button>
+          </div>
+        )}
         <div className="table list-table-wrapper">
           <table className="list-table" aria-label="Lista de Despesas">
             <colgroup>
@@ -446,21 +517,29 @@ const DespesasPage = ({
             </colgroup>
             <thead className="list-table__head">
               <tr>
-                <th scope="col">Data</th>
-                <th scope="col">Descrição</th>
-                <th scope="col">Categoria</th>
-                <th scope="col">Valor</th>
-                <th scope="col">Status</th>
+                {Object.values(despesasColumnConfigs).map(config => (
+                  <th key={config.key} scope="col">
+                    <TableFilter
+                      columnConfig={config}
+                      filterValue={tableFilters[config.key]}
+                      onFilterChange={(value) => setColumnFilter(config.key, value)}
+                      onClearFilter={() => clearColumnFilter(config.key)}
+                      sortConfig={sortConfig}
+                      onSortToggle={toggleSort}
+                      onSortDirectionChange={(direction) => toggleSort(config.key)}
+                    />
+                  </th>
+                ))}
                 <th scope="col" className="list-table__head-actions">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {filteredDespesas.length === 0 ? (
+              {filteredSortedDespesas.length === 0 ? (
                 <tr className="list-table__row list-table__row--empty">
-                  <td colSpan={6}>Sem despesas para o mês selecionado.</td>
+                  <td colSpan={6}>{hasActiveFilters ? 'Nenhuma despesa encontrada com os filtros ativos.' : 'Sem despesas para o mês selecionado.'}</td>
                 </tr>
               ) : (
-                filteredDespesas.map((despesa) => (
+                filteredSortedDespesas.map((despesa) => (
                   <tr className="list-table__row" key={despesa.id}>
                     <td>{new Date(despesa.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}</td>
                     <td>{despesa.complemento ? `${despesa.descricao} - ${despesa.complemento}` : despesa.descricao}</td>

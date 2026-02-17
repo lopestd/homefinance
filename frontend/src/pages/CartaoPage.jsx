@@ -101,8 +101,8 @@ const CartaoPage = ({
     if (!effectiveCartaoId) return [];
     return lancamentosCartao.filter((l) =>
       l.cartaoId === effectiveCartaoId &&
-      (l.mesReferencia === selectedMes || (l.meses && l.meses.includes(selectedMes)))
-    );
+      (l.mesReferencia === selectedMes || (l.meses && l.meses.includes(selectedMes))))
+    ;
   }, [lancamentosCartao, effectiveCartaoId, selectedMes]);
 
   const { fixoParcelado, gastosMes, totalMes } = useMemo(() => {
@@ -625,55 +625,6 @@ const CartaoPage = ({
             </select>
           </label>
         </form>
-      </section>
-
-      <section className="panel">
-        <h3 className="panel-title">
-          Lançamentos de <span className="badge-month">{selectedMes}</span>
-        </h3>
-
-        <div className="table list-table-wrapper">
-          <table className="list-table list-table--cartao" aria-label="Lançamentos do cartão">
-            <colgroup>
-              <col className="list-table__col list-table__col--date" />
-              <col className="list-table__col list-table__col--desc" />
-              <col className="list-table__col list-table__col--tipo" />
-              <col className="list-table__col list-table__col--valor" />
-              <col className="list-table__col list-table__col--acoes" />
-            </colgroup>
-            <thead className="list-table__head">
-              <tr>
-                <th scope="col">Data</th>
-                <th scope="col">Descrição</th>
-                <th scope="col">Tipo de Gasto</th>
-                <th scope="col">Valor</th>
-                <th scope="col">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredLancamentos.length === 0 ? (
-                <tr className="list-table__row list-table__row--empty">
-                  <td colSpan={5}>Nenhum lançamento nesta fatura.</td>
-                </tr>
-              ) : (
-                filteredLancamentos.map((l) => (
-                  <tr className="list-table__row" key={l.id}>
-                    <td>{new Date(l.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}</td>
-                    <td>{l.complemento ? `${l.descricao} - ${l.complemento}` : l.descricao}</td>
-                    <td>{l.tipoRecorrencia === "FIXO" ? "Fixo" : l.tipoRecorrencia === "PARCELADO" ? "Parcelado" : "Eventual"}</td>
-                    <td>{formatCurrency(l.valor)}</td>
-                    <td className="list-table__cell list-table__cell--acoes">
-                      <div className="actions">
-                        <button className="icon-button info" onClick={() => openModal(l)} title="Editar"><IconEdit /></button>
-                        <button className="icon-button delete" onClick={() => handleDelete(l.id)} title="Excluir"><IconTrash /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
 
         <div className="dashboard-grid">
           <div className="summary-card">
@@ -722,6 +673,55 @@ const CartaoPage = ({
               {isFaturaFechada ? "Reabrir Fatura" : "Fechar Fatura"}
             </button>
           </div>
+        </div>
+      </section>
+
+      <section className="panel">
+        <h3 className="panel-title">
+          Lançamentos de <span className="badge-month">{selectedMes}</span>
+        </h3>
+
+        <div className="table list-table-wrapper">
+          <table className="list-table list-table--cartao" aria-label="Lançamentos do cartão">
+            <colgroup>
+              <col className="list-table__col list-table__col--date" />
+              <col className="list-table__col list-table__col--desc" />
+              <col className="list-table__col list-table__col--tipo" />
+              <col className="list-table__col list-table__col--valor" />
+              <col className="list-table__col list-table__col--acoes" />
+            </colgroup>
+            <thead className="list-table__head">
+              <tr>
+                <th scope="col">Data</th>
+                <th scope="col">Descrição</th>
+                <th scope="col">Tipo de Gasto</th>
+                <th scope="col">Valor</th>
+                <th scope="col">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredLancamentos.length === 0 ? (
+                <tr className="list-table__row list-table__row--empty">
+                  <td colSpan={5}>Nenhum lançamento nesta fatura.</td>
+                </tr>
+              ) : (
+                filteredLancamentos.map((l) => (
+                  <tr className="list-table__row" key={l.id}>
+                    <td>{new Date(l.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}</td>
+                    <td>{l.complemento ? `${l.descricao} - ${l.complemento}` : l.descricao}</td>
+                    <td>{l.tipoRecorrencia === "FIXO" ? "Fixo" : l.tipoRecorrencia === "PARCELADO" ? "Parcelado" : "Eventual"}</td>
+                    <td>{formatCurrency(l.valor)}</td>
+                    <td className="list-table__cell list-table__cell--acoes">
+                      <div className="actions">
+                        <button className="icon-button info" onClick={() => openModal(l)} title="Editar"><IconEdit /></button>
+                        <button className="icon-button delete" onClick={() => handleDelete(l.id)} title="Excluir"><IconTrash /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
 
