@@ -20,10 +20,8 @@ const TableFilter = ({
   onFilterChange,
   onClearFilter,
   sortConfig,
-  onSortToggle,
-  onSortDirectionChange
+  onSortToggle
 }) => {
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [localValue, setLocalValue] = useState(filterValue || '');
 
   const isSorted = sortConfig.column === columnConfig.key;
@@ -41,10 +39,6 @@ const TableFilter = ({
 
   const handleSortClick = () => {
     onSortToggle(columnConfig.key);
-  };
-
-  const handleSortDirectionChange = (direction) => {
-    onSortDirectionChange(columnConfig.key, direction);
   };
 
   const renderFilterInput = () => {
@@ -88,7 +82,6 @@ const TableFilter = ({
             locale={ptBR}
             placeholderText="dd/mm/aaaa"
             isClearable
-            onClickOutside={() => setIsFilterOpen(false)}
             popperPlacement="bottom-start"
           />
         );

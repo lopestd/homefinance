@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import useRelatorios from "../hooks/useRelatorios";
+import useSaldoAcumulado from "../hooks/useSaldoAcumulado";
 import { formatCurrency } from "../utils/appUtils";
 import { TabNavigation } from "../components/reports";
 import { AreaChart, HorizontalBar, PieChart } from "../components/charts";
@@ -24,6 +25,19 @@ const RelatoriosPage = ({
     mesFim,
     mesesSelecionados
   } = useRelatorios(orcamentos);
+  const currentOrcamento = useMemo(
+    () => orcamentos.find((orcamento) => orcamento.id === effectiveOrcamentoId),
+    [orcamentos, effectiveOrcamentoId]
+  );
+  const anoOrcamento = Number.parseInt(currentOrcamento?.label, 10) || new Date().getFullYear();
+  const { saldos } = useSaldoAcumulado(effectiveOrcamentoId, anoOrcamento);
+  const saldoAcumuladoMap = useMemo(() => {
+    const map = new Map();
+    (saldos || []).forEach((saldo) => {
+      map.set(saldo.mesNome, saldo.saldoFinal);
+    });
+    return map;
+  }, [saldos]);
 
   const categoriasMap = useMemo(
     () => new Map(categorias.map((categoria) => [categoria.id, categoria.nome])),
@@ -106,15 +120,16 @@ const RelatoriosPage = ({
 
   const evolucaoMensalComAcumulado = useMemo(() => {
     return evolucaoMensal.map((item, index) => {
-      const saldoAcumulado = evolucaoMensal
-        .slice(0, index + 1)
-        .reduce((acc, current) => acc + current.saldoMes, 0);
+      const saldoApi = saldoAcumuladoMap.get(item.mes);
+      const saldoAcumulado = saldoApi !== undefined
+        ? (parseFloat(saldoApi) || 0)
+        : evolucaoMensal.slice(0, index + 1).reduce((acc, current) => acc + current.saldoMes, 0);
       return {
         ...item,
         saldoAcumulado: filters.visao === "Acumulada" ? saldoAcumulado : item.saldoMes
       };
     });
-  }, [evolucaoMensal, filters.visao]);
+  }, [evolucaoMensal, filters.visao, saldoAcumuladoMap]);
 
   // Dados para gráfico de evolução
   const evolucaoChartData = useMemo(() => {
@@ -125,23 +140,6 @@ const RelatoriosPage = ({
       saldo: item.saldoAcumulado
     }));
   }, [evolucaoMensalComAcumulado]);
-
-  const comparativoPlanejado = useMemo(() => {
-    const diffReceitas = resumoConsolidado.recRecebido - resumoConsolidado.recPrevisto;
-    const diffDespesas = resumoConsolidado.despPago - resumoConsolidado.despPrevisto;
-    return [
-      {
-        tipo: "Receitas",
-        diff: diffReceitas,
-        percent: resumoConsolidado.recPrevisto ? (diffReceitas / resumoConsolidado.recPrevisto) * 100 : 0
-      },
-      {
-        tipo: "Despesas",
-        diff: diffDespesas,
-        percent: resumoConsolidado.despPrevisto ? (diffDespesas / resumoConsolidado.despPrevisto) * 100 : 0
-      }
-    ];
-  }, [resumoConsolidado]);
 
   const despesasPorCategoria = useMemo(() => {
     const map = new Map();
@@ -290,24 +288,6 @@ const RelatoriosPage = ({
     return rows;
   }, [cartoes, lancamentosCartao, mesesSelecionados]);
 
-  const resumoAnual = useMemo(() => {
-    const base = mesesOrcamento.map((mes) => {
-      const resumo = calcResumo([mes]);
-      const saldoMes = resumo.recRecebido - resumo.despPago;
-      return {
-        mes,
-        ...resumo,
-        saldoMes
-      };
-    });
-    return base.map((item, index) => {
-      const saldoAcumulado = base
-        .slice(0, index + 1)
-        .reduce((acc, current) => acc + current.saldoMes, 0);
-      return { ...item, saldoAcumulado };
-    });
-  }, [mesesOrcamento, calcResumo]);
-
   const saldoPrevisto = resumoConsolidado.recPrevisto - resumoConsolidado.despPrevisto;
   const saldoEmConta = resumoConsolidado.recRecebido - resumoConsolidado.despPago;
 
@@ -323,7 +303,8 @@ const RelatoriosPage = ({
   // Series para gráficos
   const areaSeries = [
     { dataKey: 'receitas', name: 'Receitas', color: '#10B981' },
-    { dataKey: 'despesas', name: 'Despesas', color: '#EF4444' }
+    { dataKey: 'despesas', name: 'Despesas', color: '#EF4444' },
+    { dataKey: 'saldo', name: 'Saldo Acumulado', color: '#6366F1' }
   ];
 
   // Calcular variação

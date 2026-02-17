@@ -1,6 +1,21 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { PieChart as RechartsPieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 
+const PieChartTooltip = ({ active, payload, total, formatCurrency }) => {
+  if (active && payload && payload.length) {
+    const item = payload[0].payload;
+    const percent = total > 0 ? ((item.value / total) * 100).toFixed(1) : 0;
+    return (
+      <div className="chart-tooltip chart-tooltip--pie">
+        <p className="chart-tooltip__title">{item.name}</p>
+        <p className="chart-tooltip__value">{formatCurrency(item.value)}</p>
+        <p className="chart-tooltip__percent">{percent}% do total</p>
+      </div>
+    );
+  }
+  return null;
+};
+
 /**
  * PieChart - Gráfico de pizza para distribuição de categorias
  * SEM ResponsiveContainer para evitar warnings de dimensões negativas
@@ -51,22 +66,7 @@ const PieChart = ({
 
   const total = data.reduce((sum, item) => sum + item.value, 0);
 
-  const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      const item = payload[0].payload;
-      const percent = total > 0 ? ((item.value / total) * 100).toFixed(1) : 0;
-      return (
-        <div className="chart-tooltip chart-tooltip--pie">
-          <p className="chart-tooltip__title">{item.name}</p>
-          <p className="chart-tooltip__value">{formatCurrency(item.value)}</p>
-          <p className="chart-tooltip__percent">{percent}% do total</p>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
+  const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
     if (percent < 0.05) return null;
     
     const RADIAN = Math.PI / 180;
@@ -122,7 +122,7 @@ const PieChart = ({
               />
             ))}
           </Pie>
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<PieChartTooltip total={total} formatCurrency={formatCurrency} />} />
           {showLegend && (
             <Legend
               layout="vertical"
@@ -131,7 +131,7 @@ const PieChart = ({
               wrapperStyle={{ fontSize: 12, paddingLeft: 10 }}
               iconType="circle"
               iconSize={8}
-              formatter={(value, entry) => (
+              formatter={(value) => (
                 <span className="pie-chart__legend-item">
                   {value}
                 </span>

@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { formatCurrency, getCurrentMonthName } from "../utils/appUtils";
-import { KPICard, SummaryCard, CardTopGastosCartao } from "../components/dashboard";
+import { formatCurrency, getCurrentMonthName, MONTHS_ORDER } from "../utils/appUtils";
+import { KPICard, SummaryCard, CardTopGastosCartao, CardSaldoAcumulado } from "../components/dashboard";
 import { AreaChart, HorizontalBar } from "../components/charts";
+import useSaldoAcumulado from "../hooks/useSaldoAcumulado";
 
 const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, lancamentosCartao }) => {
   const [selectedOrcamentoId, setSelectedOrcamentoId] = useState("");
@@ -10,10 +11,16 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
   const initialOrcamentoId = orcamentos[0]?.id ?? "";
   const effectiveOrcamentoId = selectedOrcamentoId || initialOrcamentoId;
   const currentOrcamento = orcamentos.find((o) => o.id === effectiveOrcamentoId);
+  const anoOrcamento = Number.parseInt(currentOrcamento?.label, 10) || new Date().getFullYear();
   
   const mesesDisponiveis = useMemo(
     () => currentOrcamento?.meses || [],
     [currentOrcamento]
+  );
+
+  const mesesOrdenados = useMemo(
+    () => MONTHS_ORDER.filter((mes) => mesesDisponiveis.includes(mes)),
+    [mesesDisponiveis]
   );
   
   const defaultMes = useMemo(() => {
@@ -23,6 +30,18 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
   }, [mesesDisponiveis]);
   
   const effectiveMes = selectedMes && mesesDisponiveis.includes(selectedMes) ? selectedMes : defaultMes;
+  const { getSaldoDoMes, getSaldoFinalDoMes } = useSaldoAcumulado(effectiveOrcamentoId, anoOrcamento);
+  const saldoMesAtual = useMemo(() => getSaldoDoMes(effectiveMes), [getSaldoDoMes, effectiveMes]);
+  const mesIndex = mesesOrdenados.indexOf(effectiveMes);
+  const mesAnterior = mesIndex > 0 ? mesesOrdenados[mesIndex - 1] : "";
+  const saldoAcumuladoAnterior = useMemo(() => {
+    if (!effectiveMes) return 0;
+    if (mesIndex <= 0) {
+      const value = saldoMesAtual ? parseFloat(saldoMesAtual.saldoInicial) : 0;
+      return Number.isNaN(value) ? 0 : value;
+    }
+    return getSaldoFinalDoMes(mesAnterior);
+  }, [effectiveMes, mesIndex, saldoMesAtual, getSaldoFinalDoMes, mesAnterior]);
 
   // Map de categorias
   const categoriasMap = useMemo(
@@ -208,7 +227,7 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
         saldo: limite - totalGasto
       };
     });
-  }, [cartoes, lancamentosCartao, effectiveOrcamentoId, effectiveMes, categoriasMap]);
+  }, [cartoes, lancamentosCartao, effectiveOrcamentoId, effectiveMes]);
 
   // Calcular tendência
   const calcularTendencia = (atual, previsto) => {
@@ -223,7 +242,14 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
     return { trend: 'neutral', trendValue: 'Dentro do previsto' };
   };
 
-  const saldoTendencia = calcularTendencia(resumoMensal.saldo, resumoMensal.recLancadas - resumoMensal.despLancadas);
+  const saldoPrevistoMes = resumoMensal.recLancadas - resumoMensal.despLancadas;
+  const saldoConsolidado = saldoAcumuladoAnterior + saldoPrevistoMes;
+  const saldoTendencia = calcularTendencia(resumoMensal.saldo, saldoPrevistoMes);
+  const saldoConsolidadoClass = saldoConsolidado >= 0 ? "summary-card-value--positive" : "summary-card-value--negative";
+  const saldoInicialMes = saldoMesAtual ? parseFloat(saldoMesAtual.saldoInicial) : 0;
+  const receitasRecebidasMes = saldoMesAtual ? parseFloat(saldoMesAtual.receitasRecebidas) : 0;
+  const despesasPagasMes = saldoMesAtual ? parseFloat(saldoMesAtual.despesasPagas) : 0;
+  const saldoFinalMes = saldoMesAtual ? parseFloat(saldoMesAtual.saldoFinal) : 0;
 
   return (
     <div className="page-grid dashboard-page">
@@ -259,12 +285,16 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
         >
           <div className="kpi-card__details">
             <div className="kpi-card__detail-row">
-              <span>Previsto:</span>
-              <strong>{formatCurrency(resumoMensal.recLancadas - resumoMensal.despLancadas)}</strong>
+              <span>Saldo acumulado anterior:</span>
+              <strong>{formatCurrency(saldoAcumuladoAnterior)}</strong>
             </div>
             <div className="kpi-card__detail-row">
-              <span>Realizado:</span>
-              <strong>{formatCurrency(resumoMensal.saldo)}</strong>
+              <span>Saldo previsto:</span>
+              <strong>{formatCurrency(saldoPrevistoMes)}</strong>
+            </div>
+            <div className="kpi-card__detail-row">
+              <span>Saldo consolidado:</span>
+              <strong className={saldoConsolidadoClass}>{formatCurrency(saldoConsolidado)}</strong>
             </div>
           </div>
         </KPICard>
@@ -344,6 +374,16 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
             />
           ))
         )}
+      </section>
+
+      <section className="panel dashboard-accumulated">
+        <CardSaldoAcumulado
+          mesAtual={effectiveMes}
+          saldoInicial={Number.isNaN(saldoInicialMes) ? 0 : saldoInicialMes}
+          receitasRecebidas={Number.isNaN(receitasRecebidasMes) ? 0 : receitasRecebidasMes}
+          despesasPagas={Number.isNaN(despesasPagasMes) ? 0 : despesasPagasMes}
+          saldoFinal={Number.isNaN(saldoFinalMes) ? 0 : saldoFinalMes}
+        />
       </section>
 
       {/* Resumo Anual */}

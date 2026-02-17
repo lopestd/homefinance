@@ -38,18 +38,17 @@ const useTableFilters = (items, columnConfigs) => {
           : item[columnKey];
 
         switch (columnConfig.type) {
-          case 'text':
-            // Filtro por substring (case-insensitive)
+          case 'text': {
             const searchText = String(filterValue).toLowerCase();
             const itemText = String(itemValue || '').toLowerCase();
             return itemText.includes(searchText);
+          }
 
-          case 'select':
-            // Filtro por valor exato
+          case 'select': {
             return String(itemValue) === String(filterValue);
+          }
 
-          case 'date':
-            // Filtro por data específica
+          case 'date': {
             const filterDate = new Date(filterValue);
             const itemDate = new Date(itemValue);
             return (
@@ -57,15 +56,17 @@ const useTableFilters = (items, columnConfigs) => {
               filterDate.getMonth() === itemDate.getMonth() &&
               filterDate.getFullYear() === itemDate.getFullYear()
             );
+          }
 
-          case 'number':
-            // Filtro por valor específico
+          case 'number': {
             const filterNum = parseFloat(filterValue);
             const itemNum = parseFloat(itemValue);
             return !isNaN(filterNum) && !isNaN(itemNum) && itemNum === filterNum;
+          }
 
-          default:
+          default: {
             return true;
+          }
         }
       });
     });

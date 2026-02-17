@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { NumericFormat } from "react-number-format";
 import { AlertDialog, ConfirmDialog } from "../components/Dialogs";
 import { IconEdit, IconTrash } from "../components/Icons";
 import Modal from "../components/Modal";
-import { createId } from "../utils/appUtils";
+import { createId, formatCurrency } from "../utils/appUtils";
 import {
   createCategoria,
   updateCategoria,
@@ -15,12 +15,20 @@ import {
   updateTipoReceita,
   deleteTipoReceita
 } from "../services/configApi";
+import {
+  listSaldosIniciaisOrcamento,
+  updateSaldoInicialOrcamento
+} from "../services/saldoApi";
 
 const normalizeCategoriaNome = (value) =>
   String(value || "")
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .toLowerCase();
+
+const normalizeOrcamentoId = (value) => (
+  value === null || value === undefined ? "" : String(value)
+);
 
 const ConfiguracoesPage = ({
   categorias,
@@ -45,6 +53,10 @@ const ConfiguracoesPage = ({
   const categoriasMap = useMemo(
     () => new Map(categorias.map((categoria) => [categoria.id, categoria.nome])),
     [categorias]
+  );
+  const orcamentosMap = useMemo(
+    () => new Map(orcamentos.map((orcamento) => [normalizeOrcamentoId(orcamento.id), orcamento.label])),
+    [orcamentos]
   );
   const despesasCategorias = categorias.filter((categoria) => categoria.tipo === "DESPESA");
 
@@ -155,12 +167,14 @@ const ConfiguracoesPage = ({
   const [tipoModalOpen, setTipoModalOpen] = useState(false);
   const [orcamentoModalOpen, setOrcamentoModalOpen] = useState(false);
   const [cartaoModalOpen, setCartaoModalOpen] = useState(false);
+  const [saldoInicialModalOpen, setSaldoInicialModalOpen] = useState(false);
 
   const [categoriaEditId, setCategoriaEditId] = useState(null);
   const [gastoEditId, setGastoEditId] = useState(null);
   const [tipoEditId, setTipoEditId] = useState(null);
   const [orcamentoEditId, setOrcamentoEditId] = useState(null);
   const [cartaoEditId, setCartaoEditId] = useState(null);
+  const [saldoInicialEditKey, setSaldoInicialEditKey] = useState(null);
 
   const [categoriaForm, setCategoriaForm] = useState({ nome: "", tipo: "DESPESA" });
   const [gastoForm, setGastoForm] = useState({
@@ -170,6 +184,20 @@ const ConfiguracoesPage = ({
   const [tipoForm, setTipoForm] = useState({ descricao: "", recorrente: "false" });
   const [orcamentoForm, setOrcamentoForm] = useState({ label: "", meses: [] });
   const [cartaoForm, setCartaoForm] = useState({ nome: "", limite: "" });
+  const [saldoInicialForm, setSaldoInicialForm] = useState({
+    orcamentoId: "",
+    ano: "",
+    saldoInicial: ""
+  });
+  const [saldosIniciais, setSaldosIniciais] = useState([]);
+  const saldosIniciaisOrdenados = useMemo(() => {
+    return [...saldosIniciais].sort((a, b) => {
+      const labelA = orcamentosMap.get(a.orcamentoId) || "";
+      const labelB = orcamentosMap.get(b.orcamentoId) || "";
+      if (labelA !== labelB) return labelA.localeCompare(labelB, "pt-BR");
+      return Number(a.ano) - Number(b.ano);
+    });
+  }, [saldosIniciais, orcamentosMap]);
 
   const abrirCategoriaModal = () => {
     setCategoriaEditId(null);
@@ -201,6 +229,22 @@ const ConfiguracoesPage = ({
     setCartaoModalOpen(true);
   };
 
+  const abrirSaldoInicialModal = () => {
+    if (orcamentos.length === 0) {
+      showAlert("Cadastre ao menos um período do orçamento antes de definir saldo inicial.");
+      return;
+    }
+    const orcamentoId = orcamentos[0]?.id ?? "";
+    const ano = orcamentos[0]?.label ?? "";
+    setSaldoInicialEditKey(null);
+    setSaldoInicialForm({
+      orcamentoId,
+      ano,
+      saldoInicial: ""
+    });
+    setSaldoInicialModalOpen(true);
+  };
+
   const editarCategoria = (categoria) => {
     setCategoriaEditId(categoria.id);
     setCategoriaForm({ nome: categoria.nome, tipo: categoria.tipo });
@@ -229,6 +273,16 @@ const ConfiguracoesPage = ({
     setCartaoEditId(cartao.id);
     setCartaoForm({ nome: cartao.nome, limite: cartao.limite || "" });
     setCartaoModalOpen(true);
+  };
+
+  const editarSaldoInicial = (saldo) => {
+    setSaldoInicialEditKey(`${saldo.orcamentoId}-${saldo.ano}`);
+    setSaldoInicialForm({
+      orcamentoId: saldo.orcamentoId,
+      ano: String(saldo.ano ?? ""),
+      saldoInicial: String(saldo.saldoInicial ?? "")
+    });
+    setSaldoInicialModalOpen(true);
   };
 
   const toggleMesForm = (mesNome) => {
@@ -388,6 +442,56 @@ const ConfiguracoesPage = ({
     setCartaoModalOpen(false);
   };
 
+  const handleSubmitSaldoInicial = async (event) => {
+    event.preventDefault();
+    const orcamentoId = normalizeOrcamentoId(saldoInicialForm.orcamentoId);
+    const parsedOrcamentoId = orcamentoId ? Number(orcamentoId) : Number.NaN;
+    const ano = Number.parseInt(saldoInicialForm.ano, 10);
+    const saldoInicial = parseFloat(saldoInicialForm.saldoInicial) || 0;
+    if (Number.isNaN(parsedOrcamentoId) || Number.isNaN(ano)) {
+      showAlert("Preencha o período e o ano corretamente.");
+      return;
+    }
+    try {
+      const result = await updateSaldoInicialOrcamento(parsedOrcamentoId, ano, saldoInicial);
+      setSaldosIniciais((prev) => {
+        const index = prev.findIndex(
+          (item) => normalizeOrcamentoId(item.orcamentoId) === orcamentoId && Number(item.ano) === ano
+        );
+        const payload = {
+          ...(index >= 0 ? prev[index] : {}),
+          ...result,
+          orcamentoId,
+          ano,
+          saldoInicial
+        };
+        if (index >= 0) {
+          const next = [...prev];
+          next[index] = payload;
+          return next;
+        }
+        return [...prev, payload];
+      });
+      setSaldoInicialEditKey(null);
+      setSaldoInicialForm({ orcamentoId: "", ano: "", saldoInicial: "" });
+      setSaldoInicialModalOpen(false);
+    } catch (error) {
+      showAlert(error?.message || "Falha ao salvar saldo inicial.");
+    }
+  };
+
+  useEffect(() => {
+    const loadSaldosIniciais = async () => {
+      try {
+        const data = await listSaldosIniciaisOrcamento();
+        setSaldosIniciais(data);
+      } catch (error) {
+        showAlert(error?.message || "Falha ao carregar saldos iniciais.");
+      }
+    };
+    loadSaldosIniciais();
+  }, []);
+
   return (
     <div className="page-grid">
       <section className="panel">
@@ -435,6 +539,60 @@ const ConfiguracoesPage = ({
                         </button>
                         <button type="button" className="icon-button delete" onClick={() => handleDeleteOrcamento(orcamento.id)} title="Excluir">
                           <IconTrash />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-header">
+          <div>
+            <h2>Saldo Inicial</h2>
+            <p>Defina o saldo inicial para cada período do orçamento.</p>
+          </div>
+          <div className="actions">
+            <button type="button" className="primary" onClick={abrirSaldoInicialModal}>
+              + Novo saldo inicial
+            </button>
+          </div>
+        </div>
+        <div className="table list-table-wrapper">
+          <table className="list-table list-table--config-saldos" aria-label="Saldo inicial do orçamento">
+            <colgroup>
+              <col className="list-table__col list-table__col--periodo" />
+              <col className="list-table__col list-table__col--ano" />
+              <col className="list-table__col list-table__col--valor" />
+              <col className="list-table__col list-table__col--acoes" />
+            </colgroup>
+            <thead className="list-table__head">
+              <tr>
+                <th scope="col">Período</th>
+                <th scope="col">Ano</th>
+                <th scope="col">Saldo Inicial</th>
+                <th scope="col" className="list-table__head-actions">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {saldosIniciaisOrdenados.length === 0 ? (
+                <tr className="list-table__row list-table__row--empty">
+                  <td colSpan={4}>Nenhum saldo inicial cadastrado.</td>
+                </tr>
+              ) : (
+                saldosIniciaisOrdenados.map((saldo) => (
+                  <tr className="list-table__row" key={`${saldo.orcamentoId}-${saldo.ano}`}>
+                    <td>{orcamentosMap.get(normalizeOrcamentoId(saldo.orcamentoId)) || "—"}</td>
+                    <td>{saldo.ano}</td>
+                    <td>{formatCurrency(saldo.saldoInicial)}</td>
+                    <td className="list-table__cell list-table__cell--acoes">
+                      <div className="actions">
+                        <button type="button" className="icon-button info" onClick={() => editarSaldoInicial(saldo)} title="Editar">
+                          <IconEdit />
                         </button>
                       </div>
                     </td>
@@ -712,6 +870,72 @@ const ConfiguracoesPage = ({
           </div>
           <div className="modal-actions">
             <button type="button" className="ghost" onClick={() => setOrcamentoModalOpen(false)} title="Fechar sem salvar">
+              Cancelar
+            </button>
+            <button type="submit" className="primary" title="Confirmar e salvar dados">Salvar</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={saldoInicialModalOpen}
+        title={saldoInicialEditKey ? "Editar saldo inicial" : "Novo saldo inicial"}
+        onClose={() => setSaldoInicialModalOpen(false)}
+      >
+        <form className="modal-grid" onSubmit={handleSubmitSaldoInicial}>
+          <label className="field">
+            Período
+            <select
+              value={saldoInicialForm.orcamentoId}
+              onChange={(event) => {
+                const rawValue = event.target.value;
+                const orcamentoId = normalizeOrcamentoId(rawValue);
+                const label = orcamentosMap.get(orcamentoId) || "";
+                setSaldoInicialForm((prev) => ({
+                  ...prev,
+                  orcamentoId,
+                  ano: prev.ano || label
+                }));
+              }}
+            >
+              {orcamentos.length === 0 ? (
+                <option value="">Sem períodos</option>
+              ) : (
+                orcamentos.map((orcamento) => (
+                  <option key={orcamento.id} value={orcamento.id}>
+                    {orcamento.label}
+                  </option>
+                ))
+              )}
+            </select>
+          </label>
+          <label className="field">
+            Ano
+            <input
+              type="number"
+              value={saldoInicialForm.ano}
+              onChange={(event) =>
+                setSaldoInicialForm((prev) => ({ ...prev, ano: event.target.value }))
+              }
+            />
+          </label>
+          <label className="field">
+            Saldo Inicial
+            <NumericFormat
+              value={saldoInicialForm.saldoInicial}
+              onValueChange={(values) =>
+                setSaldoInicialForm((prev) => ({ ...prev, saldoInicial: values.value }))
+              }
+              thousandSeparator="."
+              decimalSeparator=","
+              decimalScale={2}
+              fixedDecimalScale
+              allowNegative={true}
+              placeholder="0,00"
+            />
+          </label>
+          <div className="modal-actions">
+            <button type="button" className="ghost" onClick={() => setSaldoInicialModalOpen(false)} title="Fechar sem salvar">
               Cancelar
             </button>
             <button type="submit" className="primary" title="Confirmar e salvar dados">Salvar</button>

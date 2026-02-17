@@ -9,6 +9,19 @@ import {
   Cell
 } from 'recharts';
 
+const HorizontalBarTooltip = ({ active, payload, formatCurrency }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="chart-tooltip">
+        <p className="chart-tooltip__text">
+          {payload[0].payload.name}: {formatCurrency(payload[0].value)}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 /**
  * HorizontalBar - Gráfico de barras horizontais
  * SEM ResponsiveContainer para evitar warnings de dimensões negativas
@@ -57,19 +70,6 @@ const HorizontalBar = ({
     }).format(value);
   };
 
-  const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="chart-tooltip">
-          <p className="chart-tooltip__text">
-            {payload[0].payload.name}: {formatCurrency(payload[0].value)}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
-
   // Calcular valor máximo se não fornecido
   const calculatedMaxValue = maxValue || (data.length > 0 
     ? Math.max(...data.map(d => d.value)) * 1.1 
@@ -112,7 +112,7 @@ const HorizontalBar = ({
             axisLine={false}
             width={100}
           />
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
+          <Tooltip content={<HorizontalBarTooltip formatCurrency={formatCurrency} />} cursor={{ fill: 'transparent' }} />
           <Bar
             dataKey="value"
             radius={[0, 4, 4, 0]}

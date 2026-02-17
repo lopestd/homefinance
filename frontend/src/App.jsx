@@ -86,6 +86,16 @@ function App() {
     setLancamentosCartao
   ]);
 
+  const reloadConfigData = useCallback(async () => {
+    try {
+      const data = await loadConfigFromApi();
+      applyConfigData(data);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [applyConfigData]);
+
   const pages = [
     { key: "dashboard", label: "📊 Dashboard" },
     { key: "receitas", label: "💰 Receitas" },
@@ -101,22 +111,22 @@ function App() {
   useEffect(() => {
     if (!authUser || !authToken) return;
     const loadData = async () => {
-      try {
-        const data = await loadConfigFromApi();
-        applyConfigData(data);
-        setIsDataLoaded(true);
-      } catch {
-        setIsDataLoaded(true);
-      }
+      await reloadConfigData();
+      setIsDataLoaded(true);
     };
     loadData();
-  }, [authUser, authToken, applyConfigData]);
+  }, [authUser, authToken, reloadConfigData]);
 
   useEffect(() => {
-    const onHashChange = () => setActiveKey(getHashPage());
+    const onHashChange = () => {
+      setActiveKey(getHashPage());
+      if (isDataLoaded && authUser && authToken) {
+        reloadConfigData();
+      }
+    };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
-  }, []);
+  }, [isDataLoaded, authUser, authToken, reloadConfigData]);
 
   useEffect(() => {
     if (!isDataLoaded || !authToken) return;

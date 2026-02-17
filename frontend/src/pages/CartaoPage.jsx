@@ -8,8 +8,7 @@ import { IconEdit, IconTrash } from "../components/Icons";
 import Modal from "../components/Modal";
 import TableFilter from "../components/TableFilter";
 import useTableFilters from "../hooks/useTableFilters";
-import { createCategoria } from "../services/configApi";
-import { createId, formatCurrency, getCurrentMonthName, calculateDateForMonth } from "../utils/appUtils";
+import { createId, formatCurrency, getCurrentMonthName } from "../utils/appUtils";
 
 registerLocale("pt-BR", ptBR);
 
@@ -84,7 +83,6 @@ const CartaoPage = ({
   orcamentos,
   setDespesas,
   categorias,
-  setCategorias,
   gastosPredefinidos
 }) => {
   const [selectedCartaoId, setSelectedCartaoId] = useState("");
@@ -271,34 +269,6 @@ const CartaoPage = ({
     setAlertPrimaryLabel(options.primaryLabel || "OK");
     setAlertModalOpen(true);
   }, [setAlertMessage, setAlertModalOpen, setAlertPrimaryLabel, setAlertTitle, setAlertVariant]);
-
-  const ensureBancosCartoesCategoria = useCallback(async () => {
-    const targetName = "Bancos/Cartões";
-    const targetKey = normalizeCategoriaNome(targetName);
-    const existing = categorias.find(
-      (c) => c.tipo === "DESPESA" && normalizeCategoriaNome(c.nome) === targetKey
-    );
-    if (existing) return existing;
-    try {
-      const created = await createCategoria({ nome: targetName, tipo: "DESPESA" });
-      setCategorias((prev) => {
-        if (!created) return prev;
-        const createdKey = normalizeCategoriaNome(created.nome);
-        const alreadyExists = prev.some(
-          (categoria) =>
-            categoria.id === created.id ||
-            (categoria.tipo === created.tipo &&
-              normalizeCategoriaNome(categoria.nome) === createdKey)
-        );
-        if (alreadyExists) return prev;
-        return [...prev, created];
-      });
-      return created;
-    } catch (error) {
-      showAlert(error?.message || "Falha ao criar categoria Bancos/Cartões.");
-    }
-    return categorias.find((c) => c.tipo === "DESPESA") || null;
-  }, [categorias, setCategorias, showAlert]);
 
   const showConfirm = (message, action) => {
     setConfirmMessage(message);

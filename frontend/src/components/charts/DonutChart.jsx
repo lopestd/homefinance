@@ -1,6 +1,19 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 
+const DonutChartTooltip = ({ active, payload }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="chart-tooltip">
+        <p className="chart-tooltip__text">
+          {payload[0].name}: {payload[0].value.toFixed(1)}%
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 /**
  * DonutChart - Gráfico de rosca reutilizável
  * SEM ResponsiveContainer para evitar warnings de dimensões negativas
@@ -10,8 +23,7 @@ const DonutChart = ({
   total = 100,
   color = '#10B981',
   size = 120,
-  showPercentage = true,
-  tooltipFormatter
+  showPercentage = true
 }) => {
   const containerRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -46,19 +58,6 @@ const DonutChart = ({
     { name: 'Restante', value: remaining }
   ];
 
-  const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="chart-tooltip">
-          <p className="chart-tooltip__text">
-            {payload[0].name}: {payload[0].value.toFixed(1)}%
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
-
   const { width, height: computedHeight } = dimensions;
 
   return (
@@ -79,7 +78,7 @@ const DonutChart = ({
             <Cell fill={color} stroke="none" />
             <Cell fill="#E2E8F0" stroke="none" />
           </Pie>
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<DonutChartTooltip />} />
         </PieChart>
       )}
       {showPercentage && (

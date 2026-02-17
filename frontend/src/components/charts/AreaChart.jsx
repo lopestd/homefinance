@@ -9,6 +9,26 @@ import {
   Legend
 } from 'recharts';
 
+const AreaChartTooltip = ({ active, payload, label, formatCurrency }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="chart-tooltip chart-tooltip--area">
+        <p className="chart-tooltip__title">{label}</p>
+        {payload.map((entry, index) => (
+          <p
+            key={index}
+            className="chart-tooltip__value"
+            style={{ color: entry.color }}
+          >
+            {entry.name}: {formatCurrency(entry.value)}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
 /**
  * AreaChart - Gráfico de área para evolução temporal
  * SEM ResponsiveContainer para evitar warnings de dimensões negativas
@@ -58,26 +78,6 @@ const AreaChart = ({
     }).format(value);
   };
 
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="chart-tooltip chart-tooltip--area">
-          <p className="chart-tooltip__title">{label}</p>
-          {payload.map((entry, index) => (
-            <p
-              key={index}
-              className="chart-tooltip__value"
-              style={{ color: entry.color }}
-            >
-              {entry.name}: {formatCurrency(entry.value)}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
-
   if (!data || data.length === 0) {
     return (
       <div className="chart-empty" style={{ height }}>
@@ -112,7 +112,7 @@ const AreaChart = ({
             axisLine={false}
             tickFormatter={currencyFormat ? (value) => formatCurrency(value) : undefined}
           />
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<AreaChartTooltip formatCurrency={formatCurrency} />} />
           {showLegend && (
             <Legend
               wrapperStyle={{ fontSize: 12 }}

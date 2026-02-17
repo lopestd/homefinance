@@ -361,7 +361,8 @@
   .list-table--config-cartoes,
   .list-table--config-categorias,
   .list-table--config-gastos,
-  .list-table--config-receitas {
+  .list-table--config-receitas,
+  .list-table--config-saldos {
     min-width: 0 !important;
     width: 100% !important;
     table-layout: fixed !important;
@@ -376,7 +377,9 @@
   .list-table--config-gastos th,
   .list-table--config-gastos td,
   .list-table--config-receitas th,
-  .list-table--config-receitas td {
+  .list-table--config-receitas td,
+  .list-table--config-saldos th,
+  .list-table--config-saldos td {
     white-space: normal !important;
     word-break: break-word !important;
   }
@@ -385,7 +388,8 @@
   .list-table--config-cartoes .list-table__col--acoes,
   .list-table--config-categorias .list-table__col--acoes,
   .list-table--config-gastos .list-table__col--acoes,
-  .list-table--config-receitas .list-table__col--acoes {
+  .list-table--config-receitas .list-table__col--acoes,
+  .list-table--config-saldos .list-table__col--acoes {
     width: 96px !important;
   }
 
@@ -644,6 +648,25 @@
     gap: 12px;
   }
 
+  .dashboard-category {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .dashboard-category .horizontal-bar,
+  .dashboard-category .chart-empty {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .dashboard-category .recharts-wrapper,
+  .dashboard-category .recharts-surface {
+    max-width: 100%;
+  }
+
   /* Reports Header */
   .reports-header__content {
     flex-direction: column;
@@ -723,6 +746,24 @@
 
   .summary-card-modern__chart-container {
     padding: 4px 0;
+  }
+
+  .saldo-acumulado-card {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .saldo-acumulado-card__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .saldo-acumulado-card__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .saldo-acumulado-card__item {
+    padding: 10px;
   }
 
   /* Report Summary Grid Mobile */

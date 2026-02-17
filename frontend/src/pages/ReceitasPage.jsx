@@ -421,7 +421,7 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
                       onClearFilter={() => clearColumnFilter(config.key)}
                       sortConfig={sortConfig}
                       onSortToggle={toggleSort}
-                      onSortDirectionChange={(direction) => toggleSort(config.key)}
+                      onSortDirectionChange={() => toggleSort(config.key)}
                     />
                   </th>
                 ))}

@@ -133,6 +133,78 @@ const clearOrcamentos = async (client, userId) => {
   await client.query("DELETE FROM admhomefinance.orcamentos WHERE id_usuario = $1", [userId]);
 };
 
+const listOrcamentos = async (client, userId) => {
+  return client.query(
+    "SELECT id, ano, ativo FROM admhomefinance.orcamentos WHERE id_usuario = $1 ORDER BY ano",
+    [userId]
+  );
+};
+
+const updateOrcamento = async (client, { id, ano, ativo, userId }) => {
+  return client.query(
+    "UPDATE admhomefinance.orcamentos SET ano = $1, ativo = $2 WHERE id = $3 AND id_usuario = $4 RETURNING id",
+    [ano, ativo, id, userId]
+  );
+};
+
+const clearOrcamentoMesesByIds = async (client, userId, orcamentoIds) => {
+  if (!Array.isArray(orcamentoIds) || orcamentoIds.length === 0) return;
+  await client.query(
+    "DELETE FROM admhomefinance.orcamento_meses WHERE id_usuario = $1 AND orcamento_id = ANY($2)",
+    [userId, orcamentoIds]
+  );
+};
+
+const deleteOrcamentosByIds = async (client, userId, orcamentoIds) => {
+  if (!Array.isArray(orcamentoIds) || orcamentoIds.length === 0) return;
+  await client.query(
+    `DELETE FROM admhomefinance.receitas_meses
+     WHERE receita_id IN (
+       SELECT id FROM admhomefinance.receitas
+       WHERE orcamento_id IN (
+         SELECT id FROM admhomefinance.orcamentos WHERE id_usuario = $1 AND id = ANY($2)
+       )
+     )`,
+    [userId, orcamentoIds]
+  );
+  await client.query(
+    `DELETE FROM admhomefinance.receitas
+     WHERE orcamento_id IN (
+       SELECT id FROM admhomefinance.orcamentos WHERE id_usuario = $1 AND id = ANY($2)
+     )`,
+    [userId, orcamentoIds]
+  );
+  await client.query(
+    `DELETE FROM admhomefinance.despesas_meses
+     WHERE despesa_id IN (
+       SELECT id FROM admhomefinance.despesas
+       WHERE orcamento_id IN (
+         SELECT id FROM admhomefinance.orcamentos WHERE id_usuario = $1 AND id = ANY($2)
+       )
+     )`,
+    [userId, orcamentoIds]
+  );
+  await client.query(
+    `DELETE FROM admhomefinance.despesas
+     WHERE orcamento_id IN (
+       SELECT id FROM admhomefinance.orcamentos WHERE id_usuario = $1 AND id = ANY($2)
+     )`,
+    [userId, orcamentoIds]
+  );
+  await client.query(
+    "DELETE FROM admhomefinance.saldo_inicial_orcamento WHERE id_usuario = $1 AND orcamento_id = ANY($2)",
+    [userId, orcamentoIds]
+  );
+  await client.query(
+    "DELETE FROM admhomefinance.orcamento_meses WHERE id_usuario = $1 AND orcamento_id = ANY($2)",
+    [userId, orcamentoIds]
+  );
+  await client.query(
+    "DELETE FROM admhomefinance.orcamentos WHERE id_usuario = $1 AND id = ANY($2)",
+    [userId, orcamentoIds]
+  );
+};
+
 const clearReceitas = async (client, userId) => {
   await client.query("DELETE FROM admhomefinance.receitas_meses WHERE id_usuario = $1", [userId]);
   await client.query("DELETE FROM admhomefinance.receitas WHERE id_usuario = $1", [userId]);
@@ -535,6 +607,10 @@ module.exports = {
   releaseClient,
   clearConfigData,
   clearOrcamentos,
+  listOrcamentos,
+  updateOrcamento,
+  clearOrcamentoMesesByIds,
+  deleteOrcamentosByIds,
   clearReceitas,
   clearDespesas,
   clearLancamentosCartao,

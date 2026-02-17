@@ -201,9 +201,6 @@ const saveConfig = async (payload, userId) => {
       if (hasCartoes) {
         await configRepository.clearCartoes(client, userId);
       }
-      if (hasOrcamentos) {
-        await configRepository.clearOrcamentos(client, userId);
-      }
       if (hasGastos) {
         await configRepository.clearGastosPredefinidos(client, userId);
       }
@@ -217,23 +214,81 @@ const saveConfig = async (payload, userId) => {
 
     const orcamentoIdMap = new Map();
     const orcamentosPayload = Array.isArray(payload.orcamentos) ? payload.orcamentos : [];
-    for (const orcamento of orcamentosPayload) {
-      const anoTexto = String(orcamento.label ?? orcamento.ano ?? "").trim();
-      const anoMatch = anoTexto.match(/\d{4}/);
-      const ano = Number(anoMatch ? anoMatch[0] : anoTexto);
-      if (!Number.isFinite(ano) || ano <= 0) continue;
-      const result = await configRepository.insertOrcamento(client, {
-        ano,
-        ativo: orcamento.ativo !== false,
-        userId
-      });
-      const id = result.rows[0].id;
-      orcamentoIdMap.set(orcamento.id, id);
-      const meses = Array.isArray(orcamento.meses) ? orcamento.meses : [];
-      for (const mesNome of meses) {
-        const mes = monthNameToNumber(mesNome);
-        if (!mes) continue;
-        await configRepository.insertOrcamentoMes(client, { orcamentoId: id, mes, userId });
+    const shouldUpsertOrcamentos = isPartial && Object.prototype.hasOwnProperty.call(payload, "orcamentos");
+    if (shouldUpsertOrcamentos) {
+      const existingOrcamentosRes = await configRepository.listOrcamentos(client, userId);
+      const existingByAno = new Map(
+        existingOrcamentosRes.rows.map((row) => [Number(row.ano), row])
+      );
+      const payloadAnos = new Set();
+      const mesesByOrcamentoId = new Map();
+      const orcamentoIdsToRefresh = new Set();
+
+      for (const orcamento of orcamentosPayload) {
+        const anoTexto = String(orcamento.label ?? orcamento.ano ?? "").trim();
+        const anoMatch = anoTexto.match(/\d{4}/);
+        const ano = Number(anoMatch ? anoMatch[0] : anoTexto);
+        if (!Number.isFinite(ano) || ano <= 0) continue;
+        payloadAnos.add(ano);
+        const existing = existingByAno.get(ano);
+        let id = existing?.id;
+        const ativo = orcamento.ativo !== false;
+        if (id) {
+          if (existing.ativo !== ativo) {
+            await configRepository.updateOrcamento(client, { id, ano, ativo, userId });
+          }
+        } else {
+          const result = await configRepository.insertOrcamento(client, {
+            ano,
+            ativo,
+            userId
+          });
+          id = result.rows[0].id;
+        }
+        orcamentoIdMap.set(orcamento.id, id);
+        orcamentoIdMap.set(String(orcamento.id), id);
+        const meses = Array.isArray(orcamento.meses) ? orcamento.meses : [];
+        mesesByOrcamentoId.set(id, meses);
+        orcamentoIdsToRefresh.add(id);
+      }
+
+      await configRepository.clearOrcamentoMesesByIds(
+        client,
+        userId,
+        Array.from(orcamentoIdsToRefresh)
+      );
+      for (const [orcamentoId, meses] of mesesByOrcamentoId.entries()) {
+        for (const mesNome of meses) {
+          const mes = monthNameToNumber(mesNome);
+          if (!mes) continue;
+          await configRepository.insertOrcamentoMes(client, { orcamentoId, mes, userId });
+        }
+      }
+
+      const idsToDelete = existingOrcamentosRes.rows
+        .filter((row) => !payloadAnos.has(Number(row.ano)))
+        .map((row) => row.id);
+      await configRepository.deleteOrcamentosByIds(client, userId, idsToDelete);
+    } else {
+      for (const orcamento of orcamentosPayload) {
+        const anoTexto = String(orcamento.label ?? orcamento.ano ?? "").trim();
+        const anoMatch = anoTexto.match(/\d{4}/);
+        const ano = Number(anoMatch ? anoMatch[0] : anoTexto);
+        if (!Number.isFinite(ano) || ano <= 0) continue;
+        const result = await configRepository.insertOrcamento(client, {
+          ano,
+          ativo: orcamento.ativo !== false,
+          userId
+        });
+        const id = result.rows[0].id;
+        orcamentoIdMap.set(orcamento.id, id);
+        orcamentoIdMap.set(String(orcamento.id), id);
+        const meses = Array.isArray(orcamento.meses) ? orcamento.meses : [];
+        for (const mesNome of meses) {
+          const mes = monthNameToNumber(mesNome);
+          if (!mes) continue;
+          await configRepository.insertOrcamentoMes(client, { orcamentoId: id, mes, userId });
+        }
       }
     }
 
