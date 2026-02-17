@@ -278,10 +278,13 @@ function App() {
             </div>
           )}
           {activeKey === "dashboard" && (
-            <DashboardPage 
-              receitas={receitas} 
-              despesas={despesas} 
-              orcamentos={orcamentos} 
+            <DashboardPage
+              receitas={receitas}
+              despesas={despesas}
+              orcamentos={orcamentos}
+              categorias={categorias}
+              cartoes={cartoes}
+              lancamentosCartao={lancamentosCartao}
             />
           )}
           {activeKey === "receitas" && (

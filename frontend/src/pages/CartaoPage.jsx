@@ -6,6 +6,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import { AlertDialog, ConfirmDialog } from "../components/Dialogs";
 import { IconEdit, IconTrash } from "../components/Icons";
 import Modal from "../components/Modal";
+import TableFilter from "../components/TableFilter";
+import useTableFilters from "../hooks/useTableFilters";
 import { createCategoria } from "../services/configApi";
 import { createId, formatCurrency, getCurrentMonthName, calculateDateForMonth } from "../utils/appUtils";
 
@@ -90,6 +92,44 @@ const CartaoPage = ({
   const [isManualDescricao, setIsManualDescricao] = useState(false);
   const effectiveCartaoId = selectedCartaoId || cartoes[0]?.id || "";
 
+  // Configuração de colunas para a tabela de cartões
+  const cartaoColumnConfigs = {
+    data: {
+      key: 'data',
+      type: 'date',
+      label: 'Data',
+      sortable: true,
+      filterable: true
+    },
+    descricao: {
+      key: 'descricao',
+      type: 'text',
+      label: 'Descrição',
+      sortable: true,
+      filterable: true
+    },
+    tipoRecorrencia: {
+      key: 'tipoRecorrencia',
+      type: 'select',
+      label: 'Tipo de Gasto',
+      sortable: true,
+      filterable: true,
+      options: ['Fixo', 'Parcelado', 'Eventual'],
+      transformValue: (value) => {
+        if (value === 'FIXO') return 'Fixo';
+        if (value === 'PARCELADO') return 'Parcelado';
+        return 'Eventual';
+      }
+    },
+    valor: {
+      key: 'valor',
+      type: 'number',
+      label: 'Valor',
+      sortable: true,
+      filterable: true
+    }
+  };
+
   const months = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
@@ -104,6 +144,20 @@ const CartaoPage = ({
       (l.mesReferencia === selectedMes || (l.meses && l.meses.includes(selectedMes))))
     ;
   }, [lancamentosCartao, effectiveCartaoId, selectedMes]);
+
+  // Hook para gerenciar filtros e ordenação na tabela
+  const {
+    filteredAndSortedItems,
+    filters,
+    sortConfig,
+    setColumnFilter,
+    clearColumnFilter,
+    clearAllFilters,
+    toggleSort,
+    setSortDirection,
+    hasActiveFilters,
+    activeFiltersCount
+  } = useTableFilters(filteredLancamentos, cartaoColumnConfigs);
 
   const { fixoParcelado, gastosMes, totalMes } = useMemo(() => {
     let fixo = 0;
@@ -681,6 +735,21 @@ const CartaoPage = ({
           Lançamentos de <span className="badge-month">{selectedMes}</span>
         </h3>
 
+        {hasActiveFilters && (
+          <div className="filters-bar">
+            <span className="filters-bar__label">
+              Filtros ativos: <span className="active-filters-badge__count">{activeFiltersCount}</span>
+            </span>
+            <button
+              type="button"
+              className="filters-bar__clear-btn ghost"
+              onClick={clearAllFilters}
+            >
+              Limpar todos
+            </button>
+          </div>
+        )}
+
         <div className="table list-table-wrapper">
           <table className="list-table list-table--cartao" aria-label="Lançamentos do cartão">
             <colgroup>
@@ -692,20 +761,29 @@ const CartaoPage = ({
             </colgroup>
             <thead className="list-table__head">
               <tr>
-                <th scope="col">Data</th>
-                <th scope="col">Descrição</th>
-                <th scope="col">Tipo de Gasto</th>
-                <th scope="col">Valor</th>
-                <th scope="col">Ações</th>
+                {Object.values(cartaoColumnConfigs).map((config) => (
+                  <th key={config.key} scope="col">
+                    <TableFilter
+                      columnConfig={config}
+                      filterValue={filters[config.key]}
+                      onFilterChange={(value) => setColumnFilter(config.key, value)}
+                      onClearFilter={() => clearColumnFilter(config.key)}
+                      sortConfig={sortConfig}
+                      onSortToggle={() => toggleSort(config.key)}
+                      onSortDirectionChange={setSortDirection}
+                    />
+                  </th>
+                ))}
+                <th scope="col" className="list-table__head-actions">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {filteredLancamentos.length === 0 ? (
+              {filteredAndSortedItems.length === 0 ? (
                 <tr className="list-table__row list-table__row--empty">
                   <td colSpan={5}>Nenhum lançamento nesta fatura.</td>
                 </tr>
               ) : (
-                filteredLancamentos.map((l) => (
+                filteredAndSortedItems.map((l) => (
                   <tr className="list-table__row" key={l.id}>
                     <td>{new Date(l.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}</td>
                     <td>{l.complemento ? `${l.descricao} - ${l.complemento}` : l.descricao}</td>

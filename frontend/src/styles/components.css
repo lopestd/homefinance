@@ -1655,3 +1655,183 @@ select:focus {
     font-size: 16px;
   }
 }
+
+/* === CARD TOP GASTOS CARTAO === */
+/* Seção de Cards de Cartão no Dashboard */
+.dashboard-cartoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.dashboard-cartoes-empty {
+  grid-column: 1 / -1;
+  padding: 40px;
+  text-align: center;
+  color: #64748b;
+}
+
+/* Card Top Gastos Cartão */
+.card-top-gastos-cartao {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s;
+}
+
+.card-top-gastos-cartao:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.card-top-gastos-cartao__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.card-top-gastos-cartao__icon {
+  font-size: 20px;
+}
+
+.card-top-gastos-cartao__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+}
+
+.card-top-gastos-cartao__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.card-top-gastos-cartao__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-top-gastos-cartao__label {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.card-top-gastos-cartao__value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.card-top-gastos-cartao__value--positive {
+  color: #059669;
+}
+
+.card-top-gastos-cartao__value--negative {
+  color: #dc2626;
+}
+
+.card-top-gastos-cartao__gastos-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.card-top-gastos-cartao__gastos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card-top-gastos-cartao__gasto-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-top-gastos-cartao__gasto-name {
+  width: 120px;
+  font-size: 12px;
+  color: #475569;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-top-gastos-cartao__gasto-bar {
+  flex: 1;
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.card-top-gastos-cartao__gasto-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.card-top-gastos-cartao__gasto-value {
+  width: 70px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.card-top-gastos-cartao__empty {
+  padding: 20px;
+  text-align: center;
+  color: #64748b;
+}
+
+.card-top-gastos-cartao__empty p {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* Responsividade para Card Top Gastos Cartão */
+@media (max-width: 768px) {
+  .dashboard-cartoes {
+    grid-template-columns: 1fr;
+  }
+
+  .card-top-gastos-cartao__gasto-name {
+    width: 100px;
+  }
+
+  .card-top-gastos-cartao__gasto-value {
+    width: 60px;
+  }
+}
+
+@media (max-width: 480px) {
+  .card-top-gastos-cartao {
+    padding: 12px;
+  }
+
+  .card-top-gastos-cartao__title {
+    font-size: 14px;
+  }
+
+  .card-top-gastos-cartao__gasto-name {
+    width: 80px;
+    font-size: 11px;
+  }
+
+  .card-top-gastos-cartao__gasto-value {
+    width: 50px;
+    font-size: 11px;
+  }
+}

@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { formatCurrency, getCurrentMonthName } from "../utils/appUtils";
-import { KPICard, SummaryCard } from "../components/dashboard";
+import { KPICard, SummaryCard, CardTopGastosCartao } from "../components/dashboard";
 import { AreaChart, HorizontalBar } from "../components/charts";
 
-const DashboardPage = ({ receitas, despesas, orcamentos, categorias }) => {
+const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, lancamentosCartao }) => {
   const [selectedOrcamentoId, setSelectedOrcamentoId] = useState("");
   const [selectedMes, setSelectedMes] = useState("");
   
@@ -118,39 +118,6 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias }) => {
     };
   }, [receitas, despesas, effectiveOrcamentoId]);
 
-  // Dados para gráfico de evolução mensal
-  const evolucaoMensalData = useMemo(() => {
-    if (!effectiveOrcamentoId || mesesDisponiveis.length === 0) return [];
-
-    return mesesDisponiveis.map((mes) => {
-      let recRecebido = 0;
-      let despPago = 0;
-
-      receitas.forEach((r) => {
-        if (r.orcamentoId !== effectiveOrcamentoId) return;
-        const isActive = r.mes === mes || (r.meses && r.meses.includes(mes));
-        if (isActive && r.status === "Recebido") {
-          recRecebido += parseFloat(r.valor) || 0;
-        }
-      });
-
-      despesas.forEach((d) => {
-        if (d.orcamentoId !== effectiveOrcamentoId) return;
-        const isActive = d.mes === mes || (d.meses && d.meses.includes(mes));
-        if (isActive && d.status === "Pago") {
-          despPago += parseFloat(d.valor) || 0;
-        }
-      });
-
-      return {
-        name: mes.substring(0, 3),
-        receitas: recRecebido,
-        despesas: despPago,
-        saldo: recRecebido - despPago
-      };
-    });
-  }, [receitas, despesas, effectiveOrcamentoId, mesesDisponiveis]);
-
   // Top 5 despesas por categoria
   const topDespesasPorCategoria = useMemo(() => {
     if (!effectiveOrcamentoId || !effectiveMes) return [];
@@ -193,6 +160,56 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias }) => {
       .slice(0, 5);
   }, [receitas, effectiveOrcamentoId, effectiveMes, categoriasMap]);
 
+  // Dados para cards de cartão
+  const cartoesData = useMemo(() => {
+    if (!effectiveOrcamentoId || !effectiveMes || !cartoes || cartoes.length === 0) {
+      return [];
+    }
+
+    return cartoes.map((cartao) => {
+      // Filtrar lançamentos do cartão para o mês
+      const lancamentosDoMes = (lancamentosCartao || []).filter((l) =>
+        l.cartaoId === cartao.id &&
+        (l.mesReferencia === effectiveMes || (l.meses && l.meses.includes(effectiveMes)))
+      );
+
+      // Agrupar gastos por descrição (removendo padrão de parcelamento)
+      const gastosPorDescricao = {};
+      lancamentosDoMes.forEach((l) => {
+        // Remover padrão de parcelamento da descrição (ex: " (1/2)")
+        let descricao = l.descricao || "Sem descrição";
+        descricao = descricao.replace(/\s*\(\d+\/\d+\)\s*$/, '').trim();
+        
+        const val = parseFloat(l.valor) || 0;
+        gastosPorDescricao[descricao] = (gastosPorDescricao[descricao] || 0) + val;
+      });
+
+      // Ordenar e pegar top 5
+      const top5Gastos = Object.entries(gastosPorDescricao)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 5);
+
+      // Calcular total gasto
+      const totalGasto = lancamentosDoMes.reduce((acc, l) => acc + (parseFloat(l.valor) || 0), 0);
+
+      // Calcular limite
+      const limitesMensais = cartao.limitesMensais || {};
+      const limite = limitesMensais[effectiveMes] !== undefined && limitesMensais[effectiveMes] !== null && limitesMensais[effectiveMes] !== ""
+        ? parseFloat(limitesMensais[effectiveMes])
+        : parseFloat(cartao.limite) || 0;
+
+      return {
+        cartao,
+        lancamentos: lancamentosDoMes,
+        top5Gastos,
+        totalGasto,
+        limite,
+        saldo: limite - totalGasto
+      };
+    });
+  }, [cartoes, lancamentosCartao, effectiveOrcamentoId, effectiveMes, categoriasMap]);
+
   // Calcular tendência
   const calcularTendencia = (atual, previsto) => {
     if (previsto === 0) return { trend: 'neutral', trendValue: 'N/A' };
@@ -207,12 +224,6 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias }) => {
   };
 
   const saldoTendencia = calcularTendencia(resumoMensal.saldo, resumoMensal.recLancadas - resumoMensal.despLancadas);
-
-  // Series para o gráfico de área
-  const areaSeries = [
-    { dataKey: 'receitas', name: 'Receitas', color: '#10B981' },
-    { dataKey: 'despesas', name: 'Despesas', color: '#EF4444' }
-  ];
 
   return (
     <div className="page-grid dashboard-page">
@@ -315,16 +326,24 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias }) => {
         </div>
       </section>
 
-      {/* Gráfico de Evolução Mensal */}
-      <section className="panel dashboard-chart">
-        <h3 className="panel-title">Evolução Mensal</h3>
-        <AreaChart
-          data={evolucaoMensalData}
-          series={areaSeries}
-          height={280}
-          showGrid={true}
-          showLegend={true}
-        />
+      {/* Top 5 Gastos por Cartão */}
+      <section className="dashboard-cartoes">
+        {cartoesData.length === 0 ? (
+          <div className="panel dashboard-cartoes-empty">
+            <p>Nenhum cartão cadastrado</p>
+          </div>
+        ) : (
+          cartoesData.map((cartaoData) => (
+            <CardTopGastosCartao
+              key={cartaoData.cartao.id}
+              cartao={cartaoData.cartao}
+              top5Gastos={cartaoData.top5Gastos}
+              totalGasto={cartaoData.totalGasto}
+              limite={cartaoData.limite}
+              saldo={cartaoData.saldo}
+            />
+          ))
+        )}
       </section>
 
       {/* Resumo Anual */}
