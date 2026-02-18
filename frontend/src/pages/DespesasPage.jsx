@@ -487,6 +487,18 @@ const DespesasPage = ({
             </select>
           </label>
         </form>
+
+        <div className="dashboard-grid">
+          <div className="summary-card">
+            <h4 className="summary-card-title">Total Lançado</h4>
+            <strong className="summary-card-value">{totals.lancado}</strong>
+          </div>
+
+          <div className="summary-card">
+            <h4 className="summary-card-title">Total Pago</h4>
+            <strong className="summary-card-value summary-card-value--positive">{totals.pago}</strong>
+          </div>
+        </div>
       </section>
       <section className="panel">
         <h2>Lista de Despesas</h2>
@@ -582,16 +594,6 @@ const DespesasPage = ({
               )}
             </tbody>
           </table>
-        </div>
-        <div className="summary">
-          <div className="summary-card">
-            <span className="summary-title">Total lançado</span>
-            <strong className="summary-value">{totals.lancado}</strong>
-          </div>
-          <div className="summary-card">
-            <span className="summary-title">Total pago</span>
-            <strong className="summary-value">{totals.pago}</strong>
-          </div>
         </div>
       </section>
       <Modal open={manualOpen} title={despesaEditId ? "Editar despesa" : "Nova despesa"} onClose={() => setManualOpen(false)}>

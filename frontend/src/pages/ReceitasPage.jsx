@@ -382,6 +382,27 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
             </select>
           </label>
         </form>
+
+        <div className="dashboard-grid">
+          <div className="summary-card">
+            <h4 className="summary-card-title">Total Lançado</h4>
+            <strong className="summary-card-value">{totals.lancado}</strong>
+          </div>
+
+          <div className="summary-card">
+            <h4 className="summary-card-title">Total Recebido</h4>
+            <strong className={`summary-card-value ${totals.tudoRecebido ? "summary-card-value--positive" : ""}`}>
+              {totals.recebido}
+            </strong>
+          </div>
+
+          <div className="summary-card">
+            <h4 className="summary-card-title">Pendente</h4>
+            <strong className={`summary-card-value ${totals.pendenteNum > 0 ? "summary-card-value--warning" : "summary-card-value--neutral"}`}>
+              {totals.pendente}
+            </strong>
+          </div>
+        </div>
       </section>
       <section className="panel">
         <h2>Lista de Receitas</h2>
@@ -477,38 +498,6 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
               )}
             </tbody>
           </table>
-        </div>
-        <div className="summary">
-          <div className="summary-card">
-            <span className="summary-title">Total lançado</span>
-            <strong className="summary-value" style={{ fontSize: "1.1rem", fontWeight: "700" }}>{totals.lancado}</strong>
-          </div>
-          <div className="summary-card">
-            <span className="summary-title">Total recebido</span>
-            <strong
-              className="summary-value"
-              style={{
-                color: totals.tudoRecebido ? "#15803d" : "#059669",
-                fontSize: "1.1rem",
-                fontWeight: totals.tudoRecebido ? "700" : "600"
-              }}
-            >
-              {totals.recebido}
-            </strong>
-          </div>
-          <div className="summary-card">
-            <span className="summary-title">Pendente de recebimento</span>
-            <strong
-              className="summary-value"
-              style={{
-                color: totals.pendenteNum === 0 ? "#64748b" : "#ea580c",
-                fontSize: "1.1rem",
-                fontWeight: totals.pendenteNum !== 0 ? "700" : "600"
-              }}
-            >
-              {totals.pendente}
-            </strong>
-          </div>
         </div>
       </section>
       <Modal open={manualOpen} title={receitaEditId ? "Editar receita" : "Nova receita"} onClose={() => setManualOpen(false)}>

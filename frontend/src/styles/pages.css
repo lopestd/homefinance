@@ -74,6 +74,14 @@
   color: #dc2626;
 }
 
+.summary-card-value--warning {
+  color: #ea580c;
+}
+
+.summary-card-value--neutral {
+  color: #64748b;
+}
+
 .summary-card-subtext {
   font-size: 0.8em;
   font-weight: 500;
