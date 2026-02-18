@@ -8,7 +8,7 @@ import { IconEdit, IconTrash } from "../components/Icons";
 import Modal from "../components/Modal";
 import TableFilter from "../components/TableFilter";
 import useTableFilters from "../hooks/useTableFilters";
-import { createId, formatCurrency, getCurrentMonthName } from "../utils/appUtils";
+import { createId, formatCurrency, getCurrentMonthName, calculateDateForMonth } from "../utils/appUtils";
 
 registerLocale("pt-BR", ptBR);
 
@@ -379,9 +379,10 @@ const CartaoPage = ({
     }
   };
 
-  const syncDespesa = (mes, cartaoId, currentLancamentos, cartoesList = cartoes) => {
+  // Calcula os dados de sincronização para um mês específico (sem chamar setDespesas)
+  const calculateSyncData = (mes, cartaoId, currentLancamentos, cartoesList) => {
     const cartao = cartoesList.find((c) => c.id === cartaoId);
-    if (!cartao) return;
+    if (!cartao) return null;
 
     const totalGastos = currentLancamentos
       .filter((l) => l.cartaoId === cartaoId && (l.mesReferencia === mes || (l.meses && l.meses.includes(mes))))
@@ -416,40 +417,71 @@ const CartaoPage = ({
     }
 
     const orcamento = orcamentos.find((o) => o.meses && o.meses.includes(mes));
-    if (!orcamento) return;
+    if (!orcamento) return null;
 
     const despesaDescricao = `Fatura do cartão ${cartao.nome}`;
 
-    setDespesas((prev) => {
-      const existingDespesa = prev.find((d) =>
-        d.descricao === despesaDescricao &&
-        d.mes === mes &&
-        d.orcamentoId === orcamento.id
-      );
+    return {
+      mes,
+      orcamentoId: orcamento.id,
+      despesaDescricao,
+      valorFinal,
+      catId,
+      catNome
+    };
+  };
 
-      if (valorFinal > 0) {
-        if (existingDespesa) {
-          return prev.map((d) => d.id === existingDespesa.id ? { ...d, valor: valorFinal } : d);
-        } else {
-          return [...prev, {
-            id: createId("desp-auto"),
-            orcamentoId: orcamento.id,
-            mes: mes,
-            data: new Date().toLocaleDateString('en-CA'),
-            categoriaId: catId,
-            descricao: despesaDescricao,
-            valor: valorFinal,
-            status: "Pendente",
-            categoria: catNome
-          }];
-        }
-      } else {
-        if (existingDespesa) {
-          return prev.filter((d) => d.id !== existingDespesa.id);
-        }
-        return prev;
+  // Sincroniza múltiplos meses de uma única vez (uma única chamada a setDespesas)
+  const syncDespesasBatched = (meses, cartaoId, currentLancamentos, cartoesList = cartoes) => {
+    const syncDataList = [];
+    for (const mes of meses) {
+      const data = calculateSyncData(mes, cartaoId, currentLancamentos, cartoesList);
+      if (data) {
+        syncDataList.push(data);
       }
+    }
+
+    if (syncDataList.length === 0) return;
+
+    // Uma única chamada a setDespesas para todos os meses
+    setDespesas((prev) => {
+      let next = [...prev];
+      for (const { mes, orcamentoId, despesaDescricao, valorFinal, catId, catNome } of syncDataList) {
+        const existingDespesa = next.find((d) =>
+          d.descricao === despesaDescricao &&
+          d.mes === mes &&
+          d.orcamentoId === orcamentoId
+        );
+
+        if (valorFinal > 0) {
+          if (existingDespesa) {
+            next = next.map((d) => d.id === existingDespesa.id ? { ...d, valor: valorFinal } : d);
+          } else {
+            next = [...next, {
+              id: createId("desp-auto"),
+              orcamentoId: orcamentoId,
+              mes: mes,
+              data: new Date().toLocaleDateString('en-CA'),
+              categoriaId: catId,
+              descricao: despesaDescricao,
+              valor: valorFinal,
+              status: "Pendente",
+              categoria: catNome
+            }];
+          }
+        } else {
+          if (existingDespesa) {
+            next = next.filter((d) => d.id !== existingDespesa.id);
+          }
+        }
+      }
+      return next;
     });
+  };
+
+  // Mantém syncDespesa para compatibilidade com chamadas de mês único
+  const syncDespesa = (mes, cartaoId, currentLancamentos, cartoesList = cartoes) => {
+    syncDespesasBatched([mes], cartaoId, currentLancamentos, cartoesList);
   };
 
   const handleUpdateLimite = (e) => {
@@ -489,6 +521,7 @@ const CartaoPage = ({
 
     let newEntries = [];
 
+    // PARCELADO - Cria entradas separadas para cada parcela
     if (!editId && form.tipoRecorrencia === "PARCELADO" && parseInt(form.qtdParcelas) > 1) {
       const qtd = parseInt(form.qtdParcelas);
       const parcValue = val / qtd;
@@ -509,7 +542,27 @@ const CartaoPage = ({
           meses: []
         });
       }
-    } else {
+    }
+    // FIXO com múltiplos meses - Cria entradas separadas para cada mês (como em Receitas/Despesas)
+    else if (!editId && form.tipoRecorrencia === "FIXO" && form.meses && form.meses.length > 0) {
+      for (const mes of form.meses) {
+        newEntries.push({
+          id: createId("lanc-card-fixo"),
+          cartaoId: effectiveCartaoId,
+          descricao: form.descricao,
+          complemento: form.complemento || "",
+          valor: val,
+          data: calculateDateForMonth(mes, form.data),
+          mesReferencia: mes,
+          categoriaId: form.categoriaId,
+          tipoRecorrencia: "FIXO",
+          qtdParcelas: "",
+          meses: []
+        });
+      }
+    }
+    // EVENTUAL ou edição ou FIXO com mês único
+    else {
       let lancamento = {
         id: editId || createId("lanc-card"),
         cartaoId: effectiveCartaoId,
@@ -536,26 +589,8 @@ const CartaoPage = ({
 
     let nextLancamentos;
     if (editId) {
-      const original = lancamentosCartao.find((l) => l.id === editId);
-      const novaVersao = newEntries[0];
-      let preservedEntry = null;
-
-      if (original && original.tipoRecorrencia === "FIXO" && original.meses && original.meses.length > 0) {
-        const removedMonths = original.meses.filter((m) => !novaVersao.meses.includes(m));
-        if (removedMonths.length > 0) {
-          preservedEntry = {
-            ...original,
-            id: createId("lanc-card-preserved"),
-            meses: removedMonths,
-            mesReferencia: removedMonths.includes(original.mesReferencia) ? original.mesReferencia : removedMonths[0]
-          };
-        }
-      }
-
-      nextLancamentos = lancamentosCartao.map((l) => l.id === editId ? novaVersao : l);
-      if (preservedEntry) {
-        nextLancamentos.push(preservedEntry);
-      }
+      // Edição: substitui apenas a entrada específica
+      nextLancamentos = lancamentosCartao.map((l) => l.id === editId ? newEntries[0] : l);
     } else {
       nextLancamentos = [...lancamentosCartao, ...newEntries];
     }
@@ -563,6 +598,7 @@ const CartaoPage = ({
     setLancamentosCartao(nextLancamentos);
     setModalOpen(false);
 
+    // Coleta todos os meses afetados para sincronizar
     let affectedMonths = new Set();
     newEntries.forEach((e) => {
       affectedMonths.add(e.mesReferencia);
@@ -577,7 +613,9 @@ const CartaoPage = ({
       }
     }
 
-    Array.from(affectedMonths).forEach((m) => syncDespesa(m, effectiveCartaoId, nextLancamentos));
+    // Sincroniza despesas de todos os meses afetados de uma única vez
+    // Importante: usar nextLancamentos que já contém todas as alterações
+    syncDespesasBatched(Array.from(affectedMonths), effectiveCartaoId, nextLancamentos);
   };
 
   const handleDelete = (id) => {
@@ -590,35 +628,18 @@ const CartaoPage = ({
         const lancamento = lancamentosCartao.find((l) => l.id === id);
         if (!lancamento) return;
 
-        let nextLancamentos;
-        if (lancamento.tipoRecorrencia === "FIXO" && selectedMes && lancamento.meses && lancamento.meses.includes(selectedMes)) {
-          const newMeses = lancamento.meses.filter((m) => m !== selectedMes);
-
-          if (newMeses.length === 0) {
-            nextLancamentos = lancamentosCartao.filter((l) => l.id !== id);
-          } else {
-            nextLancamentos = lancamentosCartao.map((l) => {
-              if (l.id === id) {
-                return {
-                  ...l,
-                  meses: newMeses,
-                  mesReferencia: (l.mesReferencia === selectedMes) ? newMeses[0] : l.mesReferencia
-                };
-              }
-              return l;
-            });
-          }
-        } else {
-          nextLancamentos = lancamentosCartao.filter((l) => l.id !== id);
-        }
+        // Com a nova estrutura de entradas separadas, a exclusão é simples
+        // Remove apenas a entrada específica pelo ID
+        const nextLancamentos = lancamentosCartao.filter((l) => l.id !== id);
 
         setLancamentosCartao(nextLancamentos);
 
+        // Sincroniza o mês afetado
         const monthsToSync = new Set();
         monthsToSync.add(lancamento.mesReferencia);
         if (lancamento.meses) lancamento.meses.forEach((m) => monthsToSync.add(m));
 
-        Array.from(monthsToSync).forEach((m) => syncDespesa(m, lancamento.cartaoId, nextLancamentos));
+        syncDespesasBatched(Array.from(monthsToSync), lancamento.cartaoId, nextLancamentos);
       } catch {
         showAlert("Ocorreu um erro ao excluir o lançamento. Tente novamente.");
       }
