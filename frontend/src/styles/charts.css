@@ -145,6 +145,11 @@
   background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
 }
 
+.kpi-card--blue {
+  border-color: #3B82F6;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
 .kpi-card__header {
   display: flex;
   align-items: center;

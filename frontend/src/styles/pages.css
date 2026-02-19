@@ -530,6 +530,20 @@
   min-width: 140px;
 }
 
+.dashboard-hero-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.dashboard-hero--left,
+.dashboard-hero--right {
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 .dashboard-hero {
   padding: 0 !important;
   background: transparent !important;
@@ -561,6 +575,14 @@
 
 .kpi-card__detail-row strong {
   color: #0F172A;
+}
+
+.kpi-card__value--positive {
+  color: #10B981 !important;
+}
+
+.kpi-card__value--negative {
+  color: #EF4444 !important;
 }
 
 .dashboard-cards {

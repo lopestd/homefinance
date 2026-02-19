@@ -730,6 +730,13 @@
 }
 
 @media (max-width: 600px) {
+  /* Dashboard Hero Row */
+  .dashboard-hero-row {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
   /* Dashboard Hero */
   .dashboard-hero .kpi-card {
     padding: 20px;

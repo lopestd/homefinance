@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { formatCurrency, getCurrentMonthName, MONTHS_ORDER } from "../utils/appUtils";
-import { KPICard, SummaryCard, CardTopGastosCartao, CardSaldoAcumulado } from "../components/dashboard";
+import { KPICard, SummaryCard, CardTopGastosCartao } from "../components/dashboard";
 import { AreaChart, HorizontalBar } from "../components/charts";
 import useSaldoAcumulado from "../hooks/useSaldoAcumulado";
 
@@ -273,31 +273,58 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
         </div>
       </section>
 
-      {/* KPI Hero - Saldo em Destaque */}
-      <section className="panel dashboard-hero">
-        <KPICard
-          title="Saldo do Mês"
-          value={formatCurrency(resumoMensal.saldo)}
-          subtitle={`Receitas: ${formatCurrency(resumoMensal.recRecebidas)} | Despesas: ${formatCurrency(resumoMensal.despPagas)}`}
-          trend={saldoTendencia.trend}
-          trendValue={saldoTendencia.trendValue}
-          color={resumoMensal.saldo >= 0 ? 'positive' : 'negative'}
-        >
-          <div className="kpi-card__details">
-            <div className="kpi-card__detail-row">
-              <span>Saldo acumulado anterior:</span>
-              <strong>{formatCurrency(saldoAcumuladoAnterior)}</strong>
+      {/* KPI Hero Row - Saldo do Mês + Saldo Acumulado */}
+      <section className="dashboard-hero-row">
+        <div className="panel dashboard-hero dashboard-hero--left">
+          <KPICard
+            title="Saldo do Mês"
+            value={formatCurrency(resumoMensal.saldo)}
+            subtitle={`Receitas: ${formatCurrency(resumoMensal.recRecebidas)} | Despesas: ${formatCurrency(resumoMensal.despPagas)}`}
+            trend={saldoTendencia.trend}
+            trendValue={saldoTendencia.trendValue}
+            color={resumoMensal.saldo >= 0 ? 'positive' : 'negative'}
+          >
+            <div className="kpi-card__details">
+              <div className="kpi-card__detail-row">
+                <span>Saldo acumulado anterior:</span>
+                <strong>{formatCurrency(saldoAcumuladoAnterior)}</strong>
+              </div>
+              <div className="kpi-card__detail-row">
+                <span>Saldo previsto:</span>
+                <strong>{formatCurrency(saldoPrevistoMes)}</strong>
+              </div>
+              <div className="kpi-card__detail-row">
+                <span>Saldo consolidado:</span>
+                <strong className={saldoConsolidadoClass}>{formatCurrency(saldoConsolidado)}</strong>
+              </div>
             </div>
-            <div className="kpi-card__detail-row">
-              <span>Saldo previsto:</span>
-              <strong>{formatCurrency(saldoPrevistoMes)}</strong>
+          </KPICard>
+        </div>
+        <div className="panel dashboard-hero dashboard-hero--right">
+          <KPICard
+            title="Saldo Acumulado"
+            value={formatCurrency(Number.isNaN(saldoFinalMes) ? 0 : saldoFinalMes)}
+            subtitle={`Saldo Inicial: ${formatCurrency(Number.isNaN(saldoInicialMes) ? 0 : saldoInicialMes)}`}
+            trend={saldoFinalMes >= 0 ? 'up' : 'down'}
+            trendValue={saldoFinalMes >= 0 ? 'Positivo' : 'Negativo'}
+            color="blue"
+          >
+            <div className="kpi-card__details">
+              <div className="kpi-card__detail-row">
+                <span>Saldo Inicial:</span>
+                <strong>{formatCurrency(Number.isNaN(saldoInicialMes) ? 0 : saldoInicialMes)}</strong>
+              </div>
+              <div className="kpi-card__detail-row">
+                <span>Receitas Recebidas:</span>
+                <strong className="kpi-card__value--positive">{formatCurrency(Number.isNaN(receitasRecebidasMes) ? 0 : receitasRecebidasMes)}</strong>
+              </div>
+              <div className="kpi-card__detail-row">
+                <span>Despesas Pagas:</span>
+                <strong className="kpi-card__value--negative">{formatCurrency(Number.isNaN(despesasPagasMes) ? 0 : despesasPagasMes)}</strong>
+              </div>
             </div>
-            <div className="kpi-card__detail-row">
-              <span>Saldo consolidado:</span>
-              <strong className={saldoConsolidadoClass}>{formatCurrency(saldoConsolidado)}</strong>
-            </div>
-          </div>
-        </KPICard>
+          </KPICard>
+        </div>
       </section>
 
       {/* Cards de Resumo */}
@@ -374,16 +401,6 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
             />
           ))
         )}
-      </section>
-
-      <section className="panel dashboard-accumulated">
-        <CardSaldoAcumulado
-          mesAtual={effectiveMes}
-          saldoInicial={Number.isNaN(saldoInicialMes) ? 0 : saldoInicialMes}
-          receitasRecebidas={Number.isNaN(receitasRecebidasMes) ? 0 : receitasRecebidasMes}
-          despesasPagas={Number.isNaN(despesasPagasMes) ? 0 : despesasPagasMes}
-          saldoFinal={Number.isNaN(saldoFinalMes) ? 0 : saldoFinalMes}
-        />
       </section>
 
       {/* Resumo Anual */}

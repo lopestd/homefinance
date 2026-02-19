@@ -143,6 +143,15 @@ const deleteTipoReceita = async (id) => {
   }
 };
 
+const persistPartialConfigToApi = async (payload) => {
+  if (!payload || typeof payload !== 'object') return;
+  try {
+    await api.put("/config", { ...payload, _partial: true });
+  } catch (error) {
+    handleConfigError(error, "Falha ao salvar dados.");
+  }
+};
+
 export {
   loadConfigFromApi,
   loadCategoriasFromApi,
@@ -156,5 +165,6 @@ export {
   loadTiposReceitaFromApi,
   createTipoReceita,
   updateTipoReceita,
-  deleteTipoReceita
+  deleteTipoReceita,
+  persistPartialConfigToApi
 };
