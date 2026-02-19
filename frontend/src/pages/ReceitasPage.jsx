@@ -8,6 +8,7 @@ import { IconCheck, IconEdit, IconTrash, IconX } from "../components/Icons";
 import Modal from "../components/Modal";
 import TableFilter from "../components/TableFilter";
 import useTableFilters from "../hooks/useTableFilters";
+import { persistPartialConfigToApi } from "../services/configApi";
 import { MONTHS_ORDER, createId, formatCurrency, getCurrentMonthName, calculateDateForMonth } from "../utils/appUtils";
 
 registerLocale("pt-BR", ptBR);
@@ -172,18 +173,24 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
   };
 
   const toggleStatus = (id) => {
-    setReceitas((prev) =>
-      prev.map((r) =>
+    setReceitas((prev) => {
+      const updated = prev.map((r) =>
         r.id === id
           ? { ...r, status: r.status === "Recebido" ? "Pendente" : "Recebido" }
           : r
-      )
-    );
+      );
+      persistPartialConfigToApi({ receitas: updated });
+      return updated;
+    });
   };
 
   const excluirReceita = (id) => {
     showConfirm("Tem certeza que deseja excluir esta receita?", () => {
-      setReceitas((prev) => prev.filter((r) => r.id !== id));
+      setReceitas((prev) => {
+        const updated = prev.filter((r) => r.id !== id);
+        persistPartialConfigToApi({ receitas: updated });
+        return updated;
+      });
     });
   };
 
@@ -259,7 +266,11 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
           categoria: receitasCategorias.find((c) => c.id === manualForm.categoriaId)?.nome || "—"
         });
       }
-      setReceitas((prev) => [...prev, ...newEntries]);
+      setReceitas((prev) => {
+        const updated = [...prev, ...newEntries];
+        persistPartialConfigToApi({ receitas: updated });
+        return updated;
+      });
       setManualOpen(false);
       return;
     }
@@ -282,7 +293,11 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
           categoria: receitasCategorias.find((c) => c.id === manualForm.categoriaId)?.nome || "—"
         });
       }
-      setReceitas((prev) => [...prev, ...newEntries]);
+      setReceitas((prev) => {
+        const updated = [...prev, ...newEntries];
+        persistPartialConfigToApi({ receitas: updated });
+        return updated;
+      });
       setManualOpen(false);
       return;
     }
@@ -312,6 +327,7 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
     if (receitaEditId) {
       setReceitas((prev) => {
         const original = prev.find((r) => r.id === receitaEditId);
+        let updated;
         if (original) {
           const originalMeses = original.meses || [];
           if (originalMeses.length > 0) {
@@ -323,14 +339,25 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
                 meses: removedMonths,
                 mes: removedMonths.includes(original.mes) ? original.mes : removedMonths[0]
               };
-              return [...prev.map((r) => r.id === receitaEditId ? novaReceita : r), preservedEntry];
+              updated = [...prev.map((r) => r.id === receitaEditId ? novaReceita : r), preservedEntry];
+            } else {
+              updated = prev.map((r) => r.id === receitaEditId ? novaReceita : r);
             }
+          } else {
+            updated = prev.map((r) => r.id === receitaEditId ? novaReceita : r);
           }
+        } else {
+          updated = prev.map((r) => r.id === receitaEditId ? novaReceita : r);
         }
-        return prev.map((r) => r.id === receitaEditId ? novaReceita : r);
+        persistPartialConfigToApi({ receitas: updated });
+        return updated;
       });
     } else {
-      setReceitas((prev) => [...prev, novaReceita]);
+      setReceitas((prev) => {
+        const updated = [...prev, novaReceita];
+        persistPartialConfigToApi({ receitas: updated });
+        return updated;
+      });
     }
     setManualOpen(false);
   };

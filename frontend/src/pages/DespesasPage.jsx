@@ -8,7 +8,7 @@ import { IconCheck, IconEdit, IconTrash, IconX } from "../components/Icons";
 import Modal from "../components/Modal";
 import TableFilter from "../components/TableFilter";
 import useTableFilters from "../hooks/useTableFilters";
-import { createCategoria } from "../services/configApi";
+import { createCategoria, persistPartialConfigToApi } from "../services/configApi";
 import { MONTHS_ORDER, createId, formatCurrency, getCurrentMonthName, calculateDateForMonth } from "../utils/appUtils";
 
 registerLocale("pt-BR", ptBR);
@@ -260,9 +260,11 @@ const DespesasPage = ({
           return prev;
         }
       }
-      return prev.map((d) =>
+      const updated = prev.map((d) =>
         d.id === id ? { ...d, status: nextStatus } : d
       );
+      persistPartialConfigToApi({ despesas: updated });
+      return updated;
     });
   };
 
@@ -278,7 +280,11 @@ const DespesasPage = ({
     }
 
     showConfirm("Tem certeza que deseja excluir esta despesa?", () => {
-      setDespesas((prev) => prev.filter((d) => d.id !== id));
+      setDespesas((prev) => {
+        const updated = prev.filter((d) => d.id !== id);
+        persistPartialConfigToApi({ despesas: updated });
+        return updated;
+      });
     });
   };
 
@@ -347,7 +353,11 @@ const DespesasPage = ({
           categoria: categoriaNome
         });
       }
-      setDespesas((prev) => [...prev, ...newEntries]);
+      setDespesas((prev) => {
+        const updated = [...prev, ...newEntries];
+        persistPartialConfigToApi({ despesas: updated });
+        return updated;
+      });
       setManualOpen(false);
       return;
     }
@@ -370,7 +380,11 @@ const DespesasPage = ({
           categoria: categoriaNome
         });
       }
-      setDespesas((prev) => [...prev, ...newEntries]);
+      setDespesas((prev) => {
+        const updated = [...prev, ...newEntries];
+        persistPartialConfigToApi({ despesas: updated });
+        return updated;
+      });
       setManualOpen(false);
       return;
     }
@@ -400,6 +414,7 @@ const DespesasPage = ({
     if (despesaEditId) {
       setDespesas((prev) => {
         const original = prev.find((d) => d.id === despesaEditId);
+        let updated;
         if (original && original.meses && original.meses.length > 0) {
           const removedMonths = original.meses.filter((m) => !novaDespesa.meses.includes(m));
           if (removedMonths.length > 0) {
@@ -409,13 +424,22 @@ const DespesasPage = ({
               meses: removedMonths,
               mes: removedMonths.includes(original.mes) ? original.mes : removedMonths[0]
             };
-            return [...prev.map((d) => d.id === despesaEditId ? novaDespesa : d), preservedEntry];
+            updated = [...prev.map((d) => d.id === despesaEditId ? novaDespesa : d), preservedEntry];
+          } else {
+            updated = prev.map((d) => d.id === despesaEditId ? novaDespesa : d);
           }
+        } else {
+          updated = prev.map((d) => d.id === despesaEditId ? novaDespesa : d);
         }
-        return prev.map((d) => d.id === despesaEditId ? novaDespesa : d);
+        persistPartialConfigToApi({ despesas: updated });
+        return updated;
       });
     } else {
-      setDespesas((prev) => [...prev, novaDespesa]);
+      setDespesas((prev) => {
+        const updated = [...prev, novaDespesa];
+        persistPartialConfigToApi({ despesas: updated });
+        return updated;
+      });
     }
     setManualOpen(false);
   };

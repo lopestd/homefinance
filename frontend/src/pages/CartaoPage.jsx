@@ -8,6 +8,7 @@ import { IconEdit, IconTrash } from "../components/Icons";
 import Modal from "../components/Modal";
 import TableFilter from "../components/TableFilter";
 import useTableFilters from "../hooks/useTableFilters";
+import { persistPartialConfigToApi } from "../services/configApi";
 import { createId, formatCurrency, getCurrentMonthName, calculateDateForMonth } from "../utils/appUtils";
 
 registerLocale("pt-BR", ptBR);
@@ -361,6 +362,7 @@ const CartaoPage = ({
       c.id === effectiveCartaoId ? { ...c, faturasFechadas: newFechadas } : c
     );
     setCartoes(updatedCartoes);
+    persistPartialConfigToApi({ cartoes: updatedCartoes });
 
     syncDespesa(selectedMes, effectiveCartaoId, lancamentosCartao, updatedCartoes);
 
@@ -371,11 +373,15 @@ const CartaoPage = ({
       if (!orcamento) return;
       const descricaoDespesa = `Fatura do cartão ${cartao.nome}`;
       const dataAtual = new Date().toLocaleDateString('en-CA');
-      setDespesas((prev) => prev.map((d) => (
-        d.descricao === descricaoDespesa && d.mes === selectedMes && d.orcamentoId === orcamento.id
-          ? { ...d, data: dataAtual }
-          : d
-      )));
+      setDespesas((prev) => {
+        const updated = prev.map((d) => (
+          d.descricao === descricaoDespesa && d.mes === selectedMes && d.orcamentoId === orcamento.id
+            ? { ...d, data: dataAtual }
+            : d
+        ));
+        persistPartialConfigToApi({ despesas: updated });
+        return updated;
+      });
     }
   };
 
@@ -475,6 +481,7 @@ const CartaoPage = ({
           }
         }
       }
+      persistPartialConfigToApi({ despesas: next });
       return next;
     });
   };
@@ -498,6 +505,7 @@ const CartaoPage = ({
     });
 
     setCartoes(updatedCartoes);
+    persistPartialConfigToApi({ cartoes: updatedCartoes });
     setLimiteModalOpen(false);
     syncDespesa(selectedMes, effectiveCartaoId, lancamentosCartao, updatedCartoes);
   };
@@ -596,6 +604,7 @@ const CartaoPage = ({
     }
 
     setLancamentosCartao(nextLancamentos);
+    persistPartialConfigToApi({ lancamentosCartao: nextLancamentos });
     setModalOpen(false);
 
     // Coleta todos os meses afetados para sincronizar
@@ -633,6 +642,7 @@ const CartaoPage = ({
         const nextLancamentos = lancamentosCartao.filter((l) => l.id !== id);
 
         setLancamentosCartao(nextLancamentos);
+        persistPartialConfigToApi({ lancamentosCartao: nextLancamentos });
 
         // Sincroniza o mês afetado
         const monthsToSync = new Set();

@@ -13,7 +13,8 @@ import {
   deleteGastoPredefinido,
   createTipoReceita,
   updateTipoReceita,
-  deleteTipoReceita
+  deleteTipoReceita,
+  persistPartialConfigToApi
 } from "../services/configApi";
 import {
   listSaldosIniciaisOrcamento,
@@ -119,7 +120,11 @@ const ConfiguracoesPage = ({
       return;
     }
     showConfirm("Tem certeza que deseja excluir este período do orçamento?", () => {
-      setOrcamentos(prev => prev.filter(o => o.id !== id));
+      setOrcamentos(prev => {
+        const updated = prev.filter(o => o.id !== id);
+        persistPartialConfigToApi({ orcamentos: updated });
+        return updated;
+      });
     });
   };
 
@@ -130,7 +135,11 @@ const ConfiguracoesPage = ({
       return;
     }
     showConfirm("Tem certeza que deseja excluir este cartão de crédito?", () => {
-      setCartoes(prev => prev.filter(c => c.id !== id));
+      setCartoes(prev => {
+        const updated = prev.filter(c => c.id !== id);
+        persistPartialConfigToApi({ cartoes: updated });
+        return updated;
+      });
     });
   };
 
@@ -426,6 +435,7 @@ const ConfiguracoesPage = ({
           }
       ];
     setOrcamentos(nextOrcamentos);
+    persistPartialConfigToApi({ orcamentos: nextOrcamentos });
     setOrcamentoEditId(null);
     setOrcamentoForm({ label: "", meses: [] });
     setOrcamentoModalOpen(false);
@@ -451,6 +461,7 @@ const ConfiguracoesPage = ({
           }
         ];
     setCartoes(nextCartoes);
+    persistPartialConfigToApi({ cartoes: nextCartoes });
     setCartaoEditId(null);
     setCartaoForm({ nome: "", limite: "" });
     setCartaoModalOpen(false);
