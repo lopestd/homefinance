@@ -302,7 +302,7 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
         </div>
         <div className="panel dashboard-hero dashboard-hero--right">
           <KPICard
-            title="Saldo Acumulado"
+            title="Saldo Acumulado (EM CONTA)"
             value={formatCurrency(Number.isNaN(saldoFinalMes) ? 0 : saldoFinalMes)}
             subtitle={`Saldo Inicial: ${formatCurrency(Number.isNaN(saldoInicialMes) ? 0 : saldoInicialMes)}`}
             trend={saldoFinalMes >= 0 ? 'up' : 'down'}

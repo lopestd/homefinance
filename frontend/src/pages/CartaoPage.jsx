@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { NumericFormat } from "react-number-format";
@@ -157,6 +157,65 @@ const CartaoPage = ({
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
+
+  /**
+   * Determina qual mês deve ser carregado inicialmente na tela Cartões.
+   * Se a fatura do mês atual está fechada, busca a próxima fatura aberta.
+   */
+  const determineInitialMonth = useCallback((cartoesList, cartaoId, orcamentosList) => {
+    const currentMonth = getCurrentMonthName();
+    
+    // Se não há cartão selecionado, retorna mês atual
+    if (!cartaoId) {
+      return currentMonth;
+    }
+    
+    const cartao = cartoesList.find((c) => c.id === cartaoId);
+    if (!cartao) {
+      return currentMonth;
+    }
+    
+    // Verifica se a fatura do mês atual está fechada
+    const isCurrentMonthFechada = cartao.faturasFechadas?.includes(currentMonth) || false;
+    
+    // Se a fatura do mês atual está aberta, retorna mês atual
+    if (!isCurrentMonthFechada) {
+      return currentMonth;
+    }
+    
+    // Fatura do mês atual está fechada - buscar próxima fatura aberta
+    const currentMonthIndex = months.indexOf(currentMonth);
+    
+    // Determina o orçamento ativo (que contém o mês atual)
+    const activeOrcamento = orcamentosList.find((o) => o.meses && o.meses.includes(currentMonth));
+    if (!activeOrcamento || !activeOrcamento.meses) {
+      return currentMonth;
+    }
+    
+    // Filtra os meses do orçamento a partir do mês atual e ordena
+    const mesesSeguintes = activeOrcamento.meses
+      .filter((mes) => months.indexOf(mes) >= currentMonthIndex)
+      .sort((a, b) => months.indexOf(a) - months.indexOf(b));
+    
+    // Busca a primeira fatura aberta
+    for (const mes of mesesSeguintes) {
+      const isFechada = cartao.faturasFechadas?.includes(mes) || false;
+      if (!isFechada) {
+        return mes;
+      }
+    }
+    
+    // Se todas as faturas subsequentes estão fechadas, retorna o próximo mês
+    return months[(currentMonthIndex + 1) % 12];
+  }, [months]);
+
+  // Efeito para determinar o mês inicial baseado no status da fatura
+  useEffect(() => {
+    const initialMonth = determineInitialMonth(cartoes, effectiveCartaoId, orcamentos);
+    if (initialMonth && initialMonth !== selectedMes) {
+      setSelectedMes(initialMonth);
+    }
+  }, [effectiveCartaoId]);
 
   const selectedCartao = useMemo(() => cartoes.find((c) => c.id === effectiveCartaoId) || {}, [cartoes, effectiveCartaoId]);
 
