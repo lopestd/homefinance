@@ -311,10 +311,6 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
           >
             <div className="kpi-card__details">
               <div className="kpi-card__detail-row">
-                <span>Saldo Inicial:</span>
-                <strong>{formatCurrency(Number.isNaN(saldoInicialMes) ? 0 : saldoInicialMes)}</strong>
-              </div>
-              <div className="kpi-card__detail-row">
                 <span>Receitas Recebidas:</span>
                 <strong className="kpi-card__value--positive">{formatCurrency(Number.isNaN(receitasRecebidasMes) ? 0 : receitasRecebidasMes)}</strong>
               </div>
