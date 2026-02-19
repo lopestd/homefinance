@@ -3,10 +3,30 @@ setlocal enabledelayedexpansion
 set SCRIPT_DIR=%~dp0
 set ROOT_DIR=%SCRIPT_DIR%..
 set IMAGE_NAME=brdocker2020/homefinance
-set VERSION=1.0.0
 set DOCKER_USER=lopestd@gmail.com
 
-set /p VERSION_INPUT=Versao da imagem (ENTER para 1.0.0):
+REM Gerar versao automatica no formato yymmdd.hhmm
+REM Formato de data no Windows pt-BR: dd/mm/yyyy
+for /f "tokens=1-3 delims=/" %%a in ("%DATE:~0,10%") do (
+    set DAY=%%a
+    set MONTH=%%b
+    set YEAR=%%c
+)
+for /f "tokens=1-2 delims=:,." %%a in ("%TIME%") do (
+    set HOUR=%%a
+    set MINUTE=%%b
+)
+REM Remover espacos em branco (hora pode ter espaco antes de 10:00)
+set YEAR=%YEAR: =0%
+set MONTH=%MONTH: =0%
+set DAY=%DAY: =0%
+set HOUR=%HOUR: =0%
+set MINUTE=%MINUTE: =0%
+REM Formatar versao: yymmdd.hhmm
+set AUTO_VERSION=%YEAR:~2,2%%MONTH%%DAY%.%HOUR%%MINUTE%
+
+set VERSION=%AUTO_VERSION%
+set /p VERSION_INPUT=Versao da imagem (ENTER para %AUTO_VERSION%):
 if not "%VERSION_INPUT%"=="" set VERSION=%VERSION_INPUT%
 set TAG_VERSION=%IMAGE_NAME%:%VERSION%
 set TAG_LATEST=%IMAGE_NAME%:latest
