@@ -939,86 +939,136 @@ select:focus {
   margin-top: 12px;
 }
 
+/* ===========================================
+   MONTHLY SUMMARY CARD - Visual Moderno
+   =========================================== */
 .monthly-summary-card {
-  background: #ffffff;
-  border: 2px solid #cbd5e1;
-  border-radius: 10px;
-  padding: 14px;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 16px;
+  padding: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 4px 6px rgba(0, 0, 0, 0.04),
+    0 2px 4px rgba(0, 0, 0, 0.02);
+  position: relative;
+  overflow: hidden;
 }
 
+/* Efeito hover suave */
+.monthly-summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 12px 24px rgba(0, 0, 0, 0.08),
+    0 4px 8px rgba(0, 0, 0, 0.04);
+  border-color: rgba(148, 163, 184, 0.5);
+}
+
+/* Indicador visual lateral */
+.monthly-summary-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #cbd5e1 0%, #94a3b8 100%);
+  border-radius: 4px 0 0 4px;
+}
+
+/* Card do mês atual - destaque especial */
 .monthly-summary-card.current-month {
-  border-color: #2563eb;
-  border-width: 2px;
-  background: #eff6ff;
-  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.15);
+  border: 2px solid #2563eb;
+  background: linear-gradient(145deg, #eff6ff 0%, #dbeafe 100%);
+  box-shadow: 
+    0 8px 16px rgba(37, 99, 235, 0.12),
+    0 4px 8px rgba(37, 99, 235, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
+.monthly-summary-card.current-month::before {
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+}
+
+/* Header com melhor hierarquia visual */
 .monthly-summary-card__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
 }
 
 .monthly-summary-card.current-month .monthly-summary-card__header {
-  border-bottom-color: #bfdbfe;
+  border-bottom-color: rgba(59, 130, 246, 0.3);
 }
 
+/* Título com peso visual melhorado */
 .monthly-summary-card__title {
   margin: 0;
-  font-size: 0.95em;
-  font-weight: 600;
+  font-size: 1em;
+  font-weight: 700;
   color: #0f172a;
+  letter-spacing: -0.01em;
 }
 
+/* Badges com visual mais moderno */
 .monthly-summary-card__badges {
   display: flex;
-  gap: 4px;
+  gap: 6px;
 }
 
 .monthly-summary-card__badge {
-  padding: 2px 8px;
-  border-radius: 12px;
+  padding: 4px 10px;
+  border-radius: 20px;
   font-size: 0.7em;
-  font-weight: 600;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
 .monthly-summary-card__badge.current {
-  background: #dbeafe;
-  color: #1e40af;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .monthly-summary-card__badge.closed {
-  background: #fee2e2;
-  color: #991b1b;
+  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+/* Content com espaçamento otimizado */
 .monthly-summary-card__content {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
+/* Rows com melhor legibilidade */
 .monthly-summary-card__row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.85em;
+  font-size: 0.875em;
+  padding: 4px 0;
 }
 
 .monthly-summary-card__row .label {
   color: #64748b;
+  font-weight: 500;
 }
 
 .monthly-summary-card__row .value {
-  font-weight: 600;
+  font-weight: 700;
   color: #0f172a;
+  font-variant-numeric: tabular-nums;
 }
 
+/* Cores para valores positivos/negativos */
 .monthly-summary-card__row .value.positive {
   color: #16a34a;
 }
@@ -1027,19 +1077,62 @@ select:focus {
   color: #dc2626;
 }
 
+/* Linha de total com destaque */
 .monthly-summary-card__row.total {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 2px solid #cbd5e1;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 2px solid rgba(148, 163, 184, 0.3);
 }
 
 .monthly-summary-card.current-month .monthly-summary-card__row.total {
-  border-top-color: #93c5fd;
+  border-top-color: rgba(59, 130, 246, 0.4);
 }
 
 .monthly-summary-card__row.total .value {
-  font-size: 1.15em;
+  font-size: 1.2em;
   color: #dc2626;
+  font-weight: 800;
+}
+
+/* === PROGRESS BAR VISUAL === */
+.monthly-summary-card__progress {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.monthly-summary-card__progress-bar {
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.monthly-summary-card__progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.monthly-summary-card__progress-fill.safe {
+  background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+}
+
+.monthly-summary-card__progress-fill.warning {
+  background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+}
+
+.monthly-summary-card__progress-fill.danger {
+  background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+}
+
+.monthly-summary-card__progress-text {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 0.75em;
+  color: #64748b;
 }
 
 .auth-screen {
@@ -1228,7 +1321,7 @@ select:focus {
   }
 
   .panel p,
-  .panel span:not(.summary-value):not(.summary-title) {
+  .panel span:not(.summary-value):not(.summary-title):not(.label):not(.value):not(.monthly-summary-card__badge) {
     color: #475569;
   }
 
@@ -1339,16 +1432,7 @@ select:focus {
     font-weight: 700;
   }
 
-  /* === MONTHLY SUMMARY CARDS === */
-  .monthly-summary-card {
-    background: #ffffff;
-    border: 1px solid rgba(37, 99, 235, 0.15);
-  }
-
-  .monthly-summary-card.current-month {
-    border-color: #2563eb;
-    background: #eff6ff;
-  }
+  /* === MONTHLY SUMMARY CARDS - Ver mobile.css para estilos modernos === */
 
   /* === STATUS BADGES === */
   .status-badge.success {

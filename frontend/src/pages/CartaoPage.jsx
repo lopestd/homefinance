@@ -30,6 +30,16 @@ const MonthlySummaryCard = ({ summary, isCurrentMonth }) => {
     isFechada
   } = summary;
 
+  // Calcular porcentagem de utilização
+  const utilizacaoPercent = limite > 0 ? Math.min((totalFatura / limite) * 100, 100) : 0;
+  
+  // Determinar cor da barra de progresso
+  const getProgressClass = () => {
+    if (utilizacaoPercent < 50) return 'safe';
+    if (utilizacaoPercent < 80) return 'warning';
+    return 'danger';
+  };
+
   return (
     <div className={`monthly-summary-card ${isCurrentMonth ? "current-month" : ""}`}>
       <div className="monthly-summary-card__header">
@@ -70,6 +80,20 @@ const MonthlySummaryCard = ({ summary, isCurrentMonth }) => {
         <div className="monthly-summary-card__row total">
           <span className="label">Valor Fatura:</span>
           <span className="value">{formatCurrency(totalFatura)}</span>
+        </div>
+      </div>
+
+      {/* Barra de Progresso Visual */}
+      <div className="monthly-summary-card__progress">
+        <div className="monthly-summary-card__progress-bar">
+          <div 
+            className={`monthly-summary-card__progress-fill ${getProgressClass()}`}
+            style={{ width: `${utilizacaoPercent}%` }}
+          />
+        </div>
+        <div className="monthly-summary-card__progress-text">
+          <span>Utilização</span>
+          <span>{utilizacaoPercent.toFixed(0)}%</span>
         </div>
       </div>
     </div>
