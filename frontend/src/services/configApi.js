@@ -27,25 +27,6 @@ const loadConfigFromApi = async () => {
   }
 };
 
-const persistConfigToApi = async (payload) => {
-  try {
-    await api.put("/config", payload);
-  } catch (error) {
-    if (error?.response?.status === 401) {
-      throw new Error("UNAUTHORIZED");
-    }
-    const message =
-      error?.response?.data?.detalhe ||
-      error?.response?.data?.error ||
-      "Falha ao salvar configurações.";
-    throw new Error(message);
-  }
-};
-
-const persistPartialConfigToApi = async (payload) => {
-  return persistConfigToApi({ ...(payload || {}), _partial: true });
-};
-
 const handleConfigError = (error, fallbackMessage) => {
   if (error?.response?.status === 401) {
     throw new Error("UNAUTHORIZED");
@@ -164,8 +145,6 @@ const deleteTipoReceita = async (id) => {
 
 export {
   loadConfigFromApi,
-  persistConfigToApi,
-  persistPartialConfigToApi,
   loadCategoriasFromApi,
   createCategoria,
   updateCategoria,

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { loadConfigFromApi, persistPartialConfigToApi } from "./services/configApi";
-import { AlertDialog } from "./components/Dialogs";
+import { loadConfigFromApi } from "./services/configApi";
 import useAuth from "./hooks/useAuth";
 import useCartao from "./hooks/useCartao";
 import useDespesas from "./hooks/useDespesas";
@@ -20,8 +19,6 @@ const getHashPage = () => {
 };
 
 function App() {
-  const [saveAlertOpen, setSaveAlertOpen] = useState(false);
-  const [saveAlertMessage, setSaveAlertMessage] = useState("");
   const [activeKey, setActiveKey] = useState(getHashPage());
   const [categorias, setCategorias] = useState([]);
   const [gastosPredefinidos, setGastosPredefinidos] = useState([]);
@@ -127,25 +124,6 @@ function App() {
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, [isDataLoaded, authUser, authToken, reloadConfigData]);
-
-  useEffect(() => {
-    if (!isDataLoaded || !authToken) return;
-    const persist = async () => {
-      try {
-        await persistPartialConfigToApi({
-          receitas,
-          despesas,
-          orcamentos,
-          cartoes,
-          lancamentosCartao
-        });
-      } catch (error) {
-        setSaveAlertMessage(error?.message || "Falha ao salvar configurações.");
-        setSaveAlertOpen(true);
-      }
-    };
-    persist();
-  }, [receitas, despesas, orcamentos, cartoes, lancamentosCartao, isDataLoaded, authToken]);
 
   const activePage = pages.find((p) => p.key === activeKey) || pages[0];
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -372,14 +350,6 @@ function App() {
             </a>
           ))}
         </nav>
-        <AlertDialog
-          open={saveAlertOpen}
-          title="Não foi possível salvar"
-          message={saveAlertMessage}
-          variant="danger"
-          primaryLabel="Ok"
-          onClose={() => setSaveAlertOpen(false)}
-        />
       </div>
     </div>
   );
