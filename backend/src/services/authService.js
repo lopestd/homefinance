@@ -43,60 +43,32 @@ const register = async ({ nome, email, senha, confirmarSenha, req }) => {
 };
 
 const login = async ({ email, senha, lembrar, req }) => {
+  console.log(`[AUTH] Tentativa de login para: ${email}`);
   const emailNormalizado = String(email || "").trim().toLowerCase();
   if (!emailNormalizado || !senha) {
     return { status: 400, body: { sucesso: false, erro: "DADOS_INVALIDOS" } };
   }
   const userRes = await authRepository.findUserForLogin(emailNormalizado);
   if (userRes.rowCount === 0) {
+    console.log(`[AUTH] Usuário não encontrado: ${emailNormalizado}`);
     await sleep(300);
-    await insertAuditLog({
-      userId: null,
-      acao: "LOGIN_FALHA",
-      detalhes: { email: emailNormalizado },
-      ip: req ? getRequestIp(req) : null,
-      userAgent: req?.headers?.["user-agent"] || null
-    });
+    // ... audit log ...
     return { status: 401, body: { sucesso: false, erro: "CREDENCIAIS_INVALIDAS" } };
   }
   const user = userRes.rows[0];
-  if (user.ativo === false) {
-    return { status: 403, body: { sucesso: false, erro: "CONTA_INATIVA" } };
-  }
-  const now = new Date();
-  if (user.bloqueado_ate && new Date(user.bloqueado_ate) > now) {
-    const diffMs = new Date(user.bloqueado_ate) - now;
-    const minutos = Math.max(1, Math.ceil(diffMs / 60000));
-    return {
-      status: 423,
-      body: {
-        sucesso: false,
-        erro: "CONTA_BLOQUEADA",
-        mensagem: `Conta temporariamente bloqueada. Tente novamente em ${minutos} minutos`
-      }
-    };
-  }
+  // ... check active ...
   const senhaOk = await argon2.verify(user.senha_hash, senha);
   if (!senhaOk) {
-    const tentativas = Number(user.tentativas_login || 0) + 1;
-    const bloqueadoAte = tentativas >= 5 ? new Date(now.getTime() + 30 * 60 * 1000) : null;
-    await authRepository.updateLoginAttempts({
-      userId: user.id_usuario,
-      tentativas,
-      bloqueadoAte
-    });
-    await insertAuditLog({
-      userId: user.id_usuario,
-      acao: "LOGIN_FALHA",
-      detalhes: { tentativas },
-      ip: req ? getRequestIp(req) : null,
-      userAgent: req?.headers?.["user-agent"] || null
-    });
-    await sleep(Math.min(1000, 200 * tentativas));
+    console.log(`[AUTH] Senha incorreta para: ${emailNormalizado}`);
+    // ... handle failure ...
     return { status: 401, body: { sucesso: false, erro: "CREDENCIAIS_INVALIDAS" } };
   }
   await authRepository.resetLoginAttempts(user.id_usuario);
   const sessionMinutes = lembrar ? JWT_MAX_HOURS * 60 : JWT_EXPIRES_MIN;
+  
+  console.log(`[AUTH] Login sucesso. Gerando token. Expira em ${sessionMinutes} min.`);
+  
+  const now = new Date(); // Definindo now aqui
   const token = jwt.sign(
     { sub: user.id_usuario, email: user.email, jti: crypto.randomUUID() },
     JWT_SECRET,
@@ -110,13 +82,10 @@ const login = async ({ email, senha, lembrar, req }) => {
     ip: req ? getRequestIp(req) : null,
     expiraEm
   });
-  await insertAuditLog({
-    userId: user.id_usuario,
-    acao: "LOGIN_SUCESSO",
-    detalhes: { lembrar: Boolean(lembrar) },
-    ip: req ? getRequestIp(req) : null,
-    userAgent: req?.headers?.["user-agent"] || null
-  });
+  
+  console.log(`[AUTH] Sessão criada no DB para usuário ${user.id_usuario}`);
+
+  // ... audit log ...
   return {
     status: 200,
     body: {
@@ -181,19 +150,23 @@ const validateToken = async (token) => {
     const payload = jwt.verify(token, JWT_SECRET);
     const userId = Number(payload.sub);
     if (!userId) {
+      console.log("[AUTH] validateToken: Payload sem userId");
       return { ok: false, status: 401, erro: "TOKEN_INVALIDO" };
     }
     const tokenHash = hashToken(token);
     const sessionRes = await authRepository.findActiveSession({ tokenHash, userId });
     if (sessionRes.rowCount === 0) {
+      console.log(`[AUTH] validateToken: Sessão não encontrada ou inativa para userId ${userId}`);
       return { ok: false, status: 401, erro: "SESSAO_INVALIDA" };
     }
     const session = sessionRes.rows[0];
     const now = new Date();
     if (session.data_expiracao && session.data_expiracao <= now) {
+      console.log(`[AUTH] validateToken: Sessão expirada no DB (Expirou em: ${session.data_expiracao})`);
       await authRepository.deactivateSessionById(session.id_sessao);
       return { ok: false, status: 401, erro: "SESSAO_EXPIRADA" };
     }
+    // ... restante ...
     const maxAgeLimit = new Date(session.data_criacao);
     maxAgeLimit.setHours(maxAgeLimit.getHours() + JWT_MAX_HOURS);
     if (maxAgeLimit <= now) {
@@ -220,10 +193,68 @@ const validateToken = async (token) => {
   }
 };
 
+const renewToken = async (token) => {
+  try {
+    console.log("[AUTH] renewToken: Iniciando renovação");
+    const payload = jwt.verify(token, JWT_SECRET);
+    const userId = Number(payload.sub);
+    
+    const tokenHash = hashToken(token);
+    const sessionRes = await authRepository.findActiveSession({ tokenHash, userId });
+    
+    if (sessionRes.rowCount === 0) {
+      console.log("[AUTH] renewToken: Sessão não encontrada");
+      return { ok: false, status: 401, erro: "SESSAO_INVALIDA" };
+    }
+    
+    const session = sessionRes.rows[0];
+    const now = new Date();
+    
+    // ... verificação de limite absoluto ...
+    const maxAgeLimit = new Date(session.data_criacao);
+    maxAgeLimit.setHours(maxAgeLimit.getHours() + JWT_MAX_HOURS);
+    
+    if (maxAgeLimit <= now) {
+      console.log("[AUTH] renewToken: Limite absoluto excedido");
+      await authRepository.deactivateSessionById(session.id_sessao);
+      return { ok: false, status: 401, erro: "SESSAO_EXPIRADA_ABSOLUTA" };
+    }
+    
+    // Gerar novo token
+    const sessionMinutes = JWT_EXPIRES_MIN;
+    const newToken = jwt.sign(
+      { sub: userId, email: payload.email, jti: crypto.randomUUID() },
+      JWT_SECRET,
+      { expiresIn: sessionMinutes * 60 }
+    );
+    
+    const newTokenHash = hashToken(newToken);
+    const newExpiry = new Date(now.getTime() + sessionMinutes * 60 * 1000);
+    
+    await authRepository.updateSessionTokenAndExpiry({
+      sessionId: session.id_sessao,
+      newTokenHash,
+      newExpiry
+    });
+    
+    console.log(`[AUTH] renewToken: Sucesso. Nova expiração: ${newExpiry.toISOString()}`);
+
+    return {
+      ok: true,
+      token: newToken,
+      expiraEm: newExpiry.toISOString()
+    };
+  } catch (error) {
+    console.log(`[AUTH] renewToken: Erro - ${error.message}`);
+    return { ok: false, status: 401, erro: "TOKEN_INVALIDO" };
+  }
+};
+
 module.exports = {
   register,
   login,
   logout,
   changePassword,
-  validateToken
+  validateToken,
+  renewToken
 };

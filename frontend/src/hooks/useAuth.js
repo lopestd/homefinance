@@ -104,15 +104,35 @@ const useAuth = ({ onLogoutCleanup } = {}) => {
   useEffect(() => {
     let active = true;
     const verifyAuth = async () => {
-      setAuthReady(false);
+      // Se não houver token, marca como pronto e sai
       if (!authToken) {
         setAuthReady(true);
         return;
       }
+      
+      // Se já temos usuário autenticado e não é a primeira carga, evitamos verificar novamente desnecessariamente
+      // a menos que o token tenha mudado.
+      if (authUser && authReady) {
+        return;
+      }
+
+      setAuthReady(false);
       try {
         const response = await api.get("/auth/verificar");
         if (!active) return;
         setAuthUser(response.data?.usuario || null);
+        
+        if (response.data?.token) {
+          const newToken = response.data.token;
+          if (newToken !== authToken) {
+             saveStoredToken(newToken);
+             setAuthToken(newToken);
+             const expiration = getTokenExpiration(newToken);
+             setTokenExpirationTime(expiration);
+             setTokenIssuedTime(Date.now());
+          }
+        }
+        
         setAuthReady(true);
       } catch {
         if (!active) return;
@@ -126,7 +146,7 @@ const useAuth = ({ onLogoutCleanup } = {}) => {
     return () => {
       active = false;
     };
-  }, [authToken]);
+  }, [authToken]); // Removido authUser e authReady para evitar loops, mas mantido authToken pois ele muda na renovação
 
   // Renovação inteligente do token com verificação de atividade
   useEffect(() => {
@@ -141,7 +161,17 @@ const useAuth = ({ onLogoutCleanup } = {}) => {
     const renewSession = async () => {
       try {
         // Fazer requisição para renovar a sessão
-        await api.get("/auth/verificar");
+        const response = await api.get("/auth/verificar");
+        
+        if (response.data?.token) {
+          const newToken = response.data.token;
+          saveStoredToken(newToken);
+          setAuthToken(newToken);
+          const expiration = getTokenExpiration(newToken);
+          setTokenExpirationTime(expiration);
+          setTokenIssuedTime(Date.now());
+        }
+
         // A sessão foi renovada pelo backend
         setLastApiRequestTime(Date.now());
       } catch {

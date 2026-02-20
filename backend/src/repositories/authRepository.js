@@ -63,6 +63,13 @@ const updateSessionExpiry = async ({ sessionId, newExpiry }) => {
   );
 };
 
+const updateSessionTokenAndExpiry = async ({ sessionId, newTokenHash, newExpiry }) => {
+  return pool.query(
+    "UPDATE admhomefinance.sessoes SET token_hash = $1, data_expiracao = $2 WHERE id_sessao = $3",
+    [newTokenHash, newExpiry, sessionId]
+  );
+};
+
 const findUserSummaryById = async (userId) => {
   return pool.query(
     "SELECT id_usuario, nome, email, ativo FROM admhomefinance.usuarios WHERE id_usuario = $1",
@@ -108,6 +115,7 @@ module.exports = {
   findActiveSession,
   deactivateSessionById,
   updateSessionExpiry,
+  updateSessionTokenAndExpiry,
   findUserSummaryById,
   deactivateSessionByToken,
   findUserPasswordById,

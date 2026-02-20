@@ -14,6 +14,7 @@ const login = async (req, res) => {
     const result = await authService.login({ ...req.body, req });
     return res.status(result.status).json(result.body);
   } catch (error) {
+    console.error("[AUTH CONTROLLER] Erro no login:", error);
     return res.status(500).json({ sucesso: false, erro: "ERRO_INTERNO" });
   }
 };
@@ -32,6 +33,23 @@ const logout = async (req, res) => {
 };
 
 const verify = async (req, res) => {
+  // Tentar renovar o token para manter a sessão ativa (sliding expiration)
+  const renewal = await authService.renewToken(req.token);
+  
+  if (renewal.ok) {
+    return res.json({
+      valido: true,
+      usuario: { id: req.user.id, nome: req.user.nome, email: req.user.email },
+      token: renewal.token,
+      expiraEm: renewal.expiraEm
+    });
+  }
+
+  if (renewal.erro === "SESSAO_EXPIRADA_ABSOLUTA") {
+    return res.status(401).json({ sucesso: false, erro: "SESSAO_EXPIRADA" });
+  }
+
+  // Fallback se não renovou mas validou
   return res.json({
     valido: true,
     usuario: { id: req.user.id, nome: req.user.nome, email: req.user.email }
