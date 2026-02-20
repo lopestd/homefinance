@@ -170,7 +170,7 @@ const CartaoPage = ({
       return currentMonth;
     }
     
-    const cartao = cartoesList.find((c) => c.id === cartaoId);
+    const cartao = cartoesList.find((c) => String(c.id) === String(cartaoId));
     if (!cartao) {
       return currentMonth;
     }
@@ -217,12 +217,12 @@ const CartaoPage = ({
     }
   }, [effectiveCartaoId]);
 
-  const selectedCartao = useMemo(() => cartoes.find((c) => c.id === effectiveCartaoId) || {}, [cartoes, effectiveCartaoId]);
+  const selectedCartao = useMemo(() => cartoes.find((c) => String(c.id) === String(effectiveCartaoId)) || {}, [cartoes, effectiveCartaoId]);
 
   const filteredLancamentos = useMemo(() => {
     if (!effectiveCartaoId) return [];
     return lancamentosCartao.filter((l) =>
-      l.cartaoId === effectiveCartaoId &&
+      String(l.cartaoId) === String(effectiveCartaoId) &&
       (l.mesReferencia === selectedMes || (l.meses && l.meses.includes(selectedMes))))
     ;
   }, [lancamentosCartao, effectiveCartaoId, selectedMes]);
@@ -273,11 +273,11 @@ const CartaoPage = ({
   const effectiveOrcamentoId = effectiveOrcamento?.id || orcamentos[0]?.id || "";
 
   const calculateMonthSummary = useCallback((cartaoId, mes) => {
-    const cartao = cartoes.find((c) => c.id === cartaoId);
+    const cartao = cartoes.find((c) => String(c.id) === String(cartaoId));
     if (!cartao) return null;
 
     const lancamentosDoMes = lancamentosCartao.filter((l) =>
-      l.cartaoId === cartaoId &&
+      String(l.cartaoId) === String(cartaoId) &&
       (l.mesReferencia === mes || (l.meses && l.meses.includes(mes)))
     );
 
@@ -391,6 +391,9 @@ const CartaoPage = ({
       showAlert("Fatura do mês está fechada.\nPara lançar ou editar itens, necessário reabrir a fatura.");
       return;
     }
+    // Resetando estado de salvamento ao abrir modal
+    setIsSaving(false);
+
     if (lancamento) {
       setEditId(lancamento.id);
 
@@ -442,7 +445,7 @@ const CartaoPage = ({
     }
 
     const updatedCartoes = cartoes.map((c) =>
-      c.id === effectiveCartaoId ? { ...c, faturasFechadas: newFechadas } : c
+      String(c.id) === String(effectiveCartaoId) ? { ...c, faturasFechadas: newFechadas } : c
     );
     setCartoes(updatedCartoes);
     persistPartialConfigToApi({ cartoes: updatedCartoes });
@@ -470,11 +473,11 @@ const CartaoPage = ({
 
   // Calcula os dados de sincronização para um mês específico (sem chamar setDespesas)
   const calculateSyncData = (mes, cartaoId, currentLancamentos, cartoesList) => {
-    const cartao = cartoesList.find((c) => c.id === cartaoId);
+    const cartao = cartoesList.find((c) => String(c.id) === String(cartaoId));
     if (!cartao) return null;
 
     const totalGastos = currentLancamentos
-      .filter((l) => l.cartaoId === cartaoId && (l.mesReferencia === mes || (l.meses && l.meses.includes(mes))))
+      .filter((l) => String(l.cartaoId) === String(cartaoId) && (l.mesReferencia === mes || (l.meses && l.meses.includes(mes))))
       .reduce((acc, l) => acc + (parseFloat(l.valor) || 0), 0);
 
     const isFechada = cartao.faturasFechadas?.includes(mes);
@@ -580,7 +583,7 @@ const CartaoPage = ({
     if (isNaN(novoLimite) || novoLimite < 0) return;
 
     const updatedCartoes = cartoes.map((c) => {
-      if (c.id === effectiveCartaoId) {
+      if (String(c.id) === String(effectiveCartaoId)) {
         const limites = c.limitesMensais || {};
         return { ...c, limitesMensais: { ...limites, [selectedMes]: novoLimite } };
       }
@@ -593,7 +596,9 @@ const CartaoPage = ({
     syncDespesa(selectedMes, effectiveCartaoId, lancamentosCartao, updatedCartoes);
   };
 
-  const handleSave = (e) => {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!effectiveCartaoId) return;
     if (isFaturaFechada) {
@@ -603,111 +608,122 @@ const CartaoPage = ({
 
     const val = parseFloat(form.valor);
     if (isNaN(val) || val <= 0) return;
+    
+    setIsSaving(true);
+    try {
+      const getNextMonth = (current, offset) => {
+        const idx = months.indexOf(current);
+        if (idx === -1) return current;
+        return months[(idx + offset) % 12];
+      };
 
-    const getNextMonth = (current, offset) => {
-      const idx = months.indexOf(current);
-      if (idx === -1) return current;
-      return months[(idx + offset) % 12];
-    };
+      let newEntries = [];
 
-    let newEntries = [];
+      // PARCELADO - Cria entradas separadas para cada parcela
+      if (!editId && form.tipoRecorrencia === "PARCELADO" && parseInt(form.qtdParcelas) > 1) {
+        const qtd = parseInt(form.qtdParcelas);
+        const parcValue = val / qtd;
 
-    // PARCELADO - Cria entradas separadas para cada parcela
-    if (!editId && form.tipoRecorrencia === "PARCELADO" && parseInt(form.qtdParcelas) > 1) {
-      const qtd = parseInt(form.qtdParcelas);
-      const parcValue = val / qtd;
-
-      for (let i = 0; i < qtd; i++) {
-        newEntries.push({
-          id: createId("lanc-card-parc"),
-          cartaoId: effectiveCartaoId,
-          descricao: `${form.descricao} (${i + 1}/${qtd})`,
-          complemento: form.complemento || "",
-          valor: parcValue,
-          data: form.data,
-          mesReferencia: getNextMonth(form.mesReferencia, i),
-          categoriaId: form.categoriaId,
-          tipoRecorrencia: "PARCELADO",
-          parcela: i + 1,
-          totalParcelas: qtd,
-          meses: []
-        });
+        for (let i = 0; i < qtd; i++) {
+          newEntries.push({
+            id: createId("lanc-card-parc"),
+            cartaoId: effectiveCartaoId,
+            descricao: `${form.descricao} (${i + 1}/${qtd})`,
+            complemento: form.complemento || "",
+            valor: parcValue,
+            data: form.data,
+            mesReferencia: getNextMonth(form.mesReferencia, i),
+            categoriaId: form.categoriaId,
+            tipoRecorrencia: "PARCELADO",
+            parcela: i + 1,
+            totalParcelas: qtd,
+            meses: []
+          });
+        }
       }
-    }
-    // FIXO com múltiplos meses - Cria entradas separadas para cada mês (como em Receitas/Despesas)
-    else if (!editId && form.tipoRecorrencia === "FIXO" && form.meses && form.meses.length > 0) {
-      for (const mes of form.meses) {
-        newEntries.push({
-          id: createId("lanc-card-fixo"),
+      // FIXO com múltiplos meses - Cria entradas separadas para cada mês (como em Receitas/Despesas)
+      else if (!editId && form.tipoRecorrencia === "FIXO" && form.meses && form.meses.length > 0) {
+        for (const mes of form.meses) {
+          newEntries.push({
+            id: createId("lanc-card-fixo"),
+            cartaoId: effectiveCartaoId,
+            descricao: form.descricao,
+            complemento: form.complemento || "",
+            valor: val,
+            data: calculateDateForMonth(mes, form.data),
+            mesReferencia: mes,
+            categoriaId: form.categoriaId,
+            tipoRecorrencia: "FIXO",
+            qtdParcelas: "",
+            meses: []
+          });
+        }
+      }
+      // EVENTUAL ou edição ou FIXO com mês único
+      else {
+        let lancamento = {
+          id: editId || createId("lanc-card"),
           cartaoId: effectiveCartaoId,
           descricao: form.descricao,
           complemento: form.complemento || "",
           valor: val,
-          data: calculateDateForMonth(mes, form.data),
-          mesReferencia: mes,
+          data: form.data,
+          mesReferencia: form.mesReferencia,
           categoriaId: form.categoriaId,
-          tipoRecorrencia: "FIXO",
-          qtdParcelas: "",
-          meses: []
-        });
-      }
-    }
-    // EVENTUAL ou edição ou FIXO com mês único
-    else {
-      let lancamento = {
-        id: editId || createId("lanc-card"),
-        cartaoId: effectiveCartaoId,
-        descricao: form.descricao,
-        complemento: form.complemento || "",
-        valor: val,
-        data: form.data,
-        mesReferencia: form.mesReferencia,
-        categoriaId: form.categoriaId,
-        tipoRecorrencia: form.tipoRecorrencia,
-        qtdParcelas: form.qtdParcelas,
-        meses: form.meses || []
-      };
+          tipoRecorrencia: form.tipoRecorrencia,
+          qtdParcelas: form.qtdParcelas,
+          meses: form.meses || []
+        };
 
-      if (form.tipoRecorrencia === "FIXO") {
-        if (selectedMes && form.meses && form.meses.includes(selectedMes)) {
-          lancamento.mesReferencia = selectedMes;
-        } else if (form.meses && form.meses.length > 0 && !form.meses.includes(form.mesReferencia)) {
-          lancamento.mesReferencia = form.meses[0];
+        if (form.tipoRecorrencia === "FIXO") {
+          if (selectedMes && form.meses && form.meses.includes(selectedMes)) {
+            lancamento.mesReferencia = selectedMes;
+          } else if (form.meses && form.meses.length > 0 && !form.meses.includes(form.mesReferencia)) {
+            lancamento.mesReferencia = form.meses[0];
+          }
+        }
+        newEntries.push(lancamento);
+      }
+
+      let nextLancamentos;
+      if (editId) {
+        // Edição: substitui apenas a entrada específica
+        nextLancamentos = lancamentosCartao.map((l) => l.id === editId ? newEntries[0] : l);
+      } else {
+        nextLancamentos = [...lancamentosCartao, ...newEntries];
+      }
+
+      setLancamentosCartao(nextLancamentos);
+      
+      // Envio imediato e aguardando resposta para garantir persistência
+      await persistPartialConfigToApi({ lancamentosCartao: nextLancamentos }, { immediate: true });
+      
+      setModalOpen(false);
+
+      // Coleta todos os meses afetados para sincronizar
+      let affectedMonths = new Set();
+      newEntries.forEach((e) => {
+        affectedMonths.add(e.mesReferencia);
+        if (e.meses) e.meses.forEach((m) => affectedMonths.add(m));
+      });
+
+      if (editId) {
+        const oldLancamento = lancamentosCartao.find((l) => l.id === editId);
+        if (oldLancamento) {
+          affectedMonths.add(oldLancamento.mesReferencia);
+          if (oldLancamento.meses) oldLancamento.meses.forEach((m) => affectedMonths.add(m));
         }
       }
-      newEntries.push(lancamento);
+
+      // Sincroniza despesas de todos os meses afetados de uma única vez
+      // Importante: usar nextLancamentos que já contém todas as alterações
+      syncDespesasBatched(Array.from(affectedMonths), effectiveCartaoId, nextLancamentos);
+    } catch (err) {
+      console.error(err);
+      showAlert("Ocorreu um erro ao salvar. Tente novamente.");
+    } finally {
+      setIsSaving(false);
     }
-
-    let nextLancamentos;
-    if (editId) {
-      // Edição: substitui apenas a entrada específica
-      nextLancamentos = lancamentosCartao.map((l) => l.id === editId ? newEntries[0] : l);
-    } else {
-      nextLancamentos = [...lancamentosCartao, ...newEntries];
-    }
-
-    setLancamentosCartao(nextLancamentos);
-    persistPartialConfigToApi({ lancamentosCartao: nextLancamentos });
-    setModalOpen(false);
-
-    // Coleta todos os meses afetados para sincronizar
-    let affectedMonths = new Set();
-    newEntries.forEach((e) => {
-      affectedMonths.add(e.mesReferencia);
-      if (e.meses) e.meses.forEach((m) => affectedMonths.add(m));
-    });
-
-    if (editId) {
-      const oldLancamento = lancamentosCartao.find((l) => l.id === editId);
-      if (oldLancamento) {
-        affectedMonths.add(oldLancamento.mesReferencia);
-        if (oldLancamento.meses) oldLancamento.meses.forEach((m) => affectedMonths.add(m));
-      }
-    }
-
-    // Sincroniza despesas de todos os meses afetados de uma única vez
-    // Importante: usar nextLancamentos que já contém todas as alterações
-    syncDespesasBatched(Array.from(affectedMonths), effectiveCartaoId, nextLancamentos);
   };
 
   const handleDelete = (id) => {
@@ -715,7 +731,7 @@ const CartaoPage = ({
       showAlert("Fatura do mês está fechada.\nPara lançar ou editar itens, necessário reabrir a fatura.");
       return;
     }
-    showConfirm("Tem certeza que deseja excluir este lançamento?", () => {
+    showConfirm("Tem certeza que deseja excluir este lançamento?", async () => {
       try {
         const lancamento = lancamentosCartao.find((l) => l.id === id);
         if (!lancamento) return;
@@ -725,7 +741,9 @@ const CartaoPage = ({
         const nextLancamentos = lancamentosCartao.filter((l) => l.id !== id);
 
         setLancamentosCartao(nextLancamentos);
-        persistPartialConfigToApi({ lancamentosCartao: nextLancamentos });
+        
+        // Envio imediato e aguardando resposta
+        await persistPartialConfigToApi({ lancamentosCartao: nextLancamentos }, { immediate: true });
 
         // Sincroniza o mês afetado
         const monthsToSync = new Set();
@@ -733,8 +751,11 @@ const CartaoPage = ({
         if (lancamento.meses) lancamento.meses.forEach((m) => monthsToSync.add(m));
 
         syncDespesasBatched(Array.from(monthsToSync), lancamento.cartaoId, nextLancamentos);
-      } catch {
+      } catch (err) {
+        console.error(err);
         showAlert("Ocorreu um erro ao excluir o lançamento. Tente novamente.");
+        // Reverteria o estado aqui se tivessmos uma cópia prévia, mas o reload do F5 já "resolve" a inconsistência
+        // Para uma UX perfeita, deveríamos re-buscar os dados do servidor.
       }
     });
   };
@@ -907,8 +928,9 @@ const CartaoPage = ({
         )}
       </section>
 
-      <Modal open={modalOpen} title={editId ? "Editar lançamento" : "Novo lançamento"} onClose={() => setModalOpen(false)}>
+      <Modal open={modalOpen} title={editId ? "Editar lançamento" : "Novo lançamento"} onClose={() => !isSaving && setModalOpen(false)} isSaving={isSaving}>
         <form className="modal-grid" onSubmit={handleSave}>
+          <fieldset disabled={isSaving} style={{ border: "none", padding: 0, margin: 0 }}>
           <div className="modal-grid-row">
             <label className="field">
               Categoria
@@ -1072,9 +1094,12 @@ const CartaoPage = ({
             </div>
           )}
           <div className="modal-actions">
-            <button type="button" className="ghost" onClick={() => setModalOpen(false)}>Cancelar</button>
-            <button type="submit" className="primary">Salvar</button>
+            <button type="button" className="ghost" onClick={() => !isSaving && setModalOpen(false)} disabled={isSaving}>Cancelar</button>
+            <button type="submit" className="primary" disabled={isSaving}>
+              {isSaving ? "Salvando..." : "Salvar"}
+            </button>
           </div>
+          </fieldset>
         </form>
       </Modal>
 

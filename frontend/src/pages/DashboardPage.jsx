@@ -286,15 +286,15 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
           >
             <div className="kpi-card__details">
               <div className="kpi-card__detail-row">
-                <span>Saldo acumulado anterior:</span>
+                <span>Saldo anterior:</span>
                 <strong>{formatCurrency(saldoAcumuladoAnterior)}</strong>
               </div>
               <div className="kpi-card__detail-row">
-                <span>Saldo previsto:</span>
+                <span>Previsto:</span>
                 <strong>{formatCurrency(saldoPrevistoMes)}</strong>
               </div>
               <div className="kpi-card__detail-row">
-                <span>Saldo consolidado:</span>
+                <span>Consolidado:</span>
                 <strong className={saldoConsolidadoClass}>{formatCurrency(saldoConsolidado)}</strong>
               </div>
             </div>

@@ -599,8 +599,212 @@ const insertLancamentoCartaoMes = async (client, { lancamentoId, mes, userId }) 
   );
 };
 
+const acquireUserLock = async (client, userId) => {
+  await client.query("SELECT pg_advisory_xact_lock(hashtext('user_lock_' || $1))", [userId]);
+};
+
+const updateCartao = async (client, { id, nome, limite, ativo, userId }) => {
+  return client.query(
+    "UPDATE admhomefinance.cartoes SET nome = $1, limite = $2, ativo = $3 WHERE id = $4 AND id_usuario = $5 RETURNING id",
+    [nome, limite, ativo, id, userId]
+  );
+};
+
+const deleteCartoesByIds = async (client, userId, cartaoIds) => {
+  if (!Array.isArray(cartaoIds) || cartaoIds.length === 0) return;
+  
+  // Exclusão em cascata deve ser tratada aqui
+  await client.query(
+    `DELETE FROM admhomefinance.lancamentos_cartao_meses
+     WHERE lancamento_id IN (
+       SELECT id FROM admhomefinance.lancamentos_cartao
+       WHERE cartao_id = ANY($2) AND id_usuario = $1
+     )`,
+    [userId, cartaoIds]
+  );
+  await client.query(
+    "DELETE FROM admhomefinance.lancamentos_cartao WHERE cartao_id = ANY($2) AND id_usuario = $1",
+    [userId, cartaoIds]
+  );
+  await client.query(
+    "DELETE FROM admhomefinance.cartao_limites_mensais WHERE cartao_id = ANY($2) AND id_usuario = $1",
+    [userId, cartaoIds]
+  );
+  await client.query(
+    "DELETE FROM admhomefinance.cartao_faturas_fechadas WHERE cartao_id = ANY($2) AND id_usuario = $1",
+    [userId, cartaoIds]
+  );
+  await client.query(
+    "DELETE FROM admhomefinance.cartoes WHERE id = ANY($2) AND id_usuario = $1",
+    [userId, cartaoIds]
+  );
+};
+
+const upsertCartaoLimite = async (client, { cartaoId, mes, limite, userId }) => {
+  return client.query(
+    `INSERT INTO admhomefinance.cartao_limites_mensais (cartao_id, mes, limite, id_usuario)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (cartao_id, mes)
+     DO UPDATE SET limite = EXCLUDED.limite`,
+    [cartaoId, mes, limite, userId]
+  );
+};
+
+const bulkUpsertCartaoLimites = async (client, { cartaoId, limites, userId }) => {
+  if (!limites || limites.length === 0) return;
+  const meses = limites.map(l => l.mes);
+  const valores = limites.map(l => l.limite);
+  
+  return client.query(
+    `INSERT INTO admhomefinance.cartao_limites_mensais (cartao_id, mes, limite, id_usuario)
+     SELECT $1, unnest($2::int[]), unnest($3::numeric[]), $4
+     ON CONFLICT (cartao_id, mes)
+     DO UPDATE SET limite = EXCLUDED.limite`,
+    [cartaoId, meses, valores, userId]
+  );
+};
+
+const bulkUpsertCartaoFaturas = async (client, { cartaoId, meses, userId }) => {
+  if (!meses || meses.length === 0) return;
+  
+  return client.query(
+    `INSERT INTO admhomefinance.cartao_faturas_fechadas (cartao_id, mes, id_usuario)
+     SELECT $1, unnest($2::int[]), $3
+     ON CONFLICT (cartao_id, mes) DO NOTHING`,
+    [cartaoId, meses, userId]
+  );
+};
+
+const deleteCartaoLimitesNotIn = async (client, { cartaoId, mesesMantidos, userId }) => {
+  if (!mesesMantidos || mesesMantidos.length === 0) {
+     return client.query(
+       "DELETE FROM admhomefinance.cartao_limites_mensais WHERE cartao_id = $1 AND id_usuario = $2",
+       [cartaoId, userId]
+     );
+  }
+  return client.query(
+    "DELETE FROM admhomefinance.cartao_limites_mensais WHERE cartao_id = $1 AND id_usuario = $2 AND mes <> ALL($3)",
+    [cartaoId, userId, mesesMantidos]
+  );
+};
+
+const upsertCartaoFatura = async (client, { cartaoId, mes, userId }) => {
+  return client.query(
+    `INSERT INTO admhomefinance.cartao_faturas_fechadas (cartao_id, mes, id_usuario)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (cartao_id, mes) DO NOTHING`,
+    [cartaoId, mes, userId]
+  );
+};
+
+const deleteCartaoFaturasNotIn = async (client, { cartaoId, mesesMantidos, userId }) => {
+  if (!mesesMantidos || mesesMantidos.length === 0) {
+     return client.query(
+       "DELETE FROM admhomefinance.cartao_faturas_fechadas WHERE cartao_id = $1 AND id_usuario = $2",
+       [cartaoId, userId]
+     );
+  }
+  return client.query(
+    "DELETE FROM admhomefinance.cartao_faturas_fechadas WHERE cartao_id = $1 AND id_usuario = $2 AND mes <> ALL($3)",
+    [cartaoId, userId, mesesMantidos]
+  );
+};
+
+const updateReceita = async (client, payload) => {
+  return client.query(
+    "UPDATE admhomefinance.receitas SET orcamento_id = $1, categoria_id = $2, descricao = $3, complemento = $4, valor = $5, mes_referencia = $6, data = $7, status = $8, tipo_recorrencia = $9, parcela_atual = $10, total_parcelas = $11 WHERE id = $12 AND id_usuario = $13 RETURNING id",
+    [
+      payload.orcamentoId,
+      payload.categoriaId,
+      payload.descricao,
+      payload.complemento,
+      payload.valor,
+      payload.mesReferencia,
+      payload.data,
+      payload.status,
+      payload.tipoRecorrencia,
+      payload.parcelaAtual,
+      payload.totalParcelas,
+      payload.id,
+      payload.userId
+    ]
+  );
+};
+
+const clearReceitaMeses = async (client, userId, receitaId) => {
+  await client.query("DELETE FROM admhomefinance.receitas_meses WHERE receita_id = $1 AND id_usuario = $2", [receitaId, userId]);
+};
+
+const deleteReceitasByIds = async (client, userId, receitaIds) => {
+  if (!Array.isArray(receitaIds) || receitaIds.length === 0) return;
+  await client.query("DELETE FROM admhomefinance.receitas_meses WHERE receita_id = ANY($2) AND id_usuario = $1", [userId, receitaIds]);
+  await client.query("DELETE FROM admhomefinance.receitas WHERE id = ANY($2) AND id_usuario = $1", [userId, receitaIds]);
+};
+
+const updateDespesa = async (client, payload) => {
+  return client.query(
+    "UPDATE admhomefinance.despesas SET orcamento_id = $1, categoria_id = $2, descricao = $3, complemento = $4, valor = $5, mes_referencia = $6, data = $7, status = $8, tipo_recorrencia = $9, parcela_atual = $10, total_parcelas = $11 WHERE id = $12 AND id_usuario = $13 RETURNING id",
+    [
+      payload.orcamentoId,
+      payload.categoriaId,
+      payload.descricao,
+      payload.complemento,
+      payload.valor,
+      payload.mesReferencia,
+      payload.data,
+      payload.status,
+      payload.tipoRecorrencia,
+      payload.parcelaAtual,
+      payload.totalParcelas,
+      payload.id,
+      payload.userId
+    ]
+  );
+};
+
+const clearDespesaMeses = async (client, userId, despesaId) => {
+  await client.query("DELETE FROM admhomefinance.despesas_meses WHERE despesa_id = $1 AND id_usuario = $2", [despesaId, userId]);
+};
+
+const deleteDespesasByIds = async (client, userId, despesaIds) => {
+  if (!Array.isArray(despesaIds) || despesaIds.length === 0) return;
+  await client.query("DELETE FROM admhomefinance.despesas_meses WHERE despesa_id = ANY($2) AND id_usuario = $1", [userId, despesaIds]);
+  await client.query("DELETE FROM admhomefinance.despesas WHERE id = ANY($2) AND id_usuario = $1", [userId, despesaIds]);
+};
+
+const clearLancamentosCartaoByCartaoId = async (client, userId, cartaoId) => {
+   await client.query(
+    `DELETE FROM admhomefinance.lancamentos_cartao_meses
+     WHERE lancamento_id IN (
+       SELECT id FROM admhomefinance.lancamentos_cartao
+       WHERE cartao_id = $1 AND id_usuario = $2
+     )`,
+    [cartaoId, userId]
+  );
+  await client.query(
+    "DELETE FROM admhomefinance.lancamentos_cartao WHERE cartao_id = $1 AND id_usuario = $2",
+    [cartaoId, userId]
+  );
+};
+
 module.exports = {
   fetchConfigData,
+  acquireUserLock,
+  updateCartao,
+  deleteCartoesByIds,
+  upsertCartaoLimite,
+  bulkUpsertCartaoLimites,
+  deleteCartaoLimitesNotIn,
+  upsertCartaoFatura,
+  bulkUpsertCartaoFaturas,
+  deleteCartaoFaturasNotIn,
+  updateReceita,
+  clearReceitaMeses,
+  deleteReceitasByIds,
+  updateDespesa,
+  clearDespesaMeses,
+  deleteDespesasByIds,
+  clearLancamentosCartaoByCartaoId,
   beginTransaction,
   commitTransaction,
   rollbackTransaction,

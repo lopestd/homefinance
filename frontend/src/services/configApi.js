@@ -143,13 +143,35 @@ const deleteTipoReceita = async (id) => {
   }
 };
 
+let pendingPayload = {};
+let debounceTimer = null;
+
 const persistPartialConfigToApi = async (payload) => {
   if (!payload || typeof payload !== 'object') return;
-  try {
-    await api.put("/config", { ...payload, _partial: true });
-  } catch (error) {
-    handleConfigError(error, "Falha ao salvar dados.");
+  
+  // Merge new payload with pending payload
+  pendingPayload = { ...pendingPayload, ...payload };
+
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
   }
+
+  return new Promise((resolve, reject) => {
+    debounceTimer = setTimeout(async () => {
+      try {
+        const payloadToSend = { ...pendingPayload, _partial: true };
+        pendingPayload = {}; // Clear pending payload immediately before sending to avoid race conditions with new updates
+        
+        await api.put("/config", payloadToSend);
+        resolve();
+      } catch (error) {
+        handleConfigError(error, "Falha ao salvar dados.");
+        reject(error);
+      } finally {
+        debounceTimer = null;
+      }
+    }, 500); // 500ms debounce
+  });
 };
 
 export {

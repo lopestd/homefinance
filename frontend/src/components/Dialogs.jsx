@@ -16,7 +16,7 @@ const AlertDialog = ({
   onClose,
   primaryLabel = "OK"
 }) => (
-  <Modal open={open} title={title} className={`modal--${variant} modal--compact`}>
+  <Modal open={open} onClose={onClose} title={title} className={`modal--${variant} modal--compact`}>
     <div className={`modal-alert modal-alert--${variant}`}>
       <div className="modal-alert__icon">{getVariantIcon(variant)}</div>
       <p className="modal-alert__message">{message}</p>
@@ -37,7 +37,7 @@ const ConfirmDialog = ({
   primaryLabel = "Excluir",
   secondaryLabel = "Cancelar"
 }) => (
-  <Modal open={open} title={title} className={`modal--${variant} modal--compact`}>
+  <Modal open={open} onClose={onClose} title={title} className={`modal--${variant} modal--compact`}>
     <div className={`modal-alert modal-alert--${variant}`}>
       <div className="modal-alert__icon">{getVariantIcon(variant)}</div>
       <p className="modal-alert__message">{message}</p>
