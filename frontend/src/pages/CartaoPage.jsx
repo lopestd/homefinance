@@ -490,7 +490,7 @@ const CartaoPage = ({
       }
 
       if (!isNaN(limite) && limite > 0) {
-        valorFinal = limite;
+        valorFinal = totalGastos > limite ? totalGastos : limite;
       }
     }
 
