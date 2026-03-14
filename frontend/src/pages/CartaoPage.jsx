@@ -131,6 +131,13 @@ const CartaoPage = ({
       sortable: true,
       filterable: true
     },
+    valor: {
+      key: 'valor',
+      type: 'number',
+      label: 'Valor',
+      sortable: true,
+      filterable: true
+    },
     tipoRecorrencia: {
       key: 'tipoRecorrencia',
       type: 'select',
@@ -143,13 +150,6 @@ const CartaoPage = ({
         if (value === 'PARCELADO') return 'Parcelado';
         return 'Eventual';
       }
-    },
-    valor: {
-      key: 'valor',
-      type: 'number',
-      label: 'Valor',
-      sortable: true,
-      filterable: true
     }
   };
 
@@ -239,7 +239,10 @@ const CartaoPage = ({
     setSortDirection,
     hasActiveFilters,
     activeFiltersCount
-  } = useTableFilters(filteredLancamentos, cartaoColumnConfigs);
+  } = useTableFilters(filteredLancamentos, cartaoColumnConfigs, {
+    column: "id",
+    direction: "desc"
+  });
 
   const { fixoParcelado, gastosMes, totalMes } = useMemo(() => {
     let fixo = 0;
@@ -860,8 +863,8 @@ const CartaoPage = ({
             <colgroup>
               <col className="list-table__col list-table__col--date" />
               <col className="list-table__col list-table__col--desc" />
-              <col className="list-table__col list-table__col--tipo" />
               <col className="list-table__col list-table__col--valor" />
+              <col className="list-table__col list-table__col--tipo" />
               <col className="list-table__col list-table__col--acoes" />
             </colgroup>
             <thead className="list-table__head">
@@ -892,8 +895,8 @@ const CartaoPage = ({
                   <tr className="list-table__row" key={l.id}>
                     <td>{new Date(l.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}</td>
                     <td>{l.complemento ? `${l.descricao} - ${l.complemento}` : l.descricao}</td>
-                    <td>{l.tipoRecorrencia === "FIXO" ? "Fixo" : l.tipoRecorrencia === "PARCELADO" ? "Parcelado" : "Eventual"}</td>
                     <td>{formatCurrency(l.valor)}</td>
+                    <td>{l.tipoRecorrencia === "FIXO" ? "Fixo" : l.tipoRecorrencia === "PARCELADO" ? "Parcelado" : "Eventual"}</td>
                     <td className="list-table__cell list-table__cell--acoes">
                       <div className="actions">
                         <button className="icon-button info" onClick={() => openModal(l)} title="Editar"><IconEdit /></button>

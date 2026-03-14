@@ -1,54 +1,52 @@
 import { useMemo, useState } from "react";
 
 /**
- * Hook customizado para gerenciar filtros e ordenaÃ§Ã£o em tabelas
+ * Hook customizado para gerenciar filtros e ordenação em tabelas
  * @param {Array} items - Lista de itens a ser filtrada/ordenada
- * @param {Object} columnConfigs - ConfiguraÃ§Ã£o de cada coluna
- * @returns {Object} Objeto com funÃ§Ãµes e estados para gerenciar filtros e ordenaÃ§Ã£o
+ * @param {Object} columnConfigs - Configuração de cada coluna
+ * @param {Object} initialSort - Ordenação inicial opcional ({ column, direction })
+ * @returns {Object} Objeto com funções e estados para gerenciar filtros e ordenação
  */
-const useTableFilters = (items, columnConfigs) => {
+const useTableFilters = (items, columnConfigs, initialSort = { column: null, direction: "asc" }) => {
   // Estado para filtros por coluna
   const [filters, setFilters] = useState({});
 
-  // Estado para ordenaÃ§Ã£o
-  const [sortConfig, setSortConfig] = useState({
-    column: null,
-    direction: 'asc'
-  });
+  // Estado para ordenação
+  const [sortConfig, setSortConfig] = useState(initialSort);
 
   /**
    * Aplica filtros aos itens
    * @param {Array} items - Lista de itens
    * @param {Object} filters - Objeto com filtros ativos
-   * @param {Object} columnConfigs - ConfiguraÃ§Ã£o de colunas
+   * @param {Object} columnConfigs - Configuração de colunas
    * @returns {Array} Itens filtrados
    */
   const applyFilters = (items, filters, columnConfigs) => {
-    return items.filter(item => {
+    return items.filter((item) => {
       return Object.entries(filters).every(([columnKey, filterValue]) => {
-        if (filterValue === null || filterValue === '' || filterValue === undefined) {
+        if (filterValue === null || filterValue === "" || filterValue === undefined) {
           return true;
         }
 
         const columnConfig = columnConfigs[columnKey];
         if (!columnConfig) return true;
 
-        const itemValue = columnConfig.transformValue 
+        const itemValue = columnConfig.transformValue
           ? columnConfig.transformValue(item[columnKey])
           : item[columnKey];
 
         switch (columnConfig.type) {
-          case 'text': {
+          case "text": {
             const searchText = String(filterValue).toLowerCase();
-            const itemText = String(itemValue || '').toLowerCase();
+            const itemText = String(itemValue || "").toLowerCase();
             return itemText.includes(searchText);
           }
 
-          case 'select': {
+          case "select": {
             return String(itemValue) === String(filterValue);
           }
 
-          case 'date': {
+          case "date": {
             const filterDate = new Date(filterValue);
             const itemDate = new Date(itemValue);
             return (
@@ -58,7 +56,7 @@ const useTableFilters = (items, columnConfigs) => {
             );
           }
 
-          case 'number': {
+          case "number": {
             const filterNum = parseFloat(filterValue);
             const itemNum = parseFloat(itemValue);
             return !isNaN(filterNum) && !isNaN(itemNum) && itemNum === filterNum;
@@ -73,53 +71,67 @@ const useTableFilters = (items, columnConfigs) => {
   };
 
   /**
-   * Aplica ordenaÃ§Ã£o aos itens
+   * Aplica ordenação aos itens
    * @param {Array} items - Lista de itens
-   * @param {Object} sortConfig - ConfiguraÃ§Ã£o de ordenaÃ§Ã£o
-   * @param {Object} columnConfigs - ConfiguraÃ§Ã£o de colunas
+   * @param {Object} sortConfig - Configuração de ordenação
+   * @param {Object} columnConfigs - Configuração de colunas
    * @returns {Array} Itens ordenados
    */
   const applySort = (items, sortConfig, columnConfigs) => {
     if (!sortConfig.column) return items;
 
     const columnConfig = columnConfigs[sortConfig.column];
-    if (!columnConfig || !columnConfig.sortable) return items;
+    const hasConfiguredColumn = Boolean(columnConfig && columnConfig.sortable);
 
     return [...items].sort((a, b) => {
-      const aValue = columnConfig.transformValue 
+      const aValue = hasConfiguredColumn && columnConfig.transformValue
         ? columnConfig.transformValue(a[sortConfig.column])
         : a[sortConfig.column];
-      const bValue = columnConfig.transformValue 
+      const bValue = hasConfiguredColumn && columnConfig.transformValue
         ? columnConfig.transformValue(b[sortConfig.column])
         : b[sortConfig.column];
 
       let comparison = 0;
 
-      switch (columnConfig.type) {
-        case 'date':
-          comparison = new Date(aValue) - new Date(bValue);
-          break;
+      if (hasConfiguredColumn) {
+        switch (columnConfig.type) {
+          case "date":
+            comparison = new Date(aValue) - new Date(bValue);
+            break;
 
-        case 'number':
-          comparison = parseFloat(aValue) - parseFloat(bValue);
-          break;
+          case "number":
+            comparison = parseFloat(aValue) - parseFloat(bValue);
+            break;
 
-        case 'text':
-        case 'select':
-        default:
-          // OrdenaÃ§Ã£o alfabÃ©tica (case-insensitive)
-          comparison = String(aValue || '').toLowerCase().localeCompare(
-            String(bValue || '').toLowerCase()
-          );
-          break;
+          case "text":
+          case "select":
+          default:
+            // Ordenação alfabética (case-insensitive)
+            comparison = String(aValue || "").toLowerCase().localeCompare(
+              String(bValue || "").toLowerCase()
+            );
+            break;
+        }
+      } else {
+        const aNum = Number(aValue);
+        const bNum = Number(bValue);
+
+        if (!Number.isNaN(aNum) && !Number.isNaN(bNum)) {
+          comparison = aNum - bNum;
+        } else {
+          comparison = String(aValue || "").localeCompare(String(bValue || ""), undefined, {
+            numeric: true,
+            sensitivity: "base"
+          });
+        }
       }
 
-      return sortConfig.direction === 'asc' ? comparison : -comparison;
+      return sortConfig.direction === "asc" ? comparison : -comparison;
     });
   };
 
   /**
-   * Aplica filtros e ordenaÃ§Ã£o aos itens
+   * Aplica filtros e ordenação aos itens
    */
   const filteredAndSortedItems = useMemo(() => {
     let result = [...items];
@@ -127,7 +139,7 @@ const useTableFilters = (items, columnConfigs) => {
     // Aplicar filtros
     result = applyFilters(result, filters, columnConfigs);
 
-    // Aplicar ordenaÃ§Ã£o
+    // Aplicar ordenação
     result = applySort(result, sortConfig, columnConfigs);
 
     return result;
@@ -139,7 +151,7 @@ const useTableFilters = (items, columnConfigs) => {
    * @param {any} value - Valor do filtro
    */
   const setColumnFilter = (column, value) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       [column]: value
     }));
@@ -150,7 +162,7 @@ const useTableFilters = (items, columnConfigs) => {
    * @param {string} column - Chave da coluna
    */
   const clearColumnFilter = (column) => {
-    setFilters(prev => {
+    setFilters((prev) => {
       const newFilters = { ...prev };
       delete newFilters[column];
       return newFilters;
@@ -165,46 +177,46 @@ const useTableFilters = (items, columnConfigs) => {
   };
 
   /**
-   * Alterna a ordenaÃ§Ã£o de uma coluna
+   * Alterna a ordenação de uma coluna
    * @param {string} column - Chave da coluna
    */
   const toggleSort = (column) => {
-    setSortConfig(prev => {
+    setSortConfig((prev) => {
       if (prev.column === column) {
         // Se a mesma coluna, alterna entre asc/desc/null
-        if (prev.direction === 'asc') {
-          return { column, direction: 'desc' };
+        if (prev.direction === "asc") {
+          return { column, direction: "desc" };
         } else {
-          return { column: null, direction: 'asc' };
+          return { column: null, direction: "asc" };
         }
       } else {
-        // Nova coluna, comeÃ§a com asc
-        return { column, direction: 'asc' };
+        // Nova coluna, começa com asc
+        return { column, direction: "asc" };
       }
     });
   };
 
   /**
-   * Define a direÃ§Ã£o de ordenaÃ§Ã£o para uma coluna
+   * Define a direção de ordenação para uma coluna
    * @param {string} column - Chave da coluna
-   * @param {string} direction - DireÃ§Ã£o ('asc' ou 'desc')
+   * @param {string} direction - Direção ('asc' ou 'desc')
    */
   const setSortDirection = (column, direction) => {
     setSortConfig({ column, direction });
   };
 
   /**
-   * Verifica se hÃ¡ filtros ativos
+   * Verifica se há filtros ativos
    */
   const hasActiveFilters = Object.keys(filters).some(
-    key => filters[key] !== null && filters[key] !== '' && filters[key] !== undefined
+    (key) => filters[key] !== null && filters[key] !== "" && filters[key] !== undefined
   );
 
   /**
-   * Conta quantos filtros estÃ£o ativos
+   * Conta quantos filtros estão ativos
    */
   const activeFiltersCount = Object.keys(filters).filter(
-    key => filters[key] !== null && filters[key] !== '' && filters[key] !== undefined
+    (key) => filters[key] !== null && filters[key] !== "" && filters[key] !== undefined
   ).length;
 
   return {
