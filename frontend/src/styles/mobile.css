@@ -321,6 +321,15 @@
     word-break: break-word !important;
     overflow-wrap: break-word !important;
   }
+
+  .summary-card-breakdown--cartao {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2px;
+    font-size: 0.8em;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
   
   .field {
     font-size: 14px !important;
@@ -719,6 +728,10 @@
     gap: 6px;
   }
 
+  .page-grid--cartao .monthly-summary-card__content {
+    gap: 4px;
+  }
+
   /* === Rows com cores corretas === */
   .monthly-summary-card__row {
     display: flex;
@@ -726,6 +739,10 @@
     align-items: center;
     font-size: 0.875em;
     padding: 4px 0;
+  }
+
+  .page-grid--cartao .monthly-summary-card__row {
+    padding: 2px 0;
   }
 
   .monthly-summary-card__row .label {

@@ -8,7 +8,8 @@ import { IconCheck, IconEdit, IconTrash, IconX } from "../components/Icons";
 import Modal from "../components/Modal";
 import TableFilter from "../components/TableFilter";
 import useTableFilters from "../hooks/useTableFilters";
-import { createCategoria, persistPartialConfigToApi } from "../services/configApi";
+import { createCategoria } from "../services/configApi";
+import { createDespesa, deleteDespesa, loadDespesasFromApi, updateDespesa, updateDespesaStatus } from "../services/despesasApi";
 import { MONTHS_ORDER, createId, formatCurrency, getCurrentMonthName, calculateDateForMonth } from "../utils/appUtils";
 
 registerLocale("pt-BR", ptBR);
@@ -150,11 +151,13 @@ const DespesasPage = ({
   const [alertPrimaryLabel, setAlertPrimaryLabel] = useState("OK");
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState("");
-  const [onConfirmAction, setOnConfirmAction] = useState(() => () => {});
+  const [onConfirmAction, setOnConfirmAction] = useState(() => async () => false);
   const confirmTitle = "Confirmação";
   const confirmVariant = "danger";
-  const confirmPrimaryLabel = "Excluir";
+  const [isConfirmProcessing, setIsConfirmProcessing] = useState(false);
+  const confirmPrimaryLabel = isConfirmProcessing ? "Excluindo..." : "Excluir";
   const confirmSecondaryLabel = "Cancelar";
+  const [operationState, setOperationState] = useState({ inProgress: false, label: "" });
 
   const showAlert = useCallback((message, options = {}) => {
     setAlertMessage(message);
@@ -163,6 +166,49 @@ const DespesasPage = ({
     setAlertPrimaryLabel(options.primaryLabel || "OK");
     setAlertModalOpen(true);
   }, [setAlertMessage, setAlertModalOpen, setAlertPrimaryLabel, setAlertTitle, setAlertVariant]);
+
+  const refreshDespesas = useCallback(async () => {
+    const updated = await loadDespesasFromApi();
+    setDespesas(updated);
+  }, [setDespesas]);
+
+  const toApiPayload = useCallback((despesa) => ({
+    orcamentoId: despesa.orcamentoId,
+    mes: despesa.mes,
+    data: despesa.data,
+    categoriaId: despesa.categoriaId,
+    descricao: despesa.descricao,
+    complemento: despesa.complemento || "",
+    valor: despesa.valor,
+    tipoRecorrencia: despesa.tipoRecorrencia,
+    qtdParcelas: despesa.qtdParcelas,
+    totalParcelas: despesa.totalParcelas,
+    parcela: despesa.parcela,
+    meses: Array.isArray(despesa.meses) ? despesa.meses : [],
+    status: despesa.status || "Pendente"
+  }), []);
+
+  const runDespesasOperation = useCallback(async ({ label, execute, onSuccess }) => {
+    setOperationState({ inProgress: true, label });
+    try {
+      await execute();
+      await refreshDespesas();
+      onSuccess?.();
+      return true;
+    } catch (error) {
+      const detail =
+        error?.message && error.message !== "UNAUTHORIZED"
+          ? `\nDetalhe técnico: ${error.message}`
+          : "";
+      showAlert(
+        `A operação não foi concluída. Nenhuma alteração será considerada final até nova confirmação do servidor.${detail}`,
+        { title: "Falha ao persistir dados", variant: "danger" }
+      );
+      return false;
+    } finally {
+      setOperationState({ inProgress: false, label: "" });
+    }
+  }, [refreshDespesas, showAlert]);
 
   const ensureBancosCartoesCategoria = useCallback(async () => {
     const targetName = "Bancos/Cartões";
@@ -247,24 +293,22 @@ const DespesasPage = ({
     setManualOpen(true);
   };
 
-  const toggleStatus = (id) => {
-    setDespesas((prev) => {
-      const target = prev.find((d) => d.id === id);
-      if (!target) return prev;
-      const nextStatus = target.status === "Pago" ? "Pendente" : "Pago";
-      if (nextStatus === "Pago") {
-        const cartaoVinculado = getCartaoVinculado(target);
-        const faturaFechada = cartaoVinculado?.faturasFechadas?.includes(target.mes);
-        if (cartaoVinculado && !faturaFechada) {
-          showAlert("A fatura está aberta. Feche a fatura para permitir o pagamento.");
-          return prev;
-        }
+  const toggleStatus = async (id) => {
+    if (operationState.inProgress) return;
+    const target = despesas.find((d) => d.id === id);
+    if (!target) return;
+    const nextStatus = target.status === "Pago" ? "Pendente" : "Pago";
+    if (nextStatus === "Pago") {
+      const cartaoVinculado = getCartaoVinculado(target);
+      const faturaFechada = cartaoVinculado?.faturasFechadas?.includes(target.mes);
+      if (cartaoVinculado && !faturaFechada) {
+        showAlert("A fatura está aberta. Feche a fatura para permitir o pagamento.");
+        return;
       }
-      const updated = prev.map((d) =>
-        d.id === id ? { ...d, status: nextStatus } : d
-      );
-      persistPartialConfigToApi({ despesas: updated });
-      return updated;
+    }
+    await runDespesasOperation({
+      label: "Atualizando...",
+      execute: () => updateDespesaStatus(id, nextStatus)
     });
   };
 
@@ -279,11 +323,10 @@ const DespesasPage = ({
       return;
     }
 
-    showConfirm("Tem certeza que deseja excluir esta despesa?", () => {
-      setDespesas((prev) => {
-        const updated = prev.filter((d) => d.id !== id);
-        persistPartialConfigToApi({ despesas: updated });
-        return updated;
+    showConfirm("Tem certeza que deseja excluir esta despesa?", async () => {
+      return runDespesasOperation({
+        label: "Excluindo...",
+        execute: () => deleteDespesa(id)
       });
     });
   };
@@ -353,12 +396,13 @@ const DespesasPage = ({
           categoria: categoriaNome
         });
       }
-      setDespesas((prev) => {
-        const updated = [...prev, ...newEntries];
-        persistPartialConfigToApi({ despesas: updated });
-        return updated;
+      const ok = await runDespesasOperation({
+        label: "Salvando...",
+        execute: async () => {
+          await Promise.all(newEntries.map((entry) => createDespesa(toApiPayload(entry))));
+        }
       });
-      setManualOpen(false);
+      if (ok) setManualOpen(false);
       return;
     }
 
@@ -380,12 +424,13 @@ const DespesasPage = ({
           categoria: categoriaNome
         });
       }
-      setDespesas((prev) => {
-        const updated = [...prev, ...newEntries];
-        persistPartialConfigToApi({ despesas: updated });
-        return updated;
+      const ok = await runDespesasOperation({
+        label: "Salvando...",
+        execute: async () => {
+          await Promise.all(newEntries.map((entry) => createDespesa(toApiPayload(entry))));
+        }
       });
-      setManualOpen(false);
+      if (ok) setManualOpen(false);
       return;
     }
 
@@ -412,36 +457,32 @@ const DespesasPage = ({
     }
 
     if (despesaEditId) {
-      setDespesas((prev) => {
-        const original = prev.find((d) => d.id === despesaEditId);
-        let updated;
-        if (original && original.meses && original.meses.length > 0) {
-          const removedMonths = original.meses.filter((m) => !novaDespesa.meses.includes(m));
-          if (removedMonths.length > 0) {
-            const preservedEntry = {
-              ...original,
-              id: createId("desp-preserved"),
-              meses: removedMonths,
-              mes: removedMonths.includes(original.mes) ? original.mes : removedMonths[0]
-            };
-            updated = [...prev.map((d) => d.id === despesaEditId ? novaDespesa : d), preservedEntry];
-          } else {
-            updated = prev.map((d) => d.id === despesaEditId ? novaDespesa : d);
+      const original = despesas.find((d) => d.id === despesaEditId);
+      const ok = await runDespesasOperation({
+        label: "Atualizando...",
+        execute: async () => {
+          await updateDespesa(despesaEditId, toApiPayload(novaDespesa));
+          if (original && original.meses && original.meses.length > 0) {
+            const removedMonths = original.meses.filter((m) => !novaDespesa.meses.includes(m));
+            if (removedMonths.length > 0) {
+              const preservedEntry = {
+                ...original,
+                meses: removedMonths,
+                mes: removedMonths.includes(original.mes) ? original.mes : removedMonths[0]
+              };
+              await createDespesa(toApiPayload(preservedEntry));
+            }
           }
-        } else {
-          updated = prev.map((d) => d.id === despesaEditId ? novaDespesa : d);
         }
-        persistPartialConfigToApi({ despesas: updated });
-        return updated;
       });
+      if (ok) setManualOpen(false);
     } else {
-      setDespesas((prev) => {
-        const updated = [...prev, novaDespesa];
-        persistPartialConfigToApi({ despesas: updated });
-        return updated;
+      const ok = await runDespesasOperation({
+        label: "Salvando...",
+        execute: () => createDespesa(toApiPayload(novaDespesa))
       });
+      if (ok) setManualOpen(false);
     }
-    setManualOpen(false);
   };
 
   useEffect(() => {
@@ -470,9 +511,12 @@ const DespesasPage = ({
         <div className="panel-header">
           <div>
             <h2>Selecione orçamento e mês para consultar as despesas.</h2>
+            {operationState.inProgress && (
+              <p style={{ margin: "6px 0 0", color: "#64748b", fontWeight: 600 }}>{operationState.label}</p>
+            )}
           </div>
           <div className="actions">
-            <button type="button" className="primary" onClick={openManualModal} title="Cadastrar uma nova despesa">
+            <button type="button" className="primary" onClick={openManualModal} title="Cadastrar uma nova despesa" disabled={operationState.inProgress}>
               + Nova despesa
             </button>
           </div>
@@ -587,9 +631,10 @@ const DespesasPage = ({
                         <button
                           type="button"
                           className={`icon-button ${despesa.status === "Pago" ? "danger" : "success"}`}
-                          onClick={() => toggleStatus(despesa.id)}
+                          onClick={() => { void toggleStatus(despesa.id); }}
                           title={despesa.status === "Pago" ? "Cancelar pagamento" : "Marcar como pago"}
                           aria-label={despesa.status === "Pago" ? "Cancelar pagamento" : "Marcar como pago"}
+                          disabled={operationState.inProgress}
                         >
                           {despesa.status === "Pago" ? <IconX /> : <IconCheck />}
                         </button>
@@ -599,6 +644,7 @@ const DespesasPage = ({
                           onClick={() => editarDespesa(despesa)}
                           title="Editar esta despesa"
                           aria-label="Editar esta despesa"
+                          disabled={operationState.inProgress}
                         >
                           <IconEdit />
                         </button>
@@ -608,6 +654,7 @@ const DespesasPage = ({
                           onClick={() => excluirDespesa(despesa.id)}
                           title="Excluir esta despesa"
                           aria-label="Excluir esta despesa"
+                          disabled={operationState.inProgress}
                         >
                           <IconTrash />
                         </button>
@@ -700,6 +747,7 @@ const DespesasPage = ({
                   type="checkbox"
                   checked={isManualDescricao}
                   onChange={(e) => setIsManualDescricao(e.target.checked)}
+                  disabled={operationState.inProgress}
                 />
                 Informar manualmente
               </label>
@@ -707,14 +755,15 @@ const DespesasPage = ({
           </div>
           <label className="field">
             Complemento
-            <input
-              type="text"
-              value={manualForm.complemento}
-              placeholder="Opcional"
-              onChange={(event) =>
-                setManualForm((prev) => ({ ...prev, complemento: event.target.value }))
-              }
-            />
+              <input
+                type="text"
+                value={manualForm.complemento}
+                placeholder="Opcional"
+                onChange={(event) =>
+                  setManualForm((prev) => ({ ...prev, complemento: event.target.value }))
+                }
+                disabled={operationState.inProgress}
+              />
           </label>
           <div className="modal-grid-row">
             <label className="field">
@@ -730,6 +779,7 @@ const DespesasPage = ({
                 fixedDecimalScale
                 allowNegative={false}
                 placeholder="0,00"
+                disabled={operationState.inProgress}
               />
             </label>
             <label className="field">
@@ -743,6 +793,7 @@ const DespesasPage = ({
                 dateFormat="dd/MM/yyyy"
                 locale="pt-BR"
                 placeholderText="DD/MM/AAAA"
+                disabled={operationState.inProgress}
               />
             </label>
           </div>
@@ -789,6 +840,7 @@ const DespesasPage = ({
                 onChange={(event) =>
                   setManualForm((prev) => ({ ...prev, qtdParcelas: event.target.value }))
                 }
+                disabled={operationState.inProgress}
               />
             </label>
           ) : null}
@@ -797,17 +849,18 @@ const DespesasPage = ({
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
                 <span style={{ fontWeight: 500 }}>Meses Recorrentes</span>
                 <label className="select-all" style={{ fontSize: "0.9em", cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={manualForm.meses.length === mesesDisponiveis.length && mesesDisponiveis.length > 0}
+                    <input
+                      type="checkbox"
+                      checked={manualForm.meses.length === mesesDisponiveis.length && mesesDisponiveis.length > 0}
                     onChange={() => {
                       const allSelected = manualForm.meses.length === mesesDisponiveis.length;
                       setManualForm((prev) => ({
                         ...prev,
                         meses: allSelected ? [] : [...mesesDisponiveis]
                       }));
-                    }}
-                  />
+                      }}
+                      disabled={operationState.inProgress}
+                    />
                   Selecionar todos
                 </label>
               </div>
@@ -818,6 +871,7 @@ const DespesasPage = ({
                       type="checkbox"
                       checked={manualForm.meses.includes(mes)}
                       onChange={() => toggleMesDespesa(mes, "manual")}
+                      disabled={operationState.inProgress}
                     />
                     <span>{mes}</span>
                   </label>
@@ -832,16 +886,19 @@ const DespesasPage = ({
               onChange={(event) =>
                 setManualForm((prev) => ({ ...prev, status: event.target.value }))
               }
+              disabled={operationState.inProgress}
             >
               <option value="Pendente">Pendente</option>
               <option value="Pago">Pago</option>
             </select>
           </label>
           <div className="modal-actions">
-            <button type="button" className="ghost" onClick={() => setManualOpen(false)}>
-              Cancelar
+            <button type="button" className="ghost" onClick={() => setManualOpen(false)} disabled={operationState.inProgress}>
+              {operationState.inProgress ? "Aguarde..." : "Cancelar"}
             </button>
-            <button type="submit" className="primary">Salvar</button>
+            <button type="submit" className="primary" disabled={operationState.inProgress}>
+              {operationState.inProgress ? operationState.label : "Salvar"}
+            </button>
           </div>
         </form>
       </Modal>
@@ -862,10 +919,15 @@ const DespesasPage = ({
         variant={confirmVariant}
         primaryLabel={confirmPrimaryLabel}
         secondaryLabel={confirmSecondaryLabel}
-        onClose={() => setConfirmModalOpen(false)}
-        onConfirm={() => {
-          onConfirmAction();
-          setConfirmModalOpen(false);
+        onClose={() => {
+          if (!isConfirmProcessing) setConfirmModalOpen(false);
+        }}
+        onConfirm={async () => {
+          if (isConfirmProcessing) return;
+          setIsConfirmProcessing(true);
+          const ok = await onConfirmAction();
+          setIsConfirmProcessing(false);
+          if (ok) setConfirmModalOpen(false);
         }}
       />
     </div>

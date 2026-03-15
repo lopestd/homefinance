@@ -27,6 +27,19 @@ const loadConfigFromApi = async () => {
   }
 };
 
+const loadDespesasFromApi = async () => {
+  try {
+    const response = await api.get("/config");
+    const data = response?.data;
+    return Array.isArray(data?.despesas) ? data.despesas : [];
+  } catch (error) {
+    if (error?.response?.status === 401) {
+      throw new Error("UNAUTHORIZED");
+    }
+    throw new Error("Falha ao carregar despesas.");
+  }
+};
+
 const handleConfigError = (error, fallbackMessage) => {
   if (error?.response?.status === 401) {
     throw new Error("UNAUTHORIZED");
@@ -146,14 +159,27 @@ const deleteTipoReceita = async (id) => {
 let pendingPayload = {};
 let debounceTimer = null;
 
-const persistPartialConfigToApi = async (payload) => {
+const persistPartialConfigToApi = async (payload, options = {}) => {
   if (!payload || typeof payload !== 'object') return;
   
   // Merge new payload with pending payload
   pendingPayload = { ...pendingPayload, ...payload };
+  const immediate = options?.immediate === true;
 
   if (debounceTimer) {
     clearTimeout(debounceTimer);
+    debounceTimer = null;
+  }
+
+  if (immediate) {
+    try {
+      const payloadToSend = { ...pendingPayload, _partial: true };
+      pendingPayload = {};
+      await api.put("/config", payloadToSend);
+      return;
+    } catch (error) {
+      handleConfigError(error, "Falha ao salvar dados.");
+    }
   }
 
   return new Promise((resolve, reject) => {
@@ -176,6 +202,7 @@ const persistPartialConfigToApi = async (payload) => {
 
 export {
   loadConfigFromApi,
+  loadDespesasFromApi,
   loadCategoriasFromApi,
   createCategoria,
   updateCategoria,
