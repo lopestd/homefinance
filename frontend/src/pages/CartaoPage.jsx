@@ -114,6 +114,7 @@ const CartaoPage = ({
   lancamentosCartao,
   setLancamentosCartao,
   orcamentos,
+  despesas,
   setDespesas,
   categorias,
   gastosPredefinidos
@@ -476,6 +477,30 @@ const CartaoPage = ({
     const currentFechadas = selectedCartao.faturasFechadas || [];
     let newFechadas;
     const isClosing = !currentFechadas.includes(selectedMes);
+
+    // Regra de negócio: não permitir reabrir fatura se a despesa vinculada já foi paga.
+    if (!isClosing) {
+      const cartaoAtual = cartoes.find((c) => String(c.id) === String(effectiveCartaoId));
+      const orcamentoAtual = orcamentos.find((o) => o.meses && o.meses.includes(selectedMes));
+      const descricaoEsperada = cartaoAtual ? `Fatura do cartão ${cartaoAtual.nome}` : "";
+
+      const despesaFaturaPaga = despesas.find((d) => {
+        if (!descricaoEsperada || !orcamentoAtual) return false;
+        const sameDescription =
+          normalizeCategoriaNome(d.descricao) === normalizeCategoriaNome(descricaoEsperada);
+        return (
+          sameDescription &&
+          String(d.orcamentoId) === String(orcamentoAtual.id) &&
+          d.mes === selectedMes &&
+          d.status === "Pago"
+        );
+      });
+
+      if (despesaFaturaPaga) {
+        showAlert("Não é possível reabrir a fatura enquanto o lançamento correspondente em Despesas estiver como Pago.");
+        return;
+      }
+    }
 
     if (!isClosing) {
       newFechadas = currentFechadas.filter((m) => m !== selectedMes);
