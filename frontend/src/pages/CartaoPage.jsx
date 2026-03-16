@@ -23,8 +23,9 @@ const MonthlySummaryCard = ({ summary, isCurrentMonth }) => {
   const {
     mes,
     limite,
-    fixoParcelado,
-    gastosEventuais,
+    fixoMes,
+    parceladoMes,
+    eventualMes,
     totalFatura,
     saldo,
     isFechada
@@ -61,13 +62,18 @@ const MonthlySummaryCard = ({ summary, isCurrentMonth }) => {
         </div>
 
         <div className="monthly-summary-card__row">
-          <span className="label">Parcelado + Fixo:</span>
-          <span className="value">{formatCurrency(fixoParcelado)}</span>
+          <span className="label">Fixo:</span>
+          <span className="value">{formatCurrency(fixoMes)}</span>
         </div>
 
         <div className="monthly-summary-card__row">
-          <span className="label">Gastos:</span>
-          <span className="value">{formatCurrency(gastosEventuais)}</span>
+          <span className="label">Parcelado:</span>
+          <span className="value">{formatCurrency(parceladoMes)}</span>
+        </div>
+
+        <div className="monthly-summary-card__row">
+          <span className="label">Eventual:</span>
+          <span className="value">{formatCurrency(eventualMes)}</span>
         </div>
 
         <div className="monthly-summary-card__row">
@@ -244,18 +250,26 @@ const CartaoPage = ({
     direction: "desc"
   });
 
-  const { fixoParcelado, gastosMes, totalMes } = useMemo(() => {
+  const { fixoMes, parceladoMes, eventualMes, totalMes } = useMemo(() => {
     let fixo = 0;
-    let gastos = 0;
+    let parcelado = 0;
+    let eventual = 0;
     filteredLancamentos.forEach((l) => {
       const val = parseFloat(l.valor) || 0;
-      if (l.tipoRecorrencia === "FIXO" || l.tipoRecorrencia === "PARCELADO") {
+      if (l.tipoRecorrencia === "FIXO") {
         fixo += val;
+      } else if (l.tipoRecorrencia === "PARCELADO") {
+        parcelado += val;
       } else {
-        gastos += val;
+        eventual += val;
       }
     });
-    return { fixoParcelado: fixo, gastosMes: gastos, totalMes: fixo + gastos };
+    return {
+      fixoMes: fixo,
+      parceladoMes: parcelado,
+      eventualMes: eventual,
+      totalMes: fixo + parcelado + eventual
+    };
   }, [filteredLancamentos]);
 
   const valorAlocado = useMemo(() => {
@@ -284,15 +298,18 @@ const CartaoPage = ({
       (l.mesReferencia === mes || (l.meses && l.meses.includes(mes)))
     );
 
-    let fixoParcelado = 0;
-    let gastosEventuais = 0;
+    let fixoMes = 0;
+    let parceladoMes = 0;
+    let eventualMes = 0;
 
     lancamentosDoMes.forEach((l) => {
       const val = parseFloat(l.valor) || 0;
-      if (l.tipoRecorrencia === "FIXO" || l.tipoRecorrencia === "PARCELADO") {
-        fixoParcelado += val;
+      if (l.tipoRecorrencia === "FIXO") {
+        fixoMes += val;
+      } else if (l.tipoRecorrencia === "PARCELADO") {
+        parceladoMes += val;
       } else {
-        gastosEventuais += val;
+        eventualMes += val;
       }
     });
 
@@ -301,15 +318,16 @@ const CartaoPage = ({
       ? parseFloat(limitesMensais[mes])
       : parseFloat(cartao.limite) || 0;
 
-    const totalFatura = fixoParcelado + gastosEventuais;
+    const totalFatura = fixoMes + parceladoMes + eventualMes;
     const saldo = limite - totalFatura;
     const isFechada = cartao.faturasFechadas?.includes(mes) || false;
 
     return {
       mes,
       limite,
-      fixoParcelado,
-      gastosEventuais,
+      fixoMes,
+      parceladoMes,
+      eventualMes,
       totalFatura,
       saldo,
       isFechada
@@ -764,7 +782,7 @@ const CartaoPage = ({
   };
 
   return (
-    <div className="page-grid">
+    <div className="page-grid page-grid--cartao">
       <section className="panel filters-panel">
         <div className="panel-header">
           <div><h2>Fatura do Cartão</h2></div>
@@ -807,11 +825,13 @@ const CartaoPage = ({
             <strong className="summary-card-value">{formatCurrency(valorAlocado)}</strong>
           </div>
 
-          <div className="summary-card">
+          <div className="summary-card summary-card--fatura-atual">
             <h4 className="summary-card-title">Fatura Atual</h4>
             <strong className="summary-card-value summary-card-value--negative">{formatCurrency(totalMes)}</strong>
-            <div className="summary-card-subtext">
-              Fixo: {formatCurrency(fixoParcelado)} | Var: {formatCurrency(gastosMes)}
+            <div className="summary-card-breakdown summary-card-breakdown--cartao">
+              <span>Fixo: {formatCurrency(fixoMes)}</span>
+              <span>Parcelado: {formatCurrency(parceladoMes)}</span>
+              <span>Eventual: {formatCurrency(eventualMes)}</span>
             </div>
           </div>
 
