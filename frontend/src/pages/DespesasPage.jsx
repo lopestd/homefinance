@@ -9,7 +9,7 @@ import Modal from "../components/Modal";
 import TableFilter from "../components/TableFilter";
 import useTableFilters from "../hooks/useTableFilters";
 import { createCategoria } from "../services/configApi";
-import { createDespesa, deleteDespesa, loadDespesasFromApi, updateDespesa, updateDespesaStatus } from "../services/despesasApi";
+import { createDespesa, createDespesasBatch, deleteDespesa, loadDespesasFromApi, updateDespesa, updateDespesaStatus } from "../services/despesasApi";
 import { MONTHS_ORDER, createId, formatCurrency, getCurrentMonthName, calculateDateForMonth } from "../utils/appUtils";
 
 registerLocale("pt-BR", ptBR);
@@ -111,7 +111,10 @@ const DespesasPage = ({
     toggleSort,
     hasActiveFilters,
     activeFiltersCount
-  } = useTableFilters(filteredDespesas, despesasColumnConfigs);
+  } = useTableFilters(filteredDespesas, despesasColumnConfigs, {
+    column: "id",
+    direction: "desc"
+  });
 
   const totals = useMemo(() => {
     let lancado = 0;
@@ -398,9 +401,7 @@ const DespesasPage = ({
       }
       const ok = await runDespesasOperation({
         label: "Salvando...",
-        execute: async () => {
-          await Promise.all(newEntries.map((entry) => createDespesa(toApiPayload(entry))));
-        }
+        execute: () => createDespesasBatch(newEntries.map((entry) => toApiPayload(entry)))
       });
       if (ok) setManualOpen(false);
       return;
@@ -426,9 +427,7 @@ const DespesasPage = ({
       }
       const ok = await runDespesasOperation({
         label: "Salvando...",
-        execute: async () => {
-          await Promise.all(newEntries.map((entry) => createDespesa(toApiPayload(entry))));
-        }
+        execute: () => createDespesasBatch(newEntries.map((entry) => toApiPayload(entry)))
       });
       if (ok) setManualOpen(false);
       return;

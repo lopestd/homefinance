@@ -1,12 +1,16 @@
 const authRoutes = require("./authRoutes");
 const configRoutes = require("./configRoutes");
 const despesasRoutes = require("./despesasRoutes");
+const receitasRoutes = require("./receitasRoutes");
+const lancamentosCartaoRoutes = require("./lancamentosCartaoRoutes");
 const saldoRoutes = require("./saldoRoutes");
 
 const registerRoutes = (app) => {
   app.use("/api/auth", authRoutes);
   app.use("/api/config", configRoutes);
   app.use("/api", despesasRoutes);
+  app.use("/api", receitasRoutes);
+  app.use("/api", lancamentosCartaoRoutes);
   app.use("/api", saldoRoutes);
 };
 

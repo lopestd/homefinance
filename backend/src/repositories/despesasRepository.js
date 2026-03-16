@@ -21,7 +21,7 @@ const releaseClient = (client) => {
 const listDespesas = async (userId) => {
   const [despesasRes, mesesRes, categoriasRes] = await Promise.all([
     pool.query(
-      "SELECT id, orcamento_id, categoria_id, descricao, complemento, valor, mes_referencia, data, status, tipo_recorrencia, parcela_atual, total_parcelas FROM admhomefinance.despesas WHERE id_usuario = $1 ORDER BY id",
+      "SELECT id, orcamento_id, categoria_id, descricao, complemento, valor, mes_referencia, data, status, tipo_recorrencia, parcela_atual, total_parcelas FROM admhomefinance.despesas WHERE id_usuario = $1 ORDER BY id DESC",
       [userId]
     ),
     pool.query(
