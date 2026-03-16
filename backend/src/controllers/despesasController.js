@@ -21,6 +21,18 @@ const createDespesa = async (req, res) => {
   }
 };
 
+const createDespesasBatch = async (req, res) => {
+  try {
+    const result = await despesasService.createDespesasBatch(req.body, req.user.id);
+    return res.status(201).json(result);
+  } catch (error) {
+    if (error?.status) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    return res.status(500).json({ error: "Falha ao criar despesas em lote." });
+  }
+};
+
 const updateDespesa = async (req, res) => {
   try {
     await despesasService.updateDespesa(req.params.id, req.body, req.user.id);
@@ -60,6 +72,7 @@ const deleteDespesa = async (req, res) => {
 module.exports = {
   listDespesas,
   createDespesa,
+  createDespesasBatch,
   updateDespesa,
   updateDespesaStatus,
   deleteDespesa

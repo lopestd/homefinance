@@ -1,4 +1,5 @@
 const despesasRepository = require("../repositories/despesasRepository");
+const batchCreateService = require("./batchCreateService");
 const { monthNumberToName, monthNameToNumber, toId } = require("../utils/backendUtils");
 
 const toPositiveInt = (value) => {
@@ -122,6 +123,10 @@ const createDespesa = async (payload, userId) => {
   }
 };
 
+const createDespesasBatch = async (payload, userId) => {
+  return batchCreateService.createDespesasBatch(payload, userId);
+};
+
 const updateDespesa = async (despesaId, payload, userId) => {
   const id = toPositiveInt(despesaId);
   if (!id) {
@@ -241,6 +246,7 @@ const deleteDespesa = async (despesaId, userId) => {
 module.exports = {
   listDespesas,
   createDespesa,
+  createDespesasBatch,
   updateDespesa,
   updateDespesaStatus,
   deleteDespesa

@@ -9,6 +9,8 @@ import Modal from "../components/Modal";
 import TableFilter from "../components/TableFilter";
 import useTableFilters from "../hooks/useTableFilters";
 import { persistPartialConfigToApi } from "../services/configApi";
+import { createDespesa, deleteDespesa, loadDespesasFromApi, updateDespesa } from "../services/despesasApi";
+import { createLancamentoCartao, createLancamentosCartaoBatch, deleteLancamentoCartao, loadLancamentosCartaoFromApi, updateLancamentoCartao } from "../services/lancamentosCartaoApi";
 import { createId, formatCurrency, getCurrentMonthName, calculateDateForMonth } from "../utils/appUtils";
 
 registerLocale("pt-BR", ptBR);
@@ -361,10 +363,11 @@ const CartaoPage = ({
   const [alertPrimaryLabel, setAlertPrimaryLabel] = useState("OK");
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState("");
-  const [onConfirmAction, setOnConfirmAction] = useState(() => () => {});
+  const [onConfirmAction, setOnConfirmAction] = useState(() => async () => false);
+  const [isConfirmProcessing, setIsConfirmProcessing] = useState(false);
   const confirmTitle = "Confirmação";
   const confirmVariant = "danger";
-  const confirmPrimaryLabel = "Excluir";
+  const confirmPrimaryLabel = isConfirmProcessing ? "Excluindo..." : "Excluir";
   const confirmSecondaryLabel = "Cancelar";
 
   const showAlert = useCallback((message, options = {}) => {
@@ -393,6 +396,21 @@ const CartaoPage = ({
     qtdParcelas: "",
     meses: []
   });
+
+  const toApiPayload = useCallback((lancamento) => ({
+    cartaoId: lancamento.cartaoId,
+    categoriaId: lancamento.categoriaId,
+    descricao: lancamento.descricao,
+    complemento: lancamento.complemento || "",
+    valor: lancamento.valor,
+    data: lancamento.data,
+    mesReferencia: lancamento.mesReferencia,
+    tipoRecorrencia: lancamento.tipoRecorrencia,
+    qtdParcelas: lancamento.qtdParcelas,
+    totalParcelas: lancamento.totalParcelas,
+    parcela: lancamento.parcela,
+    meses: Array.isArray(lancamento.meses) ? lancamento.meses : []
+  }), []);
 
   const toggleMesLancamento = (mes) => {
     setForm((prev) => {
@@ -453,7 +471,7 @@ const CartaoPage = ({
     setModalOpen(true);
   };
 
-  const toggleFaturaStatus = () => {
+  const toggleFaturaStatus = async () => {
     if (!effectiveCartaoId || !selectedMes) return;
     const currentFechadas = selectedCartao.faturasFechadas || [];
     let newFechadas;
@@ -471,25 +489,7 @@ const CartaoPage = ({
     setCartoes(updatedCartoes);
     persistPartialConfigToApi({ cartoes: updatedCartoes });
 
-    syncDespesa(selectedMes, effectiveCartaoId, lancamentosCartao, updatedCartoes);
-
-    if (isClosing) {
-      const cartao = cartoes.find((c) => c.id === effectiveCartaoId);
-      if (!cartao) return;
-      const orcamento = orcamentos.find((o) => o.meses && o.meses.includes(selectedMes));
-      if (!orcamento) return;
-      const descricaoDespesa = `Fatura do cartão ${cartao.nome}`;
-      const dataAtual = new Date().toLocaleDateString('en-CA');
-      setDespesas((prev) => {
-        const updated = prev.map((d) => (
-          d.descricao === descricaoDespesa && d.mes === selectedMes && d.orcamentoId === orcamento.id
-            ? { ...d, data: dataAtual }
-            : d
-        ));
-        persistPartialConfigToApi({ despesas: updated });
-        return updated;
-      });
-    }
+    await syncDespesa(selectedMes, effectiveCartaoId, lancamentosCartao, updatedCartoes, { updateDate: isClosing });
   };
 
   // Calcula os dados de sincronização para um mês específico (sem chamar setDespesas)
@@ -540,12 +540,34 @@ const CartaoPage = ({
       despesaDescricao,
       valorFinal,
       catId,
-      catNome
+      catNome,
+      isFechada
     };
   };
 
-  // Sincroniza múltiplos meses de uma única vez (uma única chamada a setDespesas)
-  const syncDespesasBatched = (meses, cartaoId, currentLancamentos, cartoesList = cartoes) => {
+  const toDespesaPayload = (despesa, defaults = {}) => ({
+    orcamentoId: despesa.orcamentoId || defaults.orcamentoId,
+    mes: despesa.mes || defaults.mes,
+    data: despesa.data || defaults.data || new Date().toLocaleDateString("en-CA"),
+    categoriaId: despesa.categoriaId || defaults.categoriaId,
+    descricao: despesa.descricao || defaults.descricao,
+    complemento: despesa.complemento || "",
+    valor: Number(despesa.valor) || 0,
+    tipoRecorrencia: despesa.tipoRecorrencia || "EVENTUAL",
+    qtdParcelas: despesa.qtdParcelas || "",
+    totalParcelas: despesa.totalParcelas ?? null,
+    parcela: despesa.parcela ?? null,
+    meses: Array.isArray(despesa.meses) ? despesa.meses : [],
+    status: despesa.status || "Pendente"
+  });
+
+  const syncDespesasBatched = async (
+    meses,
+    cartaoId,
+    currentLancamentos,
+    cartoesList = cartoes,
+    options = {}
+  ) => {
     const syncDataList = [];
     for (const mes of meses) {
       const data = calculateSyncData(mes, cartaoId, currentLancamentos, cartoesList);
@@ -556,49 +578,65 @@ const CartaoPage = ({
 
     if (syncDataList.length === 0) return;
 
-    // Uma única chamada a setDespesas para todos os meses
-    setDespesas((prev) => {
-      let next = [...prev];
-      for (const { mes, orcamentoId, despesaDescricao, valorFinal, catId, catNome } of syncDataList) {
-        const existingDespesa = next.find((d) =>
+    try {
+      const despesasAtuais = await loadDespesasFromApi();
+      const today = new Date().toLocaleDateString("en-CA");
+
+      for (const { mes, orcamentoId, despesaDescricao, valorFinal, catId, catNome, isFechada } of syncDataList) {
+        const existingDespesa = despesasAtuais.find((d) =>
           d.descricao === despesaDescricao &&
           d.mes === mes &&
           d.orcamentoId === orcamentoId
         );
 
         if (valorFinal > 0) {
+          const dataReferencia = options.updateDate && isFechada
+            ? today
+            : (existingDespesa?.data || today);
+
           if (existingDespesa) {
-            next = next.map((d) => d.id === existingDespesa.id ? { ...d, valor: valorFinal } : d);
+            const payload = toDespesaPayload(
+              { ...existingDespesa, valor: valorFinal, data: dataReferencia },
+              { orcamentoId, mes, categoriaId: catId, descricao: despesaDescricao, data: dataReferencia }
+            );
+            await updateDespesa(existingDespesa.id, payload);
+            Object.assign(existingDespesa, { valor: valorFinal, data: dataReferencia });
           } else {
-            next = [...next, {
-              id: createId("desp-auto"),
-              orcamentoId: orcamentoId,
+            const payload = toDespesaPayload({
+              orcamentoId,
               mes: mes,
-              data: new Date().toLocaleDateString('en-CA'),
+              data: dataReferencia,
               categoriaId: catId,
               descricao: despesaDescricao,
               valor: valorFinal,
               status: "Pendente",
               categoria: catNome
-            }];
+            });
+            await createDespesa(payload);
+            despesasAtuais.push({ ...payload, id: createId("desp-sync-temp"), categoria: catNome });
           }
         } else {
           if (existingDespesa) {
-            next = next.filter((d) => d.id !== existingDespesa.id);
+            await deleteDespesa(existingDespesa.id);
+            const idx = despesasAtuais.findIndex((d) => d.id === existingDespesa.id);
+            if (idx >= 0) despesasAtuais.splice(idx, 1);
           }
         }
       }
-      persistPartialConfigToApi({ despesas: next });
-      return next;
-    });
+
+      const refreshedDespesas = await loadDespesasFromApi();
+      setDespesas(refreshedDespesas);
+    } catch (err) {
+      console.error(err);
+      showAlert("Ocorreu um erro ao sincronizar a fatura com Despesas. Tente novamente.");
+    }
   };
 
-  // Mantém syncDespesa para compatibilidade com chamadas de mês único
-  const syncDespesa = (mes, cartaoId, currentLancamentos, cartoesList = cartoes) => {
-    syncDespesasBatched([mes], cartaoId, currentLancamentos, cartoesList);
+  const syncDespesa = async (mes, cartaoId, currentLancamentos, cartoesList = cartoes, options = {}) => {
+    await syncDespesasBatched([mes], cartaoId, currentLancamentos, cartoesList, options);
   };
 
-  const handleUpdateLimite = (e) => {
+  const handleUpdateLimite = async (e) => {
     e.preventDefault();
     const novoLimite = parseFloat(limiteEditValue);
     if (isNaN(novoLimite) || novoLimite < 0) return;
@@ -614,7 +652,7 @@ const CartaoPage = ({
     setCartoes(updatedCartoes);
     persistPartialConfigToApi({ cartoes: updatedCartoes });
     setLimiteModalOpen(false);
-    syncDespesa(selectedMes, effectiveCartaoId, lancamentosCartao, updatedCartoes);
+    await syncDespesa(selectedMes, effectiveCartaoId, lancamentosCartao, updatedCartoes);
   };
 
   const [isSaving, setIsSaving] = useState(false);
@@ -706,27 +744,37 @@ const CartaoPage = ({
         newEntries.push(lancamento);
       }
 
-      let nextLancamentos;
-      if (editId) {
-        // Edição: substitui apenas a entrada específica
-        nextLancamentos = lancamentosCartao.map((l) => l.id === editId ? newEntries[0] : l);
-      } else {
-        nextLancamentos = [...lancamentosCartao, ...newEntries];
-      }
-
-      setLancamentosCartao(nextLancamentos);
-      
-      // Envio imediato e aguardando resposta para garantir persistência
-      await persistPartialConfigToApi({ lancamentosCartao: nextLancamentos }, { immediate: true });
-      
-      setModalOpen(false);
-
-      // Coleta todos os meses afetados para sincronizar
       let affectedMonths = new Set();
       newEntries.forEach((e) => {
         affectedMonths.add(e.mesReferencia);
         if (e.meses) e.meses.forEach((m) => affectedMonths.add(m));
       });
+
+      const isBatchCreateMode =
+        !editId &&
+        (
+          (form.tipoRecorrencia === "PARCELADO" && parseInt(form.qtdParcelas) > 1) ||
+          (form.tipoRecorrencia === "FIXO" && form.meses && form.meses.length > 0)
+        );
+
+      if (isBatchCreateMode) {
+        await createLancamentosCartaoBatch(newEntries.map((entry) => toApiPayload(entry)));
+        const refreshedLancamentos = await loadLancamentosCartaoFromApi();
+        setLancamentosCartao(refreshedLancamentos);
+        setModalOpen(false);
+        await syncDespesasBatched(Array.from(affectedMonths), effectiveCartaoId, refreshedLancamentos);
+        return;
+      }
+
+      if (editId) {
+        await updateLancamentoCartao(editId, toApiPayload(newEntries[0]));
+      } else {
+        await createLancamentoCartao(toApiPayload(newEntries[0]));
+      }
+
+      const refreshedLancamentos = await loadLancamentosCartaoFromApi();
+      setLancamentosCartao(refreshedLancamentos);
+      setModalOpen(false);
 
       if (editId) {
         const oldLancamento = lancamentosCartao.find((l) => l.id === editId);
@@ -736,9 +784,8 @@ const CartaoPage = ({
         }
       }
 
-      // Sincroniza despesas de todos os meses afetados de uma única vez
-      // Importante: usar nextLancamentos que já contém todas as alterações
-      syncDespesasBatched(Array.from(affectedMonths), effectiveCartaoId, nextLancamentos);
+      // Sincroniza despesas de todos os meses afetados com dados recarregados do banco
+      await syncDespesasBatched(Array.from(affectedMonths), effectiveCartaoId, refreshedLancamentos);
     } catch (err) {
       console.error(err);
       showAlert("Ocorreu um erro ao salvar. Tente novamente.");
@@ -755,28 +802,23 @@ const CartaoPage = ({
     showConfirm("Tem certeza que deseja excluir este lançamento?", async () => {
       try {
         const lancamento = lancamentosCartao.find((l) => l.id === id);
-        if (!lancamento) return;
+        if (!lancamento) return false;
 
-        // Com a nova estrutura de entradas separadas, a exclusão é simples
-        // Remove apenas a entrada específica pelo ID
-        const nextLancamentos = lancamentosCartao.filter((l) => l.id !== id);
+        await deleteLancamentoCartao(id);
+        const refreshedLancamentos = await loadLancamentosCartaoFromApi();
+        setLancamentosCartao(refreshedLancamentos);
 
-        setLancamentosCartao(nextLancamentos);
-        
-        // Envio imediato e aguardando resposta
-        await persistPartialConfigToApi({ lancamentosCartao: nextLancamentos }, { immediate: true });
-
-        // Sincroniza o mês afetado
+        // Sincroniza o mês afetado com dados recarregados do banco
         const monthsToSync = new Set();
         monthsToSync.add(lancamento.mesReferencia);
         if (lancamento.meses) lancamento.meses.forEach((m) => monthsToSync.add(m));
 
-        syncDespesasBatched(Array.from(monthsToSync), lancamento.cartaoId, nextLancamentos);
+        await syncDespesasBatched(Array.from(monthsToSync), lancamento.cartaoId, refreshedLancamentos);
+        return true;
       } catch (err) {
         console.error(err);
         showAlert("Ocorreu um erro ao excluir o lançamento. Tente novamente.");
-        // Reverteria o estado aqui se tivessmos uma cópia prévia, mas o reload do F5 já "resolve" a inconsistência
-        // Para uma UX perfeita, deveríamos re-buscar os dados do servidor.
+        return false;
       }
     });
   };
@@ -787,7 +829,7 @@ const CartaoPage = ({
         <div className="panel-header">
           <div><h2>Fatura do Cartão</h2></div>
           <div className="actions">
-            <button type="button" className="primary" onClick={() => openModal()}>+ Novo lançamento</button>
+            <button type="button" className="primary" onClick={() => openModal()} disabled={isSaving}>+ Novo lançamento</button>
           </div>
         </div>
         <form className="form-inline" onSubmit={(e) => e.preventDefault()}>
@@ -919,8 +961,8 @@ const CartaoPage = ({
                     <td>{l.tipoRecorrencia === "FIXO" ? "Fixo" : l.tipoRecorrencia === "PARCELADO" ? "Parcelado" : "Eventual"}</td>
                     <td className="list-table__cell list-table__cell--acoes">
                       <div className="actions">
-                        <button className="icon-button info" onClick={() => openModal(l)} title="Editar"><IconEdit /></button>
-                        <button className="icon-button delete" onClick={() => handleDelete(l.id)} title="Excluir"><IconTrash /></button>
+                        <button className="icon-button info" onClick={() => openModal(l)} title="Editar" disabled={isSaving}><IconEdit /></button>
+                        <button className="icon-button delete" onClick={() => handleDelete(l.id)} title="Excluir" disabled={isSaving}><IconTrash /></button>
                       </div>
                     </td>
                   </tr>
@@ -1171,10 +1213,15 @@ const CartaoPage = ({
         variant={confirmVariant}
         primaryLabel={confirmPrimaryLabel}
         secondaryLabel={confirmSecondaryLabel}
-        onClose={() => setConfirmModalOpen(false)}
-        onConfirm={() => {
-          onConfirmAction();
-          setConfirmModalOpen(false);
+        onClose={() => {
+          if (!isConfirmProcessing) setConfirmModalOpen(false);
+        }}
+        onConfirm={async () => {
+          if (isConfirmProcessing) return;
+          setIsConfirmProcessing(true);
+          const ok = await onConfirmAction();
+          setIsConfirmProcessing(false);
+          if (ok) setConfirmModalOpen(false);
         }}
       />
     </div>
@@ -1182,3 +1229,4 @@ const CartaoPage = ({
 };
 
 export { CartaoPage };
+

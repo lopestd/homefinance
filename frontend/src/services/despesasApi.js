@@ -9,6 +9,10 @@ const createDespesa = async (payload) => {
   await api.post("/despesas", payload);
 };
 
+const createDespesasBatch = async (payload) => {
+  await api.post("/despesas/lote", payload);
+};
+
 const updateDespesa = async (id, payload) => {
   await api.put(`/despesas/${id}`, payload);
 };
@@ -24,6 +28,7 @@ const deleteDespesa = async (id) => {
 export {
   loadDespesasFromApi,
   createDespesa,
+  createDespesasBatch,
   updateDespesa,
   updateDespesaStatus,
   deleteDespesa

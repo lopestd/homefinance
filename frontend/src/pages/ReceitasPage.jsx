@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useCallback, useMemo, useState } from "react";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { NumericFormat } from "react-number-format";
@@ -8,7 +8,7 @@ import { IconCheck, IconEdit, IconTrash, IconX } from "../components/Icons";
 import Modal from "../components/Modal";
 import TableFilter from "../components/TableFilter";
 import useTableFilters from "../hooks/useTableFilters";
-import { persistPartialConfigToApi } from "../services/configApi";
+import { createReceita, createReceitasBatch, deleteReceita, loadReceitasFromApi, updateReceita, updateReceitaStatus } from "../services/receitasApi";
 import { MONTHS_ORDER, createId, formatCurrency, getCurrentMonthName, calculateDateForMonth } from "../utils/appUtils";
 
 registerLocale("pt-BR", ptBR);
@@ -95,7 +95,10 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
     toggleSort,
     hasActiveFilters,
     activeFiltersCount
-  } = useTableFilters(filteredReceitas, receitasColumnConfigs);
+  } = useTableFilters(filteredReceitas, receitasColumnConfigs, {
+    column: "id",
+    direction: "desc"
+  });
 
   const totals = useMemo(() => {
     let lancado = 0;
@@ -135,17 +138,61 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
   const [receitaEditId, setReceitaEditId] = useState(null);
 
   const [alertModalOpen, setAlertModalOpen] = useState(false);
-  const [alertMessage, _setAlertMessage] = useState("");
+  const [alertMessage, setAlertMessage] = useState("");
   const alertTitle = "Atenção";
   const alertVariant = "info";
   const alertPrimaryLabel = "OK";
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState("");
-  const [onConfirmAction, setOnConfirmAction] = useState(() => () => {});
+  const [onConfirmAction, setOnConfirmAction] = useState(() => async () => false);
+  const [isConfirmProcessing, setIsConfirmProcessing] = useState(false);
   const confirmTitle = "Confirmação";
   const confirmVariant = "danger";
-  const confirmPrimaryLabel = "Excluir";
+  const confirmPrimaryLabel = isConfirmProcessing ? "Excluindo..." : "Excluir";
   const confirmSecondaryLabel = "Cancelar";
+  const [operationState, setOperationState] = useState({ inProgress: false, label: "" });
+
+  const showAlert = useCallback((message) => {
+    setAlertMessage(message);
+    setAlertModalOpen(true);
+  }, []);
+
+  const refreshReceitas = useCallback(async () => {
+    const updated = await loadReceitasFromApi();
+    setReceitas(updated);
+  }, [setReceitas]);
+
+  const toApiPayload = useCallback((receita) => ({
+    orcamentoId: receita.orcamentoId,
+    mes: receita.mes,
+    data: receita.data,
+    categoriaId: receita.categoriaId,
+    descricao: receita.descricao,
+    complemento: receita.complemento || "",
+    valor: receita.valor,
+    tipoRecorrencia: receita.tipoRecorrencia,
+    qtdParcelas: receita.qtdParcelas,
+    totalParcelas: receita.totalParcelas,
+    parcela: receita.parcela,
+    meses: Array.isArray(receita.meses) ? receita.meses : [],
+    status: receita.status || "Pendente"
+  }), []);
+
+  const runReceitasOperation = useCallback(async ({ label, execute, onSuccess }) => {
+    setOperationState({ inProgress: true, label });
+    try {
+      await execute();
+      await refreshReceitas();
+      onSuccess?.();
+      return true;
+    } catch (error) {
+      const detail = error?.message ? `\nDetalhe técnico: ${error.message}` : "";
+      showAlert(`Não foi possível concluir a operação.${detail}`);
+      return false;
+    } finally {
+      setOperationState({ inProgress: false, label: "" });
+    }
+  }, [refreshReceitas, showAlert]);
 
   const showConfirm = (message, action) => {
     setConfirmMessage(message);
@@ -172,24 +219,22 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
     setManualOpen(true);
   };
 
-  const toggleStatus = (id) => {
-    setReceitas((prev) => {
-      const updated = prev.map((r) =>
-        r.id === id
-          ? { ...r, status: r.status === "Recebido" ? "Pendente" : "Recebido" }
-          : r
-      );
-      persistPartialConfigToApi({ receitas: updated });
-      return updated;
+  const toggleStatus = async (id) => {
+    if (operationState.inProgress) return;
+    const target = receitas.find((r) => r.id === id);
+    if (!target) return;
+    const nextStatus = target.status === "Recebido" ? "Pendente" : "Recebido";
+    await runReceitasOperation({
+      label: "Atualizando...",
+      execute: () => updateReceitaStatus(id, nextStatus)
     });
   };
 
   const excluirReceita = (id) => {
-    showConfirm("Tem certeza que deseja excluir esta receita?", () => {
-      setReceitas((prev) => {
-        const updated = prev.filter((r) => r.id !== id);
-        persistPartialConfigToApi({ receitas: updated });
-        return updated;
+    showConfirm("Tem certeza que deseja excluir esta receita?", async () => {
+      return runReceitasOperation({
+        label: "Excluindo...",
+        execute: () => deleteReceita(id)
       });
     });
   };
@@ -233,7 +278,7 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
     });
   };
 
-  const handleSaveManual = (event) => {
+  const handleSaveManual = async (event) => {
     event.preventDefault();
 
     if (!receitaEditId && manualForm.tipoRecorrencia === "PARCELADO" && parseInt(manualForm.qtdParcelas) > 1) {
@@ -266,12 +311,11 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
           categoria: receitasCategorias.find((c) => c.id === manualForm.categoriaId)?.nome || "—"
         });
       }
-      setReceitas((prev) => {
-        const updated = [...prev, ...newEntries];
-        persistPartialConfigToApi({ receitas: updated });
-        return updated;
+      const ok = await runReceitasOperation({
+        label: "Salvando...",
+        execute: () => createReceitasBatch(newEntries.map((entry) => toApiPayload(entry)))
       });
-      setManualOpen(false);
+      if (ok) setManualOpen(false);
       return;
     }
 
@@ -293,12 +337,11 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
           categoria: receitasCategorias.find((c) => c.id === manualForm.categoriaId)?.nome || "—"
         });
       }
-      setReceitas((prev) => {
-        const updated = [...prev, ...newEntries];
-        persistPartialConfigToApi({ receitas: updated });
-        return updated;
+      const ok = await runReceitasOperation({
+        label: "Salvando...",
+        execute: () => createReceitasBatch(newEntries.map((entry) => toApiPayload(entry)))
       });
-      setManualOpen(false);
+      if (ok) setManualOpen(false);
       return;
     }
 
@@ -325,41 +368,32 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
     }
 
     if (receitaEditId) {
-      setReceitas((prev) => {
-        const original = prev.find((r) => r.id === receitaEditId);
-        let updated;
-        if (original) {
-          const originalMeses = original.meses || [];
-          if (originalMeses.length > 0) {
-            const removedMonths = originalMeses.filter((m) => !novaReceita.meses.includes(m));
+      const original = receitas.find((r) => r.id === receitaEditId);
+      const ok = await runReceitasOperation({
+        label: "Atualizando...",
+        execute: async () => {
+          await updateReceita(receitaEditId, toApiPayload(novaReceita));
+          if (original && original.meses && original.meses.length > 0) {
+            const removedMonths = original.meses.filter((m) => !novaReceita.meses.includes(m));
             if (removedMonths.length > 0) {
               const preservedEntry = {
                 ...original,
-                id: createId("rec-preserved"),
                 meses: removedMonths,
                 mes: removedMonths.includes(original.mes) ? original.mes : removedMonths[0]
               };
-              updated = [...prev.map((r) => r.id === receitaEditId ? novaReceita : r), preservedEntry];
-            } else {
-              updated = prev.map((r) => r.id === receitaEditId ? novaReceita : r);
+              await createReceita(toApiPayload(preservedEntry));
             }
-          } else {
-            updated = prev.map((r) => r.id === receitaEditId ? novaReceita : r);
           }
-        } else {
-          updated = prev.map((r) => r.id === receitaEditId ? novaReceita : r);
         }
-        persistPartialConfigToApi({ receitas: updated });
-        return updated;
       });
+      if (ok) setManualOpen(false);
     } else {
-      setReceitas((prev) => {
-        const updated = [...prev, novaReceita];
-        persistPartialConfigToApi({ receitas: updated });
-        return updated;
+      const ok = await runReceitasOperation({
+        label: "Salvando...",
+        execute: () => createReceita(toApiPayload(novaReceita))
       });
+      if (ok) setManualOpen(false);
     }
-    setManualOpen(false);
   };
 
   return (
@@ -368,9 +402,12 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
         <div className="panel-header">
           <div>
             <h2>Selecione orçamento e mês para consultar as receitas.</h2>
+            {operationState.inProgress && (
+              <p style={{ margin: "6px 0 0", color: "#64748b", fontWeight: 600 }}>{operationState.label}</p>
+            )}
           </div>
           <div className="actions">
-            <button type="button" className="primary" onClick={openManualModal} title="Cadastrar uma nova receita">
+            <button type="button" className="primary" onClick={openManualModal} title="Cadastrar uma nova receita" disabled={operationState.inProgress}>
               + Nova receita
             </button>
           </div>
@@ -494,9 +531,10 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
                         <button
                           type="button"
                           className={`icon-button ${receita.status === "Recebido" ? "danger" : "success"}`}
-                          onClick={() => toggleStatus(receita.id)}
+                          onClick={() => { void toggleStatus(receita.id); }}
                           title={receita.status === "Recebido" ? "Cancelar recebimento" : "Marcar como recebido"}
                           aria-label={receita.status === "Recebido" ? "Cancelar recebimento" : "Marcar como recebido"}
+                          disabled={operationState.inProgress}
                         >
                           {receita.status === "Recebido" ? <IconX /> : <IconCheck />}
                         </button>
@@ -506,6 +544,7 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
                           onClick={() => editarReceita(receita)}
                           title="Editar esta receita"
                           aria-label="Editar esta receita"
+                          disabled={operationState.inProgress}
                         >
                           <IconEdit />
                         </button>
@@ -515,6 +554,7 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
                           onClick={() => excluirReceita(receita.id)}
                           title="Excluir esta receita"
                           aria-label="Excluir esta receita"
+                          disabled={operationState.inProgress}
                         >
                           <IconTrash />
                         </button>
@@ -528,10 +568,8 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
         </div>
       </section>
       <Modal open={manualOpen} title={receitaEditId ? "Editar receita" : "Nova receita"} onClose={() => setManualOpen(false)}>
-        <form
-          className="modal-grid"
-          onSubmit={handleSaveManual}
-        >
+        <form className="modal-grid" onSubmit={handleSaveManual}>
+          <fieldset disabled={operationState.inProgress} style={{ border: "none", padding: 0, margin: 0 }}>
           <div className="modal-grid-row">
             <label className="field">
               Categoria
@@ -720,11 +758,14 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
             </select>
           </label>
           <div className="modal-actions">
-            <button type="button" className="ghost" onClick={() => setManualOpen(false)} title="Fechar sem salvar">
+            <button type="button" className="ghost" onClick={() => setManualOpen(false)} title="Fechar sem salvar" disabled={operationState.inProgress}>
               Cancelar
             </button>
-            <button type="submit" className="primary" title="Confirmar e salvar dados">Salvar</button>
+            <button type="submit" className="primary" title="Confirmar e salvar dados" disabled={operationState.inProgress}>
+              {operationState.inProgress ? operationState.label : "Salvar"}
+            </button>
           </div>
+          </fieldset>
         </form>
       </Modal>
 
@@ -744,10 +785,15 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
         variant={confirmVariant}
         primaryLabel={confirmPrimaryLabel}
         secondaryLabel={confirmSecondaryLabel}
-        onClose={() => setConfirmModalOpen(false)}
-        onConfirm={() => {
-          onConfirmAction();
-          setConfirmModalOpen(false);
+        onClose={() => {
+          if (!isConfirmProcessing) setConfirmModalOpen(false);
+        }}
+        onConfirm={async () => {
+          if (isConfirmProcessing) return;
+          setIsConfirmProcessing(true);
+          const ok = await onConfirmAction();
+          setIsConfirmProcessing(false);
+          if (ok) setConfirmModalOpen(false);
         }}
       />
     </div>
@@ -755,3 +801,5 @@ const ReceitasPage = ({ categorias, tiposReceita, orcamentos, receitas, setRecei
 };
 
 export { ReceitasPage };
+
+
