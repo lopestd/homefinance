@@ -69,6 +69,21 @@ const parseLancamentoCartao = (payload) => {
     resolveMonth((payload?.meses || [])[0]);
   const valor = Number(payload?.valor) || 0;
   const meses = Array.isArray(payload?.meses) ? payload.meses : [];
+  const rawTipo = String(payload?.tipoRecorrencia || "").trim().toUpperCase();
+  const tipoRecorrencia = ["EVENTUAL", "FIXO", "PARCELADO"].includes(rawTipo) ? rawTipo : null;
+  const parcelaFromPayload = payload?.parcela ? Number(payload.parcela) : null;
+  const totalParcelasFromPayload = payload?.totalParcelas
+    ? Number(payload.totalParcelas)
+    : payload?.qtdParcelas
+      ? Number(payload.qtdParcelas)
+      : null;
+  let parcelaFromDescricao = null;
+  let totalParcelasFromDescricao = null;
+  const parcelaMatch = descricao.match(/\((\d+)\s*\/\s*(\d+)\)\s*$/);
+  if (parcelaMatch) {
+    parcelaFromDescricao = Number(parcelaMatch[1]);
+    totalParcelasFromDescricao = Number(parcelaMatch[2]);
+  }
 
   if (!cartaoId || !categoriaId || !descricao || !mesReferencia) {
     throwBadRequest("Dados de lançamento de cartão inválidos para criação em lote.");
@@ -82,13 +97,9 @@ const parseLancamentoCartao = (payload) => {
     valor,
     data: payload?.data || null,
     mesReferencia,
-    tipoRecorrencia: payload?.tipoRecorrencia || null,
-    parcelaAtual: payload?.parcela ? Number(payload.parcela) : null,
-    totalParcelas: payload?.totalParcelas
-      ? Number(payload.totalParcelas)
-      : payload?.qtdParcelas
-        ? Number(payload.qtdParcelas)
-        : null,
+    tipoRecorrencia,
+    parcelaAtual: parcelaFromPayload ?? parcelaFromDescricao,
+    totalParcelas: totalParcelasFromPayload ?? totalParcelasFromDescricao,
     meses
   };
 };
@@ -372,13 +383,22 @@ const updateLancamentoCartao = async (lancamentoId, payload, userId) => {
     await assertExistingIds(client, "cartoes", "id", userId, new Set([parsed.cartaoId]), "Cartão");
 
     const exists = await client.query(
-      "SELECT id FROM admhomefinance.lancamentos_cartao WHERE id = $1 AND id_usuario = $2",
+      "SELECT id, tipo_recorrencia, parcela_atual, total_parcelas FROM admhomefinance.lancamentos_cartao WHERE id = $1 AND id_usuario = $2",
       [id, userId]
     );
     if (exists.rowCount === 0) {
       const error = new Error("Lançamento não encontrado.");
       error.status = 404;
       throw error;
+    }
+
+    const existing = exists.rows[0];
+    const tipoRecorrenciaFinal = parsed.tipoRecorrencia || existing.tipo_recorrencia || null;
+    let parcelaAtualFinal = parsed.parcelaAtual ?? existing.parcela_atual ?? null;
+    let totalParcelasFinal = parsed.totalParcelas ?? existing.total_parcelas ?? null;
+    if (tipoRecorrenciaFinal !== "PARCELADO") {
+      parcelaAtualFinal = null;
+      totalParcelasFinal = null;
     }
 
     const updated = await client.query(
@@ -391,9 +411,9 @@ const updateLancamentoCartao = async (lancamentoId, payload, userId) => {
         parsed.valor,
         parsed.data,
         parsed.mesReferencia,
-        parsed.tipoRecorrencia,
-        parsed.parcelaAtual,
-        parsed.totalParcelas,
+        tipoRecorrenciaFinal,
+        parcelaAtualFinal,
+        totalParcelasFinal,
         id,
         userId
       ]

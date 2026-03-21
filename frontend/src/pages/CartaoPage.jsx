@@ -395,6 +395,8 @@ const CartaoPage = ({
     categoriaId: "",
     tipoRecorrencia: "EVENTUAL",
     qtdParcelas: "",
+    parcela: null,
+    totalParcelas: null,
     meses: []
   });
 
@@ -448,7 +450,9 @@ const CartaoPage = ({
         mesReferencia: lancamento.mesReferencia,
         categoriaId: lancamento.categoriaId || "",
         tipoRecorrencia: lancamento.tipoRecorrencia || "EVENTUAL",
-        qtdParcelas: lancamento.qtdParcelas || "",
+        qtdParcelas: lancamento.qtdParcelas || lancamento.totalParcelas || "",
+        parcela: lancamento.parcela ?? null,
+        totalParcelas: lancamento.totalParcelas ?? null,
         meses: lancamento.meses || []
       });
     } else {
@@ -466,6 +470,8 @@ const CartaoPage = ({
         categoriaId: "",
         tipoRecorrencia: "EVENTUAL",
         qtdParcelas: "",
+        parcela: null,
+        totalParcelas: null,
         meses: []
       });
     }
@@ -756,6 +762,8 @@ const CartaoPage = ({
           categoriaId: form.categoriaId,
           tipoRecorrencia: form.tipoRecorrencia,
           qtdParcelas: form.qtdParcelas,
+          parcela: form.parcela ?? null,
+          totalParcelas: form.totalParcelas ?? (form.qtdParcelas ? Number(form.qtdParcelas) : null),
           meses: form.meses || []
         };
 
@@ -765,6 +773,10 @@ const CartaoPage = ({
           } else if (form.meses && form.meses.length > 0 && !form.meses.includes(form.mesReferencia)) {
             lancamento.mesReferencia = form.meses[0];
           }
+        }
+        if (form.tipoRecorrencia !== "PARCELADO") {
+          lancamento.parcela = null;
+          lancamento.totalParcelas = null;
         }
         newEntries.push(lancamento);
       }
@@ -1131,7 +1143,17 @@ const CartaoPage = ({
           <div className="modal-grid-row">
             <label className="field">
               Tipo de gasto
-              <select value={form.tipoRecorrencia} onChange={(e) => setForm({ ...form, tipoRecorrencia: e.target.value })}>
+              <select
+                value={form.tipoRecorrencia}
+                onChange={(e) => {
+                  const nextTipo = e.target.value;
+                  setForm((prev) => ({
+                    ...prev,
+                    tipoRecorrencia: nextTipo,
+                    ...(nextTipo !== "PARCELADO" ? { parcela: null, totalParcelas: null } : {})
+                  }));
+                }}
+              >
                 <option value="EVENTUAL">Eventual</option>
                 <option value="FIXO">Fixo</option>
                 <option value="PARCELADO">Parcelado</option>
