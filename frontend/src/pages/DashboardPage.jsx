@@ -1,8 +1,18 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { formatCurrency, getCurrentMonthName, MONTHS_ORDER } from "../utils/appUtils";
 import { KPICard, SummaryCard, CardTopGastosCartao } from "../components/dashboard";
 import { AreaChart, HorizontalBar } from "../components/charts";
 import useSaldoAcumulado from "../hooks/useSaldoAcumulado";
+
+const CREDITO_TAG = "[CREDITO]";
+const stripCreditoTag = (descricao) => {
+  const text = String(descricao || "").trim();
+  if (text === CREDITO_TAG) return "";
+  if (text.startsWith(`${CREDITO_TAG} `)) return text.slice(CREDITO_TAG.length).trim();
+  return text;
+};
+const isCreditoLancamento = (lancamento) =>
+  Number(lancamento?.valor) < 0 || String(lancamento?.descricao || "").startsWith(CREDITO_TAG);
 
 const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, lancamentosCartao }) => {
   const [selectedOrcamentoId, setSelectedOrcamentoId] = useState("");
@@ -179,40 +189,41 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
       .slice(0, 5);
   }, [receitas, effectiveOrcamentoId, effectiveMes, categoriasMap]);
 
-  // Dados para cards de cartão
+  // Dados para cards de cartÃ£o
   const cartoesData = useMemo(() => {
     if (!effectiveOrcamentoId || !effectiveMes || !cartoes || cartoes.length === 0) {
       return [];
     }
 
     return cartoes.map((cartao) => {
-      // Filtrar lançamentos do cartão para o mês
       const lancamentosDoMes = (lancamentosCartao || []).filter((l) =>
-        l.cartaoId === cartao.id &&
+        String(l.cartaoId) === String(cartao.id) &&
         (l.mesReferencia === effectiveMes || (l.meses && l.meses.includes(effectiveMes)))
       );
 
-      // Agrupar gastos por descrição (removendo padrão de parcelamento)
       const gastosPorDescricao = {};
+      let totalDebitos = 0;
+      let totalCreditos = 0;
+
       lancamentosDoMes.forEach((l) => {
-        // Remover padrão de parcelamento da descrição (ex: " (1/2)")
-        let descricao = l.descricao || "Sem descrição";
-        descricao = descricao.replace(/\s*\(\d+\/\d+\)\s*$/, '').trim();
-        
-        const val = parseFloat(l.valor) || 0;
+        const val = Math.abs(parseFloat(l.valor) || 0);
+        if (isCreditoLancamento(l)) {
+          totalCreditos += val;
+          return;
+        }
+
+        totalDebitos += val;
+        let descricao = stripCreditoTag(l.descricao) || "Sem descrição";
+        descricao = descricao.replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
         gastosPorDescricao[descricao] = (gastosPorDescricao[descricao] || 0) + val;
       });
 
-      // Ordenar e pegar top 5
       const top5Gastos = Object.entries(gastosPorDescricao)
         .map(([name, value]) => ({ name, value }))
         .sort((a, b) => b.value - a.value)
         .slice(0, 5);
 
-      // Calcular total gasto
-      const totalGasto = lancamentosDoMes.reduce((acc, l) => acc + (parseFloat(l.valor) || 0), 0);
-
-      // Calcular limite
+      const totalGasto = Math.max(totalDebitos - totalCreditos, 0);
       const limitesMensais = cartao.limitesMensais || {};
       const limite = limitesMensais[effectiveMes] !== undefined && limitesMensais[effectiveMes] !== null && limitesMensais[effectiveMes] !== ""
         ? parseFloat(limitesMensais[effectiveMes])
@@ -229,7 +240,7 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
     });
   }, [cartoes, lancamentosCartao, effectiveOrcamentoId, effectiveMes]);
 
-  // Calcular tendência
+  // Calcular tendÃªncia
   const calcularTendencia = (atual, previsto) => {
     if (previsto === 0) return { trend: 'neutral', trendValue: 'N/A' };
     const diff = atual - previsto;
@@ -258,13 +269,13 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
         <div className="dashboard-header__content">
           <form className="form-inline dashboard-filters" onSubmit={(e) => e.preventDefault()}>
             <label className="field">
-              Orçamento
+              OrÃ§amento
               <select value={effectiveOrcamentoId} onChange={(e) => setSelectedOrcamentoId(e.target.value)}>
                 {orcamentos.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
               </select>
             </label>
             <label className="field">
-              Mês
+              MÃªs
               <select value={effectiveMes} onChange={(e) => setSelectedMes(e.target.value)}>
                 {mesesDisponiveis.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
@@ -273,11 +284,11 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
         </div>
       </section>
 
-      {/* KPI Hero Row - Saldo do Mês + Saldo Acumulado */}
+      {/* KPI Hero Row - Saldo do MÃªs + Saldo Acumulado */}
       <section className="dashboard-hero-row">
         <div className="panel dashboard-hero dashboard-hero--left">
           <KPICard
-            title="Saldo do Mês"
+            title="Saldo do MÃªs"
             value={formatCurrency(resumoMensal.saldo)}
             subtitle={`Receitas: ${formatCurrency(resumoMensal.recRecebidas)} | Despesas: ${formatCurrency(resumoMensal.despPagas)}`}
             trend={saldoTendencia.trend}
@@ -327,7 +338,7 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
       <section className="dashboard-cards">
         <SummaryCard
           title="Receitas"
-          icon="📈"
+          icon="ðŸ“ˆ"
           previsto={resumoMensal.recLancadas}
           realizado={resumoMensal.recRecebidas}
           color="#10B981"
@@ -336,7 +347,7 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
         />
         <SummaryCard
           title="Despesas"
-          icon="📉"
+          icon="ðŸ“‰"
           previsto={resumoMensal.despLancadas}
           realizado={resumoMensal.despPagas}
           color="#EF4444"
@@ -358,7 +369,7 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
             />
           ) : (
             <div className="chart-empty" style={{ height: 180 }}>
-              <p>Sem despesas no período</p>
+              <p>Sem despesas no perÃ­odo</p>
             </div>
           )}
         </div>
@@ -373,17 +384,17 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
             />
           ) : (
             <div className="chart-empty" style={{ height: 180 }}>
-              <p>Sem receitas no período</p>
+              <p>Sem receitas no perÃ­odo</p>
             </div>
           )}
         </div>
       </section>
 
-      {/* Top 5 Gastos por Cartão */}
+      {/* Top 5 Gastos por CartÃ£o */}
       <section className="dashboard-cartoes">
         {cartoesData.length === 0 ? (
           <div className="panel dashboard-cartoes-empty">
-            <p>Nenhum cartão cadastrado</p>
+            <p>Nenhum cartÃ£o cadastrado</p>
           </div>
         ) : (
           cartoesData.map((cartaoData) => (

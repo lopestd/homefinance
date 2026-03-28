@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { NumericFormat } from "react-number-format";
@@ -21,6 +21,20 @@ const normalizeCategoriaNome = (value) =>
     .replace(/\p{Diacritic}/gu, "")
     .toLowerCase();
 
+const CREDITO_TAG = "[CREDITO]";
+const stripCreditoTag = (descricao) => {
+  const text = String(descricao || "").trim();
+  if (text === CREDITO_TAG) return "";
+  if (text.startsWith(`${CREDITO_TAG} `)) return text.slice(CREDITO_TAG.length).trim();
+  return text;
+};
+const isCreditoLancamento = (lancamento) =>
+  Number(lancamento?.valor) < 0 || String(lancamento?.descricao || "").startsWith(CREDITO_TAG);
+const toCreditoDescricao = (descricao, isCredito) => {
+  const base = stripCreditoTag(descricao);
+  return isCredito ? `${CREDITO_TAG} ${base}`.trim() : base;
+};
+
 const MonthlySummaryCard = ({ summary, isCurrentMonth }) => {
   const {
     mes,
@@ -28,6 +42,7 @@ const MonthlySummaryCard = ({ summary, isCurrentMonth }) => {
     fixoMes,
     parceladoMes,
     eventualMes,
+    creditoMes,
     totalFatura,
     saldo,
     isFechada
@@ -76,6 +91,10 @@ const MonthlySummaryCard = ({ summary, isCurrentMonth }) => {
         <div className="monthly-summary-card__row">
           <span className="label">Eventual:</span>
           <span className="value">{formatCurrency(eventualMes)}</span>
+        </div>
+        <div className="monthly-summary-card__row">
+          <span className="label">Créditos:</span>
+          <span className="value positive">{formatCurrency(creditoMes)}</span>
         </div>
 
         <div className="monthly-summary-card__row">
@@ -253,12 +272,17 @@ const CartaoPage = ({
     direction: "desc"
   });
 
-  const { fixoMes, parceladoMes, eventualMes, totalMes } = useMemo(() => {
+  const { fixoMes, parceladoMes, eventualMes, creditoMes, totalMes } = useMemo(() => {
     let fixo = 0;
     let parcelado = 0;
     let eventual = 0;
+    let credito = 0;
     filteredLancamentos.forEach((l) => {
-      const val = parseFloat(l.valor) || 0;
+      const val = Math.abs(parseFloat(l.valor) || 0);
+      if (isCreditoLancamento(l)) {
+        credito += val;
+        return;
+      }
       if (l.tipoRecorrencia === "FIXO") {
         fixo += val;
       } else if (l.tipoRecorrencia === "PARCELADO") {
@@ -267,11 +291,14 @@ const CartaoPage = ({
         eventual += val;
       }
     });
+    const totalDebitos = fixo + parcelado + eventual;
+    const totalLiquido = Math.max(totalDebitos - credito, 0);
     return {
       fixoMes: fixo,
       parceladoMes: parcelado,
       eventualMes: eventual,
-      totalMes: fixo + parcelado + eventual
+      creditoMes: credito,
+      totalMes: totalLiquido
     };
   }, [filteredLancamentos]);
 
@@ -304,9 +331,14 @@ const CartaoPage = ({
     let fixoMes = 0;
     let parceladoMes = 0;
     let eventualMes = 0;
+    let creditoMes = 0;
 
     lancamentosDoMes.forEach((l) => {
-      const val = parseFloat(l.valor) || 0;
+      const val = Math.abs(parseFloat(l.valor) || 0);
+      if (isCreditoLancamento(l)) {
+        creditoMes += val;
+        return;
+      }
       if (l.tipoRecorrencia === "FIXO") {
         fixoMes += val;
       } else if (l.tipoRecorrencia === "PARCELADO") {
@@ -321,7 +353,7 @@ const CartaoPage = ({
       ? parseFloat(limitesMensais[mes])
       : parseFloat(cartao.limite) || 0;
 
-    const totalFatura = fixoMes + parceladoMes + eventualMes;
+    const totalFatura = Math.max((fixoMes + parceladoMes + eventualMes) - creditoMes, 0);
     const saldo = limite - totalFatura;
     const isFechada = cartao.faturasFechadas?.includes(mes) || false;
 
@@ -331,6 +363,7 @@ const CartaoPage = ({
       fixoMes,
       parceladoMes,
       eventualMes,
+      creditoMes,
       totalFatura,
       saldo,
       isFechada
@@ -386,10 +419,12 @@ const CartaoPage = ({
   };
 
   const [editId, setEditId] = useState(null);
+  const dataPickerRef = useRef(null);
   const [form, setForm] = useState({
     descricao: "",
     complemento: "",
     valor: "",
+    tipoMovimento: "DEBITO",
     data: new Date().toLocaleDateString('en-CA'),
     mesReferencia: "",
     categoriaId: "",
@@ -439,13 +474,15 @@ const CartaoPage = ({
     if (lancamento) {
       setEditId(lancamento.id);
 
-      const matchPredef = gastosPredefinidos && gastosPredefinidos.some((g) => g.descricao === lancamento.descricao);
+      const descricaoSemTag = stripCreditoTag(lancamento.descricao);
+      const matchPredef = gastosPredefinidos && gastosPredefinidos.some((g) => g.descricao === descricaoSemTag);
       setIsManualDescricao(!matchPredef);
 
       setForm({
-        descricao: lancamento.descricao,
+        descricao: descricaoSemTag,
         complemento: lancamento.complemento || "",
-        valor: lancamento.valor,
+        valor: Math.abs(lancamento.valor),
+        tipoMovimento: isCreditoLancamento(lancamento) ? "CREDITO" : "DEBITO",
         data: lancamento.data,
         mesReferencia: lancamento.mesReferencia,
         categoriaId: lancamento.categoriaId || "",
@@ -465,6 +502,7 @@ const CartaoPage = ({
         descricao: "",
         complemento: "",
         valor: "",
+        tipoMovimento: "DEBITO",
         data: new Date().toLocaleDateString('en-CA'),
         mesReferencia: selectedMes,
         categoriaId: "",
@@ -530,11 +568,15 @@ const CartaoPage = ({
 
     const totalGastos = currentLancamentos
       .filter((l) => String(l.cartaoId) === String(cartaoId) && (l.mesReferencia === mes || (l.meses && l.meses.includes(mes))))
-      .reduce((acc, l) => acc + (parseFloat(l.valor) || 0), 0);
+      .reduce((acc, l) => {
+        const val = Math.abs(parseFloat(l.valor) || 0);
+        return acc + (isCreditoLancamento(l) ? -val : val);
+      }, 0);
+    const totalLiquido = Math.max(totalGastos, 0);
 
     const isFechada = cartao.faturasFechadas?.includes(mes);
 
-    let valorFinal = totalGastos;
+    let valorFinal = totalLiquido;
     if (!isFechada) {
       let limite = parseFloat(cartao.limite);
       if (cartao.limitesMensais && cartao.limitesMensais[mes] !== undefined && cartao.limitesMensais[mes] !== null && cartao.limitesMensais[mes] !== "") {
@@ -542,7 +584,7 @@ const CartaoPage = ({
       }
 
       if (!isNaN(limite) && limite > 0) {
-        valorFinal = totalGastos > limite ? totalGastos : limite;
+        valorFinal = totalLiquido > limite ? totalLiquido : limite;
       }
     }
 
@@ -696,8 +738,12 @@ const CartaoPage = ({
       return;
     }
 
-    const val = parseFloat(form.valor);
+    const val = Math.abs(parseFloat(form.valor));
     if (isNaN(val) || val <= 0) return;
+    const isCredito = form.tipoMovimento === "CREDITO";
+    const valorPersistido = val;
+    const descricaoPersistida = toCreditoDescricao(form.descricao, isCredito);
+    const tipoRecorrenciaFinal = isCredito ? "EVENTUAL" : form.tipoRecorrencia;
     
     setIsSaving(true);
     try {
@@ -710,7 +756,7 @@ const CartaoPage = ({
       let newEntries = [];
 
       // PARCELADO - Cria entradas separadas para cada parcela
-      if (!editId && form.tipoRecorrencia === "PARCELADO" && parseInt(form.qtdParcelas) > 1) {
+      if (!editId && tipoRecorrenciaFinal === "PARCELADO" && parseInt(form.qtdParcelas) > 1) {
         const qtd = parseInt(form.qtdParcelas);
         const parcValue = val / qtd;
 
@@ -732,14 +778,14 @@ const CartaoPage = ({
         }
       }
       // FIXO com múltiplos meses - Cria entradas separadas para cada mês (como em Receitas/Despesas)
-      else if (!editId && form.tipoRecorrencia === "FIXO" && form.meses && form.meses.length > 0) {
+      else if (!editId && tipoRecorrenciaFinal === "FIXO" && form.meses && form.meses.length > 0) {
         for (const mes of form.meses) {
           newEntries.push({
             id: createId("lanc-card-fixo"),
             cartaoId: effectiveCartaoId,
-            descricao: form.descricao,
+            descricao: descricaoPersistida,
             complemento: form.complemento || "",
-            valor: val,
+            valor: valorPersistido,
             data: calculateDateForMonth(mes, form.data),
             mesReferencia: mes,
             categoriaId: form.categoriaId,
@@ -754,27 +800,27 @@ const CartaoPage = ({
         let lancamento = {
           id: editId || createId("lanc-card"),
           cartaoId: effectiveCartaoId,
-          descricao: form.descricao,
+          descricao: descricaoPersistida,
           complemento: form.complemento || "",
-          valor: val,
+          valor: valorPersistido,
           data: form.data,
           mesReferencia: form.mesReferencia,
           categoriaId: form.categoriaId,
-          tipoRecorrencia: form.tipoRecorrencia,
+          tipoRecorrencia: tipoRecorrenciaFinal,
           qtdParcelas: form.qtdParcelas,
           parcela: form.parcela ?? null,
           totalParcelas: form.totalParcelas ?? (form.qtdParcelas ? Number(form.qtdParcelas) : null),
-          meses: form.meses || []
+          meses: tipoRecorrenciaFinal === "FIXO" ? (form.meses || []) : []
         };
 
-        if (form.tipoRecorrencia === "FIXO") {
+        if (tipoRecorrenciaFinal === "FIXO") {
           if (selectedMes && form.meses && form.meses.includes(selectedMes)) {
             lancamento.mesReferencia = selectedMes;
           } else if (form.meses && form.meses.length > 0 && !form.meses.includes(form.mesReferencia)) {
             lancamento.mesReferencia = form.meses[0];
           }
         }
-        if (form.tipoRecorrencia !== "PARCELADO") {
+        if (tipoRecorrenciaFinal !== "PARCELADO") {
           lancamento.parcela = null;
           lancamento.totalParcelas = null;
         }
@@ -790,8 +836,8 @@ const CartaoPage = ({
       const isBatchCreateMode =
         !editId &&
         (
-          (form.tipoRecorrencia === "PARCELADO" && parseInt(form.qtdParcelas) > 1) ||
-          (form.tipoRecorrencia === "FIXO" && form.meses && form.meses.length > 0)
+          (tipoRecorrenciaFinal === "PARCELADO" && parseInt(form.qtdParcelas) > 1) ||
+          (tipoRecorrenciaFinal === "FIXO" && form.meses && form.meses.length > 0)
         );
 
       if (isBatchCreateMode) {
@@ -911,6 +957,7 @@ const CartaoPage = ({
               <span>Fixo: {formatCurrency(fixoMes)}</span>
               <span>Parcelado: {formatCurrency(parceladoMes)}</span>
               <span>Eventual: {formatCurrency(eventualMes)}</span>
+              <span>Créditos: {formatCurrency(creditoMes)}</span>
             </div>
           </div>
 
@@ -993,8 +1040,10 @@ const CartaoPage = ({
                 filteredAndSortedItems.map((l) => (
                   <tr className="list-table__row" key={l.id}>
                     <td>{new Date(l.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}</td>
-                    <td>{l.complemento ? `${l.descricao} - ${l.complemento}` : l.descricao}</td>
-                    <td>{formatCurrency(l.valor)}</td>
+                    <td>{l.complemento ? `${stripCreditoTag(l.descricao)} - ${l.complemento}` : stripCreditoTag(l.descricao)}</td>
+                    <td className={isCreditoLancamento(l) ? "summary-card-value--positive" : ""}>
+                      {formatCurrency(isCreditoLancamento(l) ? -(Math.abs(Number(l.valor) || 0)) : Math.abs(Number(l.valor) || 0))}
+                    </td>
                     <td>{l.tipoRecorrencia === "FIXO" ? "Fixo" : l.tipoRecorrencia === "PARCELADO" ? "Parcelado" : "Eventual"}</td>
                     <td className="list-table__cell list-table__cell--acoes">
                       <div className="actions">
@@ -1112,6 +1161,23 @@ const CartaoPage = ({
           </label>
           <div className="modal-grid-row">
             <label className="field">
+              Movimento
+              <select
+                value={form.tipoMovimento}
+                onChange={(e) => {
+                  const nextMovimento = e.target.value;
+                  setForm((prev) => ({
+                    ...prev,
+                    tipoMovimento: nextMovimento,
+                    ...(nextMovimento === "CREDITO" ? { tipoRecorrencia: "EVENTUAL", qtdParcelas: "", meses: [] } : {})
+                  }));
+                }}
+              >
+                <option value="DEBITO">Débito (compra)</option>
+                <option value="CREDITO">Crédito (estorno/reembolso)</option>
+              </select>
+            </label>
+            <label className="field">
               Valor (R$)
               <NumericFormat
                 value={form.valor}
@@ -1129,11 +1195,17 @@ const CartaoPage = ({
             <label className="field">
               Data
               <DatePicker
+                ref={dataPickerRef}
                 selected={form.data ? new Date(form.data + "T00:00:00") : null}
                 onChange={(date) => {
                   const formattedDate = date ? date.toISOString().split("T")[0] : "";
                   setForm({ ...form, data: formattedDate });
+                  setTimeout(() => dataPickerRef.current?.setOpen?.(false), 0);
                 }}
+                onSelect={() => {
+                  setTimeout(() => dataPickerRef.current?.setOpen?.(false), 0);
+                }}
+                shouldCloseOnSelect
                 dateFormat="dd/MM/yyyy"
                 locale="pt-BR"
                 placeholderText="DD/MM/AAAA"
@@ -1145,6 +1217,7 @@ const CartaoPage = ({
               Tipo de gasto
               <select
                 value={form.tipoRecorrencia}
+                disabled={form.tipoMovimento === "CREDITO"}
                 onChange={(e) => {
                   const nextTipo = e.target.value;
                   setForm((prev) => ({
@@ -1166,13 +1239,13 @@ const CartaoPage = ({
               </select>
             </label>
           </div>
-          {form.tipoRecorrencia === "PARCELADO" && (
+          {form.tipoMovimento !== "CREDITO" && form.tipoRecorrencia === "PARCELADO" && (
             <label className="field">
               Nº Parcelas
               <input type="number" min="2" value={form.qtdParcelas} onChange={(e) => setForm({ ...form, qtdParcelas: e.target.value })} />
             </label>
           )}
-          {form.tipoRecorrencia === "FIXO" && (
+          {form.tipoMovimento !== "CREDITO" && form.tipoRecorrencia === "FIXO" && (
             <div className="field">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
                 <span style={{ fontWeight: 500 }}>Meses Recorrentes</span>
@@ -1205,7 +1278,7 @@ const CartaoPage = ({
               </div>
             </div>
           )}
-          <div className="modal-actions">
+          <div className="modal-actions modal-actions--form">
             <button type="button" className="ghost" onClick={() => !isSaving && setModalOpen(false)} disabled={isSaving}>Cancelar</button>
             <button type="submit" className="primary" disabled={isSaving}>
               {isSaving ? "Salvando..." : "Salvar"}
@@ -1237,7 +1310,7 @@ const CartaoPage = ({
               autoFocus
             />
           </label>
-          <div className="modal-actions">
+          <div className="modal-actions modal-actions--form">
             <button type="button" className="ghost" onClick={() => setLimiteModalOpen(false)}>Cancelar</button>
             <button type="submit" className="primary">Salvar Limite</button>
           </div>
