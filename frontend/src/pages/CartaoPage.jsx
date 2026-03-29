@@ -145,6 +145,7 @@ const CartaoPage = ({
 }) => {
   const [selectedCartaoId, setSelectedCartaoId] = useState("");
   const [selectedMes, setSelectedMes] = useState(getCurrentMonthName());
+  const previousCartaoIdRef = useRef("");
   const [isManualDescricao, setIsManualDescricao] = useState(false);
   const effectiveCartaoId = selectedCartaoId || cartoes[0]?.id || "";
   const despesasCategorias = useMemo(
@@ -254,10 +255,18 @@ const CartaoPage = ({
   // Efeito para determinar o mês inicial baseado no status da fatura
   useEffect(() => {
     const initialMonth = determineInitialMonth(cartoes, effectiveCartaoId, orcamentos);
-    if (initialMonth && initialMonth !== selectedMes) {
-      setSelectedMes(initialMonth);
-    }
-  }, [cartoes, determineInitialMonth, effectiveCartaoId, orcamentos, selectedMes]);
+    const cardChanged = previousCartaoIdRef.current !== effectiveCartaoId;
+
+    setSelectedMes((prevSelectedMes) => {
+      if (!initialMonth) return prevSelectedMes;
+      if (cardChanged || !prevSelectedMes || !months.includes(prevSelectedMes)) {
+        return initialMonth;
+      }
+      return prevSelectedMes;
+    });
+
+    previousCartaoIdRef.current = effectiveCartaoId;
+  }, [cartoes, determineInitialMonth, effectiveCartaoId, months, orcamentos]);
 
   const selectedCartao = useMemo(() => cartoes.find((c) => String(c.id) === String(effectiveCartaoId)) || {}, [cartoes, effectiveCartaoId]);
 

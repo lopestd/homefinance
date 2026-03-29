@@ -939,6 +939,40 @@
     grid-template-columns: 1fr;
   }
 
+  .reports-gastos-modal {
+    width: calc(100vw - 20px) !important;
+    max-width: calc(100vw - 20px) !important;
+  }
+
+  .reports-gastos-modal .modal-header {
+    padding: 12px 14px !important;
+  }
+
+  .reports-gastos-modal .modal-header h3 {
+    font-size: 18px !important;
+    line-height: 1.3;
+  }
+
+  .reports-gastos-modal .modal-body {
+    padding: 12px 14px 14px !important;
+  }
+
+  .reports-gastos-modal__summary {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .reports-gastos-modal__stat {
+    padding: 12px;
+  }
+
+  .reports-gastos-modal__stat-value {
+    font-size: 15px;
+  }
+
+  .reports-gastos-modal__table .reports-table__table {
+    min-width: 980px;
+  }
+
   /* KPI Card */
   .kpi-card__details {
     flex-direction: column;

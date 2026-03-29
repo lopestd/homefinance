@@ -5,6 +5,7 @@ import { formatCurrency } from "../utils/appUtils";
 import { TabNavigation } from "../components/reports";
 import { AreaChart, HorizontalBar, PieChart } from "../components/charts";
 import { KPICard } from "../components/dashboard";
+import Modal from "../components/Modal";
 
 const CREDITO_TAG = "[CREDITO]";
 
@@ -25,12 +26,24 @@ const stripCreditoTag = (descricao) => {
 const isCreditoLancamento = (lancamento) =>
   Number(lancamento?.valor) < 0 || String(lancamento?.descricao || "").startsWith(CREDITO_TAG);
 
+const getSignedLancamentoValor = (lancamento) => {
+  const valor = Math.abs(Number(lancamento?.valor) || 0);
+  return isCreditoLancamento(lancamento) ? -valor : valor;
+};
+
 const formatPercent = (value) => {
   if (value === null || value === undefined || Number.isNaN(value)) return "-";
   return `${value.toLocaleString("pt-BR", {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1
   })}%`;
+};
+
+const formatDate = (value) => {
+  if (!value) return "-";
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("pt-BR", { timeZone: "UTC" });
 };
 
 const MetricCard = ({ title, value, subtitle, tone = "neutral" }) => (
@@ -41,7 +54,7 @@ const MetricCard = ({ title, value, subtitle, tone = "neutral" }) => (
   </div>
 );
 
-const DataTable = ({ columns, rows, emptyMessage, className = "" }) => (
+const DataTable = ({ columns, rows, emptyMessage, className = "", onRowClick }) => (
   <div className={`reports-table ${className}`.trim()}>
     <table className="reports-table__table">
       <thead>
@@ -60,7 +73,11 @@ const DataTable = ({ columns, rows, emptyMessage, className = "" }) => (
           </tr>
         ) : (
           rows.map((row, index) => (
-            <tr key={row.id || `${row.categoria || row.mes || "row"}-${index}`}>
+            <tr
+              key={row.id || `${row.categoria || row.mes || "row"}-${index}`}
+              onClick={onRowClick ? () => onRowClick(row) : undefined}
+              style={onRowClick ? { cursor: "pointer" } : undefined}
+            >
               {columns.map((column) => (
                 <td key={column.key}>{column.render ? column.render(row) : row[column.key]}</td>
               ))}
@@ -81,6 +98,7 @@ const RelatoriosPage = ({
   categorias
 }) => {
   const [activeTab, setActiveTab] = useState("visao-geral");
+  const [selectedGastoGrupo, setSelectedGastoGrupo] = useState(null);
 
   const {
     filters,
@@ -132,6 +150,12 @@ const RelatoriosPage = ({
     return [];
   }, []);
 
+  const getTipoGasto = useCallback((item) => {
+    if (item.tipoRecorrencia === "FIXO") return "Fixo";
+    if (item.tipoRecorrencia === "PARCELADO") return "Parcelado";
+    return "Eventual";
+  }, []);
+
   const countOcorrencias = useCallback(
     (item, validMonthsSet) => getMesesItem(item).filter((mes) => validMonthsSet.has(mes)).length,
     [getMesesItem]
@@ -162,9 +186,10 @@ const RelatoriosPage = ({
       const categoria = normalizeText(getCategoriaNome(despesa));
       const descricao = normalizeText(despesa.descricao);
       return (
-        categoria === "bancos/cartoes" ||
         categoria === "emprestimos" ||
         categoria === "financiamentos" ||
+        categoria === "juros" ||
+        categoria === "tarifas" ||
         descricao.includes("emprestimo") ||
         descricao.includes("financiamento") ||
         descricao.includes("juros") ||
@@ -196,15 +221,63 @@ const RelatoriosPage = ({
     [lancamentosCartao, countOcorrencias, mesesSelecionadosSet]
   );
 
-  const lancamentosDebito = useMemo(
-    () => lancamentosPeriodo.filter((lancamento) => !isCreditoLancamento(lancamento)),
-    [lancamentosPeriodo]
-  );
+  const resumoCartoesMensal = useMemo(() => {
+    const rows = [];
 
-  const lancamentosCredito = useMemo(
-    () => lancamentosPeriodo.filter((lancamento) => isCreditoLancamento(lancamento)),
-    [lancamentosPeriodo]
-  );
+    (cartoes || []).forEach((cartao) => {
+      mesesSelecionados.forEach((mes) => {
+        const lancamentosMes = lancamentosPeriodo.filter((lancamento) => {
+          if (String(lancamento.cartaoId) !== String(cartao.id)) return false;
+          return getMesesItem(lancamento).includes(mes);
+        });
+
+        const creditos = lancamentosMes
+          .filter((lancamento) => isCreditoLancamento(lancamento))
+          .reduce((acc, lancamento) => acc + Math.abs(Number(lancamento.valor) || 0), 0);
+
+        const debitos = lancamentosMes
+          .filter((lancamento) => !isCreditoLancamento(lancamento))
+          .reduce((acc, lancamento) => acc + Math.abs(Number(lancamento.valor) || 0), 0);
+
+        const fixo = lancamentosMes
+          .filter((lancamento) => lancamento.tipoRecorrencia === "FIXO" && !isCreditoLancamento(lancamento))
+          .reduce((acc, lancamento) => acc + Math.abs(Number(lancamento.valor) || 0), 0);
+
+        const parcelado = lancamentosMes
+          .filter((lancamento) => lancamento.tipoRecorrencia === "PARCELADO" && !isCreditoLancamento(lancamento))
+          .reduce((acc, lancamento) => acc + Math.abs(Number(lancamento.valor) || 0), 0);
+
+        const eventual = Math.max(debitos - fixo - parcelado, 0);
+        const liquido = Math.max(debitos - creditos, 0);
+        const limiteMensal = cartao.limitesMensais || {};
+        const limite = limiteMensal[mes] !== undefined && limiteMensal[mes] !== null && limiteMensal[mes] !== ""
+          ? Number(limiteMensal[mes]) || 0
+          : Number(cartao.limite) || 0;
+        const utilizacao = limite > 0 ? (liquido / limite) * 100 : 0;
+        const fechada = cartao.faturasFechadas?.includes(mes) || false;
+
+        if (lancamentosMes.length > 0 || limite > 0 || fechada) {
+          rows.push({
+            id: `${cartao.id}-${mes}`,
+            cartaoId: cartao.id,
+            cartao: cartao.nome,
+            mes,
+            limite,
+            fixo,
+            parcelado,
+            eventual,
+            creditos,
+            debitos,
+            liquido,
+            utilizacao,
+            situacao: fechada ? "Fechada" : "Aberta"
+          });
+        }
+      });
+    });
+
+    return rows;
+  }, [cartoes, mesesSelecionados, lancamentosPeriodo, getMesesItem]);
 
   const calcResumoFluxo = useCallback(
     (monthsSet) => {
@@ -283,31 +356,18 @@ const RelatoriosPage = ({
     return { previsto, pago, aberto: previsto - pago };
   }, [despesasTecnicas, countOcorrencias, mesesSelecionadosSet]);
 
-  const totaisCartao = useMemo(() => {
-    let consumo = 0;
-    let faturaFechada = 0;
-    let faturaAberta = 0;
-
-    lancamentosDebito.forEach((lancamento) => {
-      const mesesAtivos = getMesesItem(lancamento).filter((mes) => mesesSelecionadosSet.has(mes));
-      if (mesesAtivos.length === 0) return;
-      const valor = Math.abs(Number(lancamento.valor) || 0);
-      consumo += valor * mesesAtivos.length;
-      const cartao = cartoesMap.get(String(lancamento.cartaoId));
-      const fechadas = cartao?.faturasFechadas || [];
-      const quantidadeFechada = mesesAtivos.filter((mes) => fechadas.includes(mes)).length;
-      faturaFechada += valor * quantidadeFechada;
-      faturaAberta += valor * (mesesAtivos.length - quantidadeFechada);
-    });
-
-    const creditos = lancamentosCredito.reduce((acc, lancamento) => {
-      const ocorrencias = countOcorrencias(lancamento, mesesSelecionadosSet);
-      if (ocorrencias === 0) return acc;
-      return acc + Math.abs(Number(lancamento.valor) || 0) * ocorrencias;
-    }, 0);
-
-    return { consumo, faturaFechada, faturaAberta, creditos };
-  }, [lancamentosDebito, lancamentosCredito, getMesesItem, cartoesMap, countOcorrencias, mesesSelecionadosSet]);
+  const totaisCartao = useMemo(
+    () => resumoCartoesMensal.reduce(
+      (acc, row) => ({
+        consumo: acc.consumo + row.liquido,
+        faturaFechada: acc.faturaFechada + (row.situacao === "Fechada" ? row.liquido : 0),
+        faturaAberta: acc.faturaAberta + (row.situacao === "Aberta" ? row.liquido : 0),
+        creditos: acc.creditos + row.creditos
+      }),
+      { consumo: 0, faturaFechada: 0, faturaAberta: 0, creditos: 0 }
+    ),
+    [resumoCartoesMensal]
+  );
 
   const saldoPrevisto = fluxoConsolidado.receitasPrevistas - fluxoConsolidado.despesasPrevistas;
   const saldoRealizado = fluxoConsolidado.receitasRecebidas - fluxoConsolidado.despesasPagas;
@@ -434,13 +494,13 @@ const RelatoriosPage = ({
 
   const categoriasCartaoDetalhadas = useMemo(() => {
     const map = new Map();
-    lancamentosDebito.forEach((lancamento) => {
+    lancamentosPeriodo.forEach((lancamento) => {
       const mesesAtivos = getMesesItem(lancamento).filter((mes) => mesesSelecionadosSet.has(mes));
       if (mesesAtivos.length === 0) return;
       const categoria = getCategoriaNome(lancamento);
       const descricaoBase = stripCreditoTag(lancamento.descricao) || "Sem descricao";
       const descricao = lancamento.complemento ? `${descricaoBase} - ${lancamento.complemento}` : descricaoBase;
-      const valor = Math.abs(Number(lancamento.valor) || 0);
+      const valorAssinado = getSignedLancamentoValor(lancamento);
       const cartao = cartoesMap.get(String(lancamento.cartaoId));
       const fechadas = cartao?.faturasFechadas || [];
       const key = `${categoria}::${descricao}`;
@@ -450,19 +510,19 @@ const RelatoriosPage = ({
       map.set(key, {
         ...current,
         quantidade: current.quantidade + mesesAtivos.length,
-        consumo: current.consumo + (valor * mesesAtivos.length),
-        faturaFechada: current.faturaFechada + (valor * quantidadeFechada),
-        faturaAberta: current.faturaAberta + (valor * quantidadeAberta)
+        consumo: current.consumo + (valorAssinado * mesesAtivos.length),
+        faturaFechada: current.faturaFechada + (valorAssinado * quantidadeFechada),
+        faturaAberta: current.faturaAberta + (valorAssinado * quantidadeAberta)
       });
     });
 
-    const rows = Array.from(map.values());
-    const totalConsumo = rows.reduce((acc, row) => acc + row.consumo, 0);
+    const rows = Array.from(map.values()).filter((row) => row.consumo !== 0 || row.faturaFechada !== 0 || row.faturaAberta !== 0);
+    const totalConsumo = rows.reduce((acc, row) => acc + Math.max(row.consumo, 0), 0);
     return rows.map((row) => ({
       ...row,
-      participacao: totalConsumo > 0 ? (row.consumo / totalConsumo) * 100 : 0
+      participacao: totalConsumo > 0 ? (Math.max(row.consumo, 0) / totalConsumo) * 100 : 0
     })).sort((a, b) => b.consumo - a.consumo);
-  }, [lancamentosDebito, getMesesItem, mesesSelecionadosSet, getCategoriaNome, cartoesMap]);
+  }, [lancamentosPeriodo, getMesesItem, mesesSelecionadosSet, getCategoriaNome, cartoesMap]);
 
   const categoriasCartaoResumo = useMemo(() => {
     const map = new Map();
@@ -485,6 +545,71 @@ const RelatoriosPage = ({
       participacao: totalConsumo > 0 ? (row.consumo / totalConsumo) * 100 : 0
     })).sort((a, b) => b.consumo - a.consumo);
   }, [categoriasCartaoDetalhadas]);
+
+  const categoriasDespesasGerenciaisResumo = useMemo(() => {
+    const map = new Map();
+
+    const appendRow = (categoria, valores) => {
+      const current = map.get(categoria) || {
+        id: categoria,
+        categoria,
+        quantidade: 0,
+        descricoes: 0,
+        total: 0,
+        realizado: 0,
+        aberto: 0
+      };
+
+      map.set(categoria, {
+        ...current,
+        quantidade: current.quantidade + (valores.quantidade || 0),
+        descricoes: current.descricoes + (valores.descricoes || 0),
+        total: current.total + (valores.total || 0),
+        realizado: current.realizado + (valores.realizado || 0),
+        aberto: current.aberto + (valores.aberto || 0)
+      });
+    };
+
+    categoriasDespesasResumo.forEach((row) => {
+      appendRow(row.categoria, {
+        quantidade: row.quantidade,
+        descricoes: row.descricoes,
+        total: row.previsto,
+        realizado: row.pago,
+        aberto: row.emAberto
+      });
+    });
+
+    categoriasFinanceirasDetalhadas.forEach((row) => {
+      appendRow(row.categoria, {
+        quantidade: row.quantidade,
+        descricoes: 1,
+        total: row.previsto,
+        realizado: row.pago,
+        aberto: row.emAberto
+      });
+    });
+
+    categoriasCartaoResumo.forEach((row) => {
+      appendRow(row.categoria, {
+        quantidade: row.quantidade,
+        descricoes: row.descricoes,
+        total: Math.max(row.consumo, 0),
+        realizado: Math.max(row.faturaFechada, 0),
+        aberto: Math.max(row.faturaAberta, 0)
+      });
+    });
+
+    const rows = Array.from(map.values()).filter((row) => row.total > 0);
+    const totalGeral = rows.reduce((acc, row) => acc + row.total, 0);
+
+    return rows
+      .map((row) => ({
+        ...row,
+        participacao: totalGeral > 0 ? (row.total / totalGeral) * 100 : 0
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [categoriasDespesasResumo, categoriasFinanceirasDetalhadas, categoriasCartaoResumo]);
 
   const categoriasReceitasDetalhadas = useMemo(() => {
     const map = new Map();
@@ -555,52 +680,19 @@ const RelatoriosPage = ({
     return Array.from(map.values()).map((row) => ({ ...row, emAberto: row.previsto - row.pago })).sort((a, b) => b.previsto - a.previsto);
   }, [despesasTecnicas, countOcorrencias, mesesSelecionadosSet]);
 
-  const cartoesResumo = useMemo(() => {
-    const rows = [];
-    (cartoes || []).forEach((cartao) => {
-      mesesSelecionados.forEach((mes) => {
-        const lancamentosMes = lancamentosPeriodo.filter((lancamento) => {
-          if (String(lancamento.cartaoId) !== String(cartao.id)) return false;
-          return getMesesItem(lancamento).includes(mes);
-        });
-        const creditos = lancamentosMes.filter((lancamento) => isCreditoLancamento(lancamento)).reduce((acc, lancamento) => acc + Math.abs(Number(lancamento.valor) || 0), 0);
-        const debitos = lancamentosMes.filter((lancamento) => !isCreditoLancamento(lancamento)).reduce((acc, lancamento) => acc + Math.abs(Number(lancamento.valor) || 0), 0);
-        const fixo = lancamentosMes.filter((lancamento) => lancamento.tipoRecorrencia === "FIXO" && !isCreditoLancamento(lancamento)).reduce((acc, lancamento) => acc + Math.abs(Number(lancamento.valor) || 0), 0);
-        const parcelado = lancamentosMes.filter((lancamento) => lancamento.tipoRecorrencia === "PARCELADO" && !isCreditoLancamento(lancamento)).reduce((acc, lancamento) => acc + Math.abs(Number(lancamento.valor) || 0), 0);
-        const eventual = Math.max(debitos - fixo - parcelado, 0);
-        const liquido = Math.max(debitos - creditos, 0);
-        const limiteMensal = cartao.limitesMensais || {};
-        const limite = limiteMensal[mes] !== undefined && limiteMensal[mes] !== null && limiteMensal[mes] !== ""
-          ? Number(limiteMensal[mes]) || 0
-          : Number(cartao.limite) || 0;
-        const utilizacao = limite > 0 ? (liquido / limite) * 100 : 0;
-        const fechada = cartao.faturasFechadas?.includes(mes) || false;
-        if (lancamentosMes.length > 0 || limite > 0 || fechada) {
-          rows.push({
-            id: `${cartao.id}-${mes}`,
-            cartao: cartao.nome,
-            mes,
-            limite,
-            fixo,
-            parcelado,
-            eventual,
-            creditos,
-            liquido,
-            utilizacao,
-            situacao: fechada ? "Fechada" : "Aberta"
-          });
-        }
-      });
-    });
-    return rows;
-  }, [cartoes, mesesSelecionados, lancamentosPeriodo, getMesesItem]);
+  const cartoesResumo = useMemo(() => resumoCartoesMensal, [resumoCartoesMensal]);
 
-  const topCategoriaDespesa = categoriasDespesasResumo[0] || null;
+  const topCategoriaDespesa = categoriasDespesasGerenciaisResumo[0] || null;
   const topCategoriaReceita = categoriasReceitasResumo[0] || null;
-  const topCategoriaCartao = categoriasCartaoResumo[0] || null;
+  const topCategoriaAberta = useMemo(
+    () => [...categoriasDespesasGerenciaisResumo]
+      .filter((row) => row.aberto > 0)
+      .sort((a, b) => b.aberto - a.aberto)[0] || null,
+    [categoriasDespesasGerenciaisResumo]
+  );
 
-  const despesasAnaliticas = useMemo(
-    () => [
+  const despesasAnaliticas = useMemo(() => {
+    const rows = [
       ...categoriasDespesasDetalhadas.map((row) => ({
         id: `desp-${row.id}`,
         categoria: row.categoria,
@@ -609,8 +701,7 @@ const RelatoriosPage = ({
         quantidade: row.quantidade,
         referencia: row.previsto,
         realizado: row.pago,
-        aberto: row.emAberto,
-        participacao: row.participacao
+        aberto: row.emAberto
       })),
       ...categoriasFinanceirasDetalhadas.map((row) => ({
         id: `fin-${row.id}`,
@@ -620,8 +711,7 @@ const RelatoriosPage = ({
         quantidade: row.quantidade,
         referencia: row.previsto,
         realizado: row.pago,
-        aberto: row.emAberto,
-        participacao: row.participacao
+        aberto: row.emAberto
       })),
       ...categoriasCartaoDetalhadas.map((row) => ({
         id: `cart-${row.id}`,
@@ -631,11 +721,199 @@ const RelatoriosPage = ({
         quantidade: row.quantidade,
         referencia: row.consumo,
         realizado: row.faturaFechada,
-        aberto: row.faturaAberta,
-        participacao: row.participacao
+        aberto: row.faturaAberta
       }))
-    ].sort((a, b) => b.referencia - a.referencia),
-    [categoriasDespesasDetalhadas, categoriasFinanceirasDetalhadas, categoriasCartaoDetalhadas]
+    ];
+
+    const totalReferencia = rows.reduce((acc, row) => acc + Math.max(Number(row.referencia) || 0, 0), 0);
+
+    return rows
+      .map((row) => ({
+        ...row,
+        participacao: totalReferencia > 0 ? (Math.max(Number(row.referencia) || 0, 0) / totalReferencia) * 100 : 0
+      }))
+      .sort((a, b) => b.referencia - a.referencia);
+  }, [categoriasDespesasDetalhadas, categoriasFinanceirasDetalhadas, categoriasCartaoDetalhadas]);
+
+  const gastosDetalhados = useMemo(() => {
+    const rows = [];
+    const faturaPrefixes = [
+      "fatura do cartao ",
+      "pagamento da fatura do cartao ",
+      "fatura cartao "
+    ];
+
+    const getCartaoDaFatura = (despesa) => {
+      const descricaoNormalizada = normalizeText(despesa.descricao);
+      const prefix = faturaPrefixes.find((item) => descricaoNormalizada.startsWith(item));
+      if (!prefix) return null;
+      const nomeCartaoNormalizado = descricaoNormalizada.slice(prefix.length).trim();
+      return (cartoes || []).find((cartao) => normalizeText(cartao.nome) === nomeCartaoNormalizado) || null;
+    };
+
+    const pushRow = (row) => {
+      rows.push({
+        valorOriginal: row.valorOriginal ?? row.valor,
+        ...row
+      });
+    };
+
+    despesasOrcamento.forEach((despesa) => {
+      const mesesAtivos = getMesesItem(despesa).filter((mes) => mesesSelecionadosSet.has(mes));
+      if (mesesAtivos.length === 0) return;
+
+      const origemBase = isFaturaTecnica(despesa)
+        ? "Fatura"
+        : isDespesaFinanceira(despesa)
+          ? "Financeiro"
+          : "Despesa";
+
+      mesesAtivos.forEach((mes, index) => {
+        const valorOficial = Math.abs(Number(despesa.valor) || 0);
+        const realizadoOficial = despesa.status === "Pago" ? valorOficial : 0;
+        const cartaoFatura = isFaturaTecnica(despesa) ? getCartaoDaFatura(despesa) : null;
+        const lancamentosFatura = cartaoFatura
+          ? lancamentosPeriodo.filter((lancamento) =>
+            String(lancamento.cartaoId) === String(cartaoFatura.id) &&
+            getMesesItem(lancamento).includes(mes)
+          )
+          : [];
+        const totalLancamentosAssinado = lancamentosFatura.reduce(
+          (acc, lancamento) => acc + getSignedLancamentoValor(lancamento),
+          0
+        );
+
+        if (origemBase === "Fatura" && lancamentosFatura.length > 0 && totalLancamentosAssinado !== 0) {
+          lancamentosFatura.forEach((lancamento, lancamentoIndex) => {
+            const valorOriginal = getSignedLancamentoValor(lancamento);
+            if (valorOriginal === 0) return;
+            const proporcao = valorOriginal / totalLancamentosAssinado;
+            const valorRateado = valorOficial * proporcao;
+            const realizado = despesa.status === "Pago" ? valorRateado : 0;
+
+            pushRow({
+              id: `fatura-${despesa.id || despesa.descricao || "item"}-${mes}-${lancamento.id || lancamentoIndex}`,
+              categoria: getCategoriaNome(lancamento),
+              tipoGasto: getTipoGasto(lancamento),
+              origem: "Cartao",
+              descricao: stripCreditoTag(lancamento.descricao) || despesa.descricao || "Sem descricao",
+              complemento: lancamento.complemento || despesa.complemento || "-",
+              mes,
+              data: lancamento.data || despesa.data || "",
+              valor: valorRateado,
+              valorOriginal,
+              realizado,
+              aberto: valorRateado - realizado,
+              status: despesa.status || "-",
+              cartao: cartaoFatura?.nome || "-",
+              tipoRecorrencia: lancamento.tipoRecorrencia || despesa.tipoRecorrencia || "EVENTUAL",
+              parcela: lancamento.parcela ?? despesa.parcela ?? "-",
+              totalParcelas: lancamento.totalParcelas ?? lancamento.qtdParcelas ?? despesa.totalParcelas ?? despesa.qtdParcelas ?? "-",
+              orcamento: currentOrcamento?.label || "-",
+              referenciaId: despesa.id || "-",
+              referenciaDescricao: despesa.descricao || "-",
+              observacao: "Rateado a partir da despesa oficial da fatura"
+            });
+          });
+          return;
+        }
+
+        pushRow({
+          id: `${origemBase.toLowerCase()}-${despesa.id || despesa.descricao || "item"}-${mes}-${index}`,
+          categoria: getCategoriaNome(despesa),
+          tipoGasto: getTipoGasto(despesa),
+          origem: origemBase,
+          descricao: despesa.descricao || "Sem descricao",
+          complemento: despesa.complemento || "-",
+          mes,
+          data: despesa.data || "",
+          valor: valorOficial,
+          realizado: realizadoOficial,
+          aberto: valorOficial - realizadoOficial,
+          status: despesa.status || "-",
+          cartao: cartaoFatura?.nome || "-",
+          tipoRecorrencia: despesa.tipoRecorrencia || "EVENTUAL",
+          parcela: despesa.parcela ?? "-",
+          totalParcelas: despesa.totalParcelas ?? despesa.qtdParcelas ?? "-",
+          orcamento: currentOrcamento?.label || "-",
+          referenciaId: despesa.id || "-",
+          referenciaDescricao: despesa.descricao || "-",
+          observacao: origemBase === "Fatura" ? "Sem composicao encontrada no cartao para o periodo" : "-"
+        });
+      });
+    });
+
+    return rows.sort((a, b) => Math.abs(b.valor) - Math.abs(a.valor));
+  }, [
+    despesasOrcamento,
+    getMesesItem,
+    mesesSelecionadosSet,
+    isFaturaTecnica,
+    isDespesaFinanceira,
+    cartoes,
+    lancamentosPeriodo,
+    getCategoriaNome,
+    getTipoGasto,
+    currentOrcamento
+  ]);
+
+  const gastosResumo = useMemo(() => {
+    const map = new Map();
+
+    gastosDetalhados.forEach((row) => {
+      const key = `${row.categoria}::${row.descricao}`;
+      const current = map.get(key) || {
+        id: key,
+        categoria: row.categoria,
+        descricao: row.descricao,
+        tipoGasto: row.tipoGasto,
+        quantidade: 0,
+        referencia: 0,
+        realizado: 0,
+        aberto: 0,
+        tiposGasto: new Set(),
+        lancamentos: []
+      };
+
+      const tiposGasto = new Set(current.tiposGasto);
+      tiposGasto.add(row.tipoGasto);
+
+      map.set(key, {
+        ...current,
+        descricao: row.descricao,
+        tipoGasto: Array.from(tiposGasto).sort().join(" / "),
+        quantidade: current.quantidade + 1,
+        referencia: current.referencia + row.valor,
+        realizado: current.realizado + row.realizado,
+        aberto: current.aberto + row.aberto,
+        tiposGasto,
+        lancamentos: [...current.lancamentos, row]
+      });
+    });
+
+    return Array.from(map.values())
+      .map((row) => ({
+        ...row,
+        lancamentos: [...row.lancamentos].sort((a, b) => {
+          const mesCompare = String(a.mes || "").localeCompare(String(b.mes || ""));
+          if (mesCompare !== 0) return mesCompare;
+          return String(a.data || "").localeCompare(String(b.data || ""));
+        })
+      }))
+      .sort((a, b) => Math.abs(b.referencia) - Math.abs(a.referencia));
+  }, [gastosDetalhados]);
+
+  const gastosTotais = useMemo(
+    () => gastosResumo.reduce(
+      (acc, row) => ({
+        referencia: acc.referencia + row.referencia,
+        realizado: acc.realizado + row.realizado,
+        aberto: acc.aberto + row.aberto,
+        quantidade: acc.quantidade + row.quantidade
+      }),
+      { referencia: 0, realizado: 0, aberto: 0, quantidade: 0 }
+    ),
+    [gastosResumo]
   );
 
   const periodoSelecionadoLabel = useMemo(() => {
@@ -649,6 +927,7 @@ const RelatoriosPage = ({
       { id: "visao-geral", label: "Visao Geral", icon: "\uD83D\uDCCA" },
       { id: "fluxo", label: "Fluxo", icon: "\uD83D\uDCC8" },
       { id: "categorias", label: "Categorias", icon: "\uD83C\uDFF7\uFE0F" },
+      { id: "gastos", label: "Gastos", icon: "\uD83D\uDCCB" },
       { id: "cartoes", label: "Cartoes", icon: "\uD83D\uDCB3" }
     ],
     []
@@ -749,6 +1028,40 @@ const RelatoriosPage = ({
     []
   );
 
+  const columnsGastosResumo = useMemo(
+    () => [
+      { key: "categoria", label: "Categoria" },
+      { key: "descricao", label: "Descricao" },
+      { key: "tipoGasto", label: "Tipo de Gasto" },
+      { key: "quantidade", label: "Qtd. Lancamentos" },
+      { key: "referencia", label: "Total", render: (row) => formatCurrency(row.referencia) },
+      { key: "realizado", label: "Realizado", render: (row) => formatCurrency(row.realizado) },
+      {
+        key: "aberto",
+        label: "Em aberto",
+        render: (row) => <span className={row.aberto > 0 ? "reports-value-warning" : "reports-value-positive"}>{formatCurrency(row.aberto)}</span>
+      }
+    ],
+    []
+  );
+
+  const columnsGastosDetalhados = useMemo(
+    () => [
+      { key: "mes", label: "Mes" },
+      { key: "data", label: "Data", render: (row) => formatDate(row.data) },
+      { key: "origem", label: "Origem" },
+      { key: "tipoGasto", label: "Tipo" },
+      { key: "descricao", label: "Descricao" },
+      { key: "complemento", label: "Complemento" },
+      { key: "cartao", label: "Cartao" },
+      { key: "valor", label: "Valor oficial", render: (row) => formatCurrency(row.valor) },
+      { key: "realizado", label: "Realizado", render: (row) => formatCurrency(row.realizado) },
+      { key: "aberto", label: "Em aberto", render: (row) => formatCurrency(row.aberto) },
+      { key: "status", label: "Status" }
+    ],
+    []
+  );
+
   return (
     <div className="page-grid reports-page reports-page--reimagined">
       <section className="panel reports-header">
@@ -833,7 +1146,7 @@ const RelatoriosPage = ({
               <MetricCard title="Receitas recebidas" value={formatCurrency(fluxoConsolidado.receitasRecebidas)} subtitle={`Previsto ${formatCurrency(fluxoConsolidado.receitasPrevistas)}`} tone="positive" />
               <MetricCard title="Despesas pagas" value={formatCurrency(fluxoConsolidado.despesasPagas)} subtitle={`Previsto ${formatCurrency(fluxoConsolidado.despesasPrevistas)}`} tone="negative" />
               <MetricCard title="Saldo do periodo" value={formatCurrency(saldoRealizado)} subtitle={`Desvio de receitas ${formatPercent(desvioReceitas)}`} tone="neutral" />
-              <MetricCard title="Faturas em aberto" value={formatCurrency(totaisTecnicos.aberto)} subtitle={`Consumo no cartao ${formatCurrency(totaisCartao.consumo)}`} tone="warning" />
+              <MetricCard title="Faturas em aberto" value={formatCurrency(totaisTecnicos.aberto)} subtitle={`Tecnicas ${formatCurrency(totaisTecnicos.aberto)} | Cartao ainda aberto ${formatCurrency(totaisCartao.faturaAberta)}`} tone="warning" />
             </section>
 
             <section className="reports-grid reports-grid--two">
@@ -845,9 +1158,9 @@ const RelatoriosPage = ({
                   </div>
                 </div>
                 <div className="reports-mini-stack">
-                  <MetricCard title="Maior despesa" value={topCategoriaDespesa?.categoria || "-"} subtitle={topCategoriaDespesa ? formatCurrency(topCategoriaDespesa.previsto) : "Sem dados"} tone="negative" />
+                  <MetricCard title="Maior despesa" value={topCategoriaDespesa?.categoria || "-"} subtitle={topCategoriaDespesa ? formatCurrency(topCategoriaDespesa.total) : "Sem dados"} tone="negative" />
                   <MetricCard title="Maior receita" value={topCategoriaReceita?.categoria || "-"} subtitle={topCategoriaReceita ? formatCurrency(topCategoriaReceita.previsto) : "Sem dados"} tone="positive" />
-                  <MetricCard title="Categoria dominante no cartao" value={topCategoriaCartao?.categoria || "-"} subtitle={topCategoriaCartao ? formatCurrency(topCategoriaCartao.consumo) : "Sem dados"} tone="highlight" />
+                  <MetricCard title="Maior aberto" value={topCategoriaAberta?.categoria || "-"} subtitle={topCategoriaAberta ? formatCurrency(topCategoriaAberta.aberto) : "Sem dados"} tone="warning" />
                 </div>
               </div>
 
@@ -909,8 +1222,8 @@ const RelatoriosPage = ({
 
             <section className="reports-grid reports-grid--two">
               <div className="panel report-card">
-                <div className="reports-section-head"><div><h4 className="report-card__title">Despesas por categoria</h4><p className="reports-section-head__subtitle">Participacao das despesas do orcamento no total analisado.</p></div></div>
-                <PieChart data={categoriasDespesasResumo.slice(0, 6).map((row) => ({ name: row.categoria, value: row.previsto }))} height={280} showLegend={true} />
+                <div className="reports-section-head"><div><h4 className="report-card__title">Despesas por categoria</h4><p className="reports-section-head__subtitle">Participacao total das categorias considerando despesas do orcamento, financeiras e consumo no cartao, sem duplicar fatura tecnica.</p></div></div>
+                <PieChart data={categoriasDespesasGerenciaisResumo.slice(0, 6).map((row) => ({ name: row.categoria, value: row.total }))} height={280} showLegend={true} />
               </div>
               <div className="panel report-card">
                 <div className="reports-section-head"><div><h4 className="report-card__title">Receitas por categoria</h4><p className="reports-section-head__subtitle">Participacao das receitas previstas para o periodo selecionado.</p></div></div>
@@ -936,6 +1249,31 @@ const RelatoriosPage = ({
           </>
         )}
 
+        {activeTab === "gastos" && (
+          <>
+            <section className="reports-metrics-grid">
+              <MetricCard title="Grupos de gastos" value={String(gastosResumo.length)} subtitle="Linhas agrupadas por categoria e descricao" tone="neutral" />
+              <MetricCard title="Despesa total" value={formatCurrency(gastosTotais.referencia)} subtitle="Base oficial da tela Despesas no periodo" tone="negative" />
+              <MetricCard title="Despesa paga" value={formatCurrency(gastosTotais.realizado)} subtitle={`Em aberto ${formatCurrency(gastosTotais.aberto)}`} tone="highlight" />
+            </section>
+
+            <section className="panel">
+              <div className="reports-section-head">
+                <div>
+                  <h3 className="panel-title">Gastos agrupados</h3>
+                  <p className="reports-section-head__subtitle">Cada linha totaliza a despesa oficial por categoria e descricao. O tipo de gasto continua visivel para contexto, mas nao define mais o agrupamento principal.</p>
+                </div>
+              </div>
+              <DataTable
+                columns={columnsGastosResumo}
+                rows={gastosResumo}
+                emptyMessage="Sem gastos no periodo."
+                onRowClick={setSelectedGastoGrupo}
+              />
+            </section>
+          </>
+        )}
+
         {activeTab === "cartoes" && (
           <>
             <section className="reports-metrics-grid">
@@ -956,6 +1294,54 @@ const RelatoriosPage = ({
           </>
         )}
       </div>
+
+      <Modal
+        open={Boolean(selectedGastoGrupo)}
+        title={selectedGastoGrupo ? `Detalhamento de gastos - ${selectedGastoGrupo.categoria} / ${selectedGastoGrupo.descricao}` : "Detalhamento de gastos"}
+        onClose={() => setSelectedGastoGrupo(null)}
+        footer={<button type="button" className="ghost" onClick={() => setSelectedGastoGrupo(null)}>Fechar</button>}
+        className="reports-gastos-modal"
+      >
+        <div className="reports-gastos-modal__content">
+          <div className="reports-gastos-modal__summary">
+            <div className="reports-gastos-modal__stat">
+              <span className="reports-gastos-modal__stat-label">Categoria</span>
+              <strong className="reports-gastos-modal__stat-value">{selectedGastoGrupo?.categoria || "-"}</strong>
+            </div>
+            <div className="reports-gastos-modal__stat">
+              <span className="reports-gastos-modal__stat-label">Descricao</span>
+              <strong className="reports-gastos-modal__stat-value">{selectedGastoGrupo?.descricao || "-"}</strong>
+            </div>
+            <div className="reports-gastos-modal__stat">
+              <span className="reports-gastos-modal__stat-label">Total</span>
+              <strong className="reports-gastos-modal__stat-value">{formatCurrency(selectedGastoGrupo?.referencia || 0)}</strong>
+            </div>
+            <div className="reports-gastos-modal__stat">
+              <span className="reports-gastos-modal__stat-label">Realizado / Em aberto</span>
+              <strong className="reports-gastos-modal__stat-value">
+                {`${formatCurrency(selectedGastoGrupo?.realizado || 0)} / ${formatCurrency(selectedGastoGrupo?.aberto || 0)}`}
+              </strong>
+            </div>
+          </div>
+
+          <div className="reports-section-head reports-gastos-modal__head">
+            <div>
+              <h4 className="report-card__title">Lancamentos do grupo</h4>
+              <p className="reports-section-head__subtitle">
+                {selectedGastoGrupo
+                  ? `Tipo ${selectedGastoGrupo.tipoGasto} | ${selectedGastoGrupo.quantidade} lancamento(s) no agrupamento`
+                  : "Detalhamento dos lancamentos que compoem a linha selecionada."}
+              </p>
+            </div>
+          </div>
+          <DataTable
+            columns={columnsGastosDetalhados}
+            rows={selectedGastoGrupo?.lancamentos || []}
+            emptyMessage="Sem lancamentos para este grupo."
+            className="reports-table--compact reports-gastos-modal__table"
+          />
+        </div>
+      </Modal>
     </div>
   );
 };

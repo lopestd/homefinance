@@ -1281,3 +1281,67 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
+
+.reports-gastos-modal {
+  width: min(1200px, calc(100vw - 48px));
+  max-width: min(1200px, calc(100vw - 48px));
+}
+
+.reports-gastos-modal .modal-header {
+  padding: 20px 24px;
+}
+
+.reports-gastos-modal .modal-header h3 {
+  font-size: 22px;
+}
+
+.reports-gastos-modal .modal-body {
+  padding: 20px 24px 24px;
+}
+
+.reports-gastos-modal__content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.reports-gastos-modal__summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.reports-gastos-modal__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid #dbe3f0;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.reports-gastos-modal__stat-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+}
+
+.reports-gastos-modal__stat-value {
+  font-size: 18px;
+  line-height: 1.35;
+  color: #0f172a;
+}
+
+.reports-gastos-modal__head {
+  margin-bottom: -4px;
+}
+
+.reports-gastos-modal__table {
+  width: 100%;
+}
+
+.reports-gastos-modal__table .reports-table__table {
+  min-width: 1180px;
+}
