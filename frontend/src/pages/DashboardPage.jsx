@@ -189,7 +189,7 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
       .slice(0, 5);
   }, [receitas, effectiveOrcamentoId, effectiveMes, categoriasMap]);
 
-  // Dados para cards de cartÃ£o
+  // Dados para cards de cartao
   const cartoesData = useMemo(() => {
     if (!effectiveOrcamentoId || !effectiveMes || !cartoes || cartoes.length === 0) {
       return [];
@@ -240,7 +240,7 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
     });
   }, [cartoes, lancamentosCartao, effectiveOrcamentoId, effectiveMes]);
 
-  // Calcular tendÃªncia
+  // Calcular tendencia
   const calcularTendencia = (atual, previsto) => {
     if (previsto === 0) return { trend: 'neutral', trendValue: 'N/A' };
     const diff = atual - previsto;
@@ -269,13 +269,13 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
         <div className="dashboard-header__content">
           <form className="form-inline dashboard-filters" onSubmit={(e) => e.preventDefault()}>
             <label className="field">
-              OrÃ§amento
+              {"Or\u00e7amento"}
               <select value={effectiveOrcamentoId} onChange={(e) => setSelectedOrcamentoId(e.target.value)}>
                 {orcamentos.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
               </select>
             </label>
             <label className="field">
-              MÃªs
+              {"M\u00eas"}
               <select value={effectiveMes} onChange={(e) => setSelectedMes(e.target.value)}>
                 {mesesDisponiveis.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
@@ -284,11 +284,11 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
         </div>
       </section>
 
-      {/* KPI Hero Row - Saldo do MÃªs + Saldo Acumulado */}
+      {/* KPI Hero Row - Saldo do Mes + Saldo Acumulado */}
       <section className="dashboard-hero-row">
         <div className="panel dashboard-hero dashboard-hero--left">
           <KPICard
-            title="Saldo do MÃªs"
+            title={"Saldo do M\u00eas"}
             value={formatCurrency(resumoMensal.saldo)}
             subtitle={`Receitas: ${formatCurrency(resumoMensal.recRecebidas)} | Despesas: ${formatCurrency(resumoMensal.despPagas)}`}
             trend={saldoTendencia.trend}
@@ -338,7 +338,7 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
       <section className="dashboard-cards">
         <SummaryCard
           title="Receitas"
-          icon="ðŸ“ˆ"
+          icon={"\uD83D\uDCC8"}
           previsto={resumoMensal.recLancadas}
           realizado={resumoMensal.recRecebidas}
           color="#10B981"
@@ -347,7 +347,7 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
         />
         <SummaryCard
           title="Despesas"
-          icon="ðŸ“‰"
+          icon={"\uD83D\uDCC9"}
           previsto={resumoMensal.despLancadas}
           realizado={resumoMensal.despPagas}
           color="#EF4444"
@@ -369,7 +369,7 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
             />
           ) : (
             <div className="chart-empty" style={{ height: 180 }}>
-              <p>Sem despesas no perÃ­odo</p>
+              <p>{"Sem despesas no per\u00edodo"}</p>
             </div>
           )}
         </div>
@@ -384,17 +384,17 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
             />
           ) : (
             <div className="chart-empty" style={{ height: 180 }}>
-              <p>Sem receitas no perÃ­odo</p>
+              <p>{"Sem receitas no per\u00edodo"}</p>
             </div>
           )}
         </div>
       </section>
 
-      {/* Top 5 Gastos por CartÃ£o */}
+      {/* Top 5 Gastos por Cartao */}
       <section className="dashboard-cartoes">
         {cartoesData.length === 0 ? (
           <div className="panel dashboard-cartoes-empty">
-            <p>Nenhum cartÃ£o cadastrado</p>
+            <p>{"Nenhum cart\u00e3o cadastrado"}</p>
           </div>
         ) : (
           cartoesData.map((cartaoData) => (

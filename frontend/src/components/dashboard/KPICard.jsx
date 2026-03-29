@@ -2,13 +2,13 @@ import React from 'react';
 
 /**
  * KPICard - Card de KPI principal com destaque
- * @param {string} title - Título do KPI
+ * @param {string} title - Titulo do KPI
  * @param {string} value - Valor principal formatado
- * @param {string} subtitle - Subtítulo ou descrição
+ * @param {string} subtitle - Subtitulo ou descricao
  * @param {string} trend - 'up' | 'down' | 'neutral'
- * @param {string} trendValue - Valor da tendência
+ * @param {string} trendValue - Valor da tendencia
  * @param {string} color - 'positive' | 'negative' | 'neutral'
- * @param {ReactNode} icon - Ícone opcional
+ * @param {ReactNode} icon - Icone opcional
  */
 const KPICard = ({
   title,
@@ -23,9 +23,9 @@ const KPICard = ({
   const getTrendIcon = () => {
     switch (trend) {
       case 'up':
-        return '▲';
+        return '\u25B2';
       case 'down':
-        return '▼';
+        return '\u25BC';
       default:
         return null;
     }
@@ -37,14 +37,14 @@ const KPICard = ({
         {icon && <span className="kpi-card__icon">{icon}</span>}
         <span className="kpi-card__title">{title}</span>
       </div>
-      
+
       <div className="kpi-card__body">
         <div className="kpi-card__value">{value}</div>
-        
+
         {subtitle && (
           <span className="kpi-card__subtitle">{subtitle}</span>
         )}
-        
+
         {trend && trendValue && (
           <div className={`kpi-card__trend kpi-card__trend--${trend}`}>
             <span className="kpi-card__trend-icon">{getTrendIcon()}</span>
@@ -52,7 +52,7 @@ const KPICard = ({
           </div>
         )}
       </div>
-      
+
       {children && (
         <div className="kpi-card__footer">
           {children}

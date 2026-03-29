@@ -143,25 +143,44 @@ const RelatoriosPage = ({
 
   const despesasPorCategoria = useMemo(() => {
     const map = new Map();
+    const isBancosCartoes = (nome) =>
+      String(nome || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase() === "bancos/cartoes";
     despesasOrcamento.forEach((d) => {
+      const nome = getCategoriaNome(d);
+      if (isBancosCartoes(nome)) return;
       const ocorrencias = countOcorrencias(d, mesesSelecionados);
       if (ocorrencias === 0) return;
-      const nome = getCategoriaNome(d);
       const val = parseFloat(d.valor) || 0;
       const previsto = val * ocorrencias;
       const pago = d.status === "Pago" ? val * ocorrencias : 0;
       const current = map.get(nome) || { categoria: nome, previsto: 0, pago: 0 };
-      map.set(nome, {
-        categoria: nome,
-        previsto: current.previsto + previsto,
-        pago: current.pago + pago
-      });
+      map.set(nome, { categoria: nome, previsto: current.previsto + previsto, pago: current.pago + pago });
+    });
+    lancamentosCartao.forEach((l) => {
+      const lMeses = l.meses && l.meses.length > 0
+        ? l.meses.filter((m) => mesesSelecionados.includes(m))
+        : (l.mesReferencia && mesesSelecionados.includes(l.mesReferencia) ? [l.mesReferencia] : []);
+      if (lMeses.length === 0) return;
+      if (Number(l.valor) < 0 || String(l.descricao || "").startsWith("[CREDITO]")) return;
+      const nome = getCategoriaNome(l);
+      const val = Math.abs(parseFloat(l.valor) || 0);
+      const cartao = cartoes.find((c) => String(c.id) === String(l.cartaoId));
+      const fechadas = cartao?.faturasFechadas || [];
+      const previsto = val * lMeses.length;
+      const pago = val * lMeses.filter((m) => fechadas.includes(m)).length;
+      const current = map.get(nome) || { categoria: nome, previsto: 0, pago: 0 };
+      map.set(nome, { categoria: nome, previsto: current.previsto + previsto, pago: current.pago + pago });
     });
     return Array.from(map.values()).map((item) => ({
       ...item,
       diferenca: item.previsto - item.pago
     }));
-  }, [despesasOrcamento, mesesSelecionados, countOcorrencias, getCategoriaNome]);
+  }, [despesasOrcamento, lancamentosCartao, cartoes, mesesSelecionados, countOcorrencias, getCategoriaNome]);
+
+  const despesasPorCategoriaOrdenadas = useMemo(
+    () => [...despesasPorCategoria].sort((a, b) => b.pago - a.pago),
+    [despesasPorCategoria]
+  );
 
   const receitasPorCategoria = useMemo(() => {
     const map = new Map();
@@ -186,20 +205,23 @@ const RelatoriosPage = ({
     }));
   }, [receitasOrcamento, mesesSelecionados, countOcorrencias, getCategoriaNome]);
 
+  const receitasPorCategoriaOrdenadas = useMemo(
+    () => [...receitasPorCategoria].sort((a, b) => b.recebido - a.recebido),
+    [receitasPorCategoria]
+  );
+
   // Dados para gráficos de pizza
   const despesasPieData = useMemo(() => {
-    return despesasPorCategoria
-      .sort((a, b) => b.pago - a.pago)
+    return despesasPorCategoriaOrdenadas
       .slice(0, 5)
       .map((item) => ({ name: item.categoria, value: item.pago }));
-  }, [despesasPorCategoria]);
+  }, [despesasPorCategoriaOrdenadas]);
 
   const receitasPieData = useMemo(() => {
-    return receitasPorCategoria
-      .sort((a, b) => b.recebido - a.recebido)
+    return receitasPorCategoriaOrdenadas
       .slice(0, 5)
       .map((item) => ({ name: item.categoria, value: item.recebido }));
-  }, [receitasPorCategoria]);
+  }, [receitasPorCategoriaOrdenadas]);
 
   const gastosPorDescricao = useMemo(() => {
     const map = new Map();
@@ -222,7 +244,7 @@ const RelatoriosPage = ({
       if (d.tipoRecorrencia) current.tipos.add(d.tipoRecorrencia);
       map.set(descricao, {
         ...current,
-        ocorrencias: current.ocorrencias,
+        ocorrencias: current.ocorrencias + monthsItem.length,
         previsto: current.previsto + previsto,
         pago: current.pago + pago,
         meses: current.meses
@@ -290,6 +312,10 @@ const RelatoriosPage = ({
 
   const saldoPrevisto = resumoConsolidado.recPrevisto - resumoConsolidado.despPrevisto;
   const saldoEmConta = resumoConsolidado.recRecebido - resumoConsolidado.despPago;
+  const topDespesaCategoria = despesasPorCategoriaOrdenadas[0] || null;
+  const tableCols7Style = { gridTemplateColumns: "1.3fr 1fr 1fr 1fr 1fr 1fr 1fr" };
+  const tableCols8Style = { gridTemplateColumns: "1.4fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr" };
+  const tableCols5ReportStyle = { gridTemplateColumns: "2.2fr 0.9fr 1fr 1fr 1fr" };
 
   // Tabs configuration
   const tabs = [
@@ -470,7 +496,7 @@ const RelatoriosPage = ({
             <section className="panel">
               <h3 className="panel-title">Detalhes por Mês</h3>
               <div className="table">
-                <div className="table-row table-header cols-7">
+                <div className="table-row table-header cols-7" style={tableCols7Style}>
                   <span>Mês</span>
                   <span>Rec. Previsto</span>
                   <span>Rec. Recebido</span>
@@ -480,12 +506,12 @@ const RelatoriosPage = ({
                   <span>Acumulado</span>
                 </div>
                 {evolucaoMensalComAcumulado.length === 0 ? (
-                  <div className="table-row empty cols-7">
+                  <div className="table-row empty cols-7" style={tableCols7Style}>
                     <span>Sem dados para o período.</span>
                   </div>
                 ) : (
                   evolucaoMensalComAcumulado.map((item) => (
-                    <div className="table-row cols-7" key={item.mes}>
+                    <div className="table-row cols-7" style={tableCols7Style} key={item.mes}>
                       <span>{item.mes}</span>
                       <span>{formatCurrency(item.recPrevisto)}</span>
                       <span className="summary-card-value--positive">{formatCurrency(item.recRecebido)}</span>
@@ -554,7 +580,7 @@ const RelatoriosPage = ({
                     <span>Pago</span>
                     <span>Diferença</span>
                   </div>
-                  {despesasPorCategoria.map((item) => (
+                  {despesasPorCategoriaOrdenadas.map((item) => (
                     <div className="table-row cols-4" key={item.categoria}>
                       <span>{item.categoria}</span>
                       <span>{formatCurrency(item.previsto)}</span>
@@ -593,7 +619,7 @@ const RelatoriosPage = ({
                 </div>
 
                 <div className="table">
-                  <div className="table-row table-header cols-8">
+                  <div className="table-row table-header cols-8" style={tableCols8Style}>
                     <span>Cartão</span>
                     <span>Mês</span>
                     <span>Alocado</span>
@@ -604,7 +630,7 @@ const RelatoriosPage = ({
                     <span>Status</span>
                   </div>
                   {analiseCartao.map((item, index) => (
-                    <div className="table-row cols-8" key={`${item.cartao}-${item.mes}-${index}`}>
+                    <div className="table-row cols-8" style={tableCols8Style} key={`${item.cartao}-${item.mes}-${index}`}>
                       <span>{item.cartao}</span>
                       <span>{item.mes}</span>
                       <span>{formatCurrency(item.valorAlocado)}</span>
@@ -615,7 +641,7 @@ const RelatoriosPage = ({
                         {formatCurrency(item.saldoMes)}
                       </span>
                       <span>
-                        <span className={`status-badge ${item.situacao === 'Fechada' ? 'status-badge--closed' : 'status-badge--open'}`}>
+                        <span className={`status-badge ${item.situacao === 'Fechada' ? 'pending' : 'success'}`}>
                           {item.situacao}
                         </span>
                       </span>
@@ -677,12 +703,12 @@ const RelatoriosPage = ({
                     </span>
                   </div>
                 )}
-                {despesasPorCategoria.length > 0 && (
+                {topDespesaCategoria && (
                   <div className="insight-item">
                     <span className="insight-item__icon">🏷️</span>
                     <span className="insight-item__text">
-                      Sua maior categoria de despesa é <strong>{despesasPorCategoria[0]?.categoria}</strong> 
-                      com {formatCurrency(despesasPorCategoria[0]?.pago)}
+                      Sua maior categoria de despesa é <strong>{topDespesaCategoria.categoria}</strong> 
+                      com {formatCurrency(topDespesaCategoria.pago)}
                     </span>
                   </div>
                 )}
@@ -713,7 +739,7 @@ const RelatoriosPage = ({
               </div>
               <div className="accordion__content">
                 <div className="table">
-                  <div className="table-row table-header cols-5-report">
+                  <div className="table-row table-header cols-5-report" style={tableCols5ReportStyle}>
                     <span>Descrição</span>
                     <span>Ocorrências</span>
                     <span>Previsto</span>
@@ -721,7 +747,7 @@ const RelatoriosPage = ({
                     <span>Média</span>
                   </div>
                   {gastosPorDescricao.slice(0, 20).map((item) => (
-                    <div className="table-row cols-5-report" key={item.descricao}>
+                    <div className="table-row cols-5-report" style={tableCols5ReportStyle} key={item.descricao}>
                       <span>{item.descricao}</span>
                       <span>{item.ocorrencias}</span>
                       <span>{formatCurrency(item.previsto)}</span>
