@@ -35,6 +35,11 @@ const toCreditoDescricao = (descricao, isCredito) => {
   return isCredito ? `${CREDITO_TAG} ${base}`.trim() : base;
 };
 
+const MONTHS = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+];
+
 const MonthlySummaryCard = ({ summary, isCurrentMonth }) => {
   const {
     mes,
@@ -142,6 +147,10 @@ const CartaoPage = ({
   const [selectedMes, setSelectedMes] = useState(getCurrentMonthName());
   const [isManualDescricao, setIsManualDescricao] = useState(false);
   const effectiveCartaoId = selectedCartaoId || cartoes[0]?.id || "";
+  const despesasCategorias = useMemo(
+    () => categorias.filter((categoria) => categoria.tipo === "DESPESA"),
+    [categorias]
+  );
 
   // Configuração de colunas para a tabela de cartões
   const cartaoColumnConfigs = {
@@ -158,6 +167,14 @@ const CartaoPage = ({
       label: 'Descrição',
       sortable: true,
       filterable: true
+    },
+    categoria: {
+      key: 'categoria',
+      type: 'select',
+      label: 'Categoria',
+      sortable: true,
+      filterable: true,
+      options: despesasCategorias.map((categoria) => categoria.nome)
     },
     valor: {
       key: 'valor',
@@ -181,10 +198,7 @@ const CartaoPage = ({
     }
   };
 
-  const months = [
-    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-  ];
+  const months = MONTHS;
 
   /**
    * Determina qual mês deve ser carregado inicialmente na tela Cartões.
@@ -243,7 +257,7 @@ const CartaoPage = ({
     if (initialMonth && initialMonth !== selectedMes) {
       setSelectedMes(initialMonth);
     }
-  }, [effectiveCartaoId]);
+  }, [cartoes, determineInitialMonth, effectiveCartaoId, orcamentos, selectedMes]);
 
   const selectedCartao = useMemo(() => cartoes.find((c) => String(c.id) === String(effectiveCartaoId)) || {}, [cartoes, effectiveCartaoId]);
 
@@ -254,6 +268,16 @@ const CartaoPage = ({
       (l.mesReferencia === selectedMes || (l.meses && l.meses.includes(selectedMes))))
     ;
   }, [lancamentosCartao, effectiveCartaoId, selectedMes]);
+
+  const filteredLancamentosWithCategoria = useMemo(
+    () =>
+      filteredLancamentos.map((lancamento) => ({
+        ...lancamento,
+        categoria:
+          despesasCategorias.find((categoria) => String(categoria.id) === String(lancamento.categoriaId))?.nome || "\u2014"
+      })),
+    [filteredLancamentos, despesasCategorias]
+  );
 
   // Hook para gerenciar filtros e ordenação na tabela
   const {
@@ -267,7 +291,7 @@ const CartaoPage = ({
     setSortDirection,
     hasActiveFilters,
     activeFiltersCount
-  } = useTableFilters(filteredLancamentos, cartaoColumnConfigs, {
+  } = useTableFilters(filteredLancamentosWithCategoria, cartaoColumnConfigs, {
     column: "id",
     direction: "desc"
   });
@@ -1009,6 +1033,7 @@ const CartaoPage = ({
             <colgroup>
               <col className="list-table__col list-table__col--date" />
               <col className="list-table__col list-table__col--desc" />
+              <col className="list-table__col list-table__col--categoria" />
               <col className="list-table__col list-table__col--valor" />
               <col className="list-table__col list-table__col--tipo" />
               <col className="list-table__col list-table__col--acoes" />
@@ -1034,13 +1059,14 @@ const CartaoPage = ({
             <tbody>
               {filteredAndSortedItems.length === 0 ? (
                 <tr className="list-table__row list-table__row--empty">
-                  <td colSpan={5}>Nenhum lançamento nesta fatura.</td>
+                  <td colSpan={6}>Nenhum lançamento nesta fatura.</td>
                 </tr>
               ) : (
                 filteredAndSortedItems.map((l) => (
                   <tr className="list-table__row" key={l.id}>
                     <td>{new Date(l.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}</td>
                     <td>{l.complemento ? `${stripCreditoTag(l.descricao)} - ${l.complemento}` : stripCreditoTag(l.descricao)}</td>
+                    <td>{l.categoria}</td>
                     <td className={isCreditoLancamento(l) ? "summary-card-value--positive" : ""}>
                       {formatCurrency(isCreditoLancamento(l) ? -(Math.abs(Number(l.valor) || 0)) : Math.abs(Number(l.valor) || 0))}
                     </td>
@@ -1105,7 +1131,7 @@ const CartaoPage = ({
                 }}
               >
                 <option value="">Selecione a Categoria</option>
-                {categorias.filter((c) => c.tipo === "DESPESA").map((c) => (
+                {despesasCategorias.map((c) => (
                   <option key={c.id} value={c.id}>{c.nome}</option>
                 ))}
               </select>

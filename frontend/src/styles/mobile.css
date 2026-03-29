@@ -920,6 +920,25 @@
     font-size: 16px;
   }
 
+  .reports-period-strip,
+  .reports-grid--two,
+  .reports-grid--three,
+  .reports-comparison-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reports-category-callout {
+    flex-direction: column;
+  }
+
+  .reports-category-callout__legend {
+    justify-content: flex-start;
+  }
+
+  .reports-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
   /* KPI Card */
   .kpi-card__details {
     flex-direction: column;
@@ -1040,6 +1059,10 @@
     padding: 3px 5px;
     white-space: nowrap;
     font-size: 10px;
+  }
+
+  .reports-table__table {
+    min-width: 760px;
   }
 
   /* Tabela de Categorias - 4 colunas */
