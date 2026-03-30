@@ -317,32 +317,6 @@ const RelatoriosPage = ({
     [mesesSelecionados.length, calcResumoFluxo, mesesSelecionadosSet]
   );
 
-  const totaisOperacionais = useMemo(() => {
-    let previsto = 0;
-    let pago = 0;
-    despesasOperacionais.forEach((despesa) => {
-      const ocorrencias = countOcorrencias(despesa, mesesSelecionadosSet);
-      if (ocorrencias === 0) return;
-      const valor = Number(despesa.valor) || 0;
-      previsto += valor * ocorrencias;
-      if (despesa.status === "Pago") pago += valor * ocorrencias;
-    });
-    return { previsto, pago, aberto: previsto - pago };
-  }, [despesasOperacionais, countOcorrencias, mesesSelecionadosSet]);
-
-  const totaisFinanceiros = useMemo(() => {
-    let previsto = 0;
-    let pago = 0;
-    despesasFinanceiras.forEach((despesa) => {
-      const ocorrencias = countOcorrencias(despesa, mesesSelecionadosSet);
-      if (ocorrencias === 0) return;
-      const valor = Number(despesa.valor) || 0;
-      previsto += valor * ocorrencias;
-      if (despesa.status === "Pago") pago += valor * ocorrencias;
-    });
-    return { previsto, pago, aberto: previsto - pago };
-  }, [despesasFinanceiras, countOcorrencias, mesesSelecionadosSet]);
-
   const totaisTecnicos = useMemo(() => {
     let previsto = 0;
     let pago = 0;
@@ -355,19 +329,6 @@ const RelatoriosPage = ({
     });
     return { previsto, pago, aberto: previsto - pago };
   }, [despesasTecnicas, countOcorrencias, mesesSelecionadosSet]);
-
-  const totaisCartao = useMemo(
-    () => resumoCartoesMensal.reduce(
-      (acc, row) => ({
-        consumo: acc.consumo + row.liquido,
-        faturaFechada: acc.faturaFechada + (row.situacao === "Fechada" ? row.liquido : 0),
-        faturaAberta: acc.faturaAberta + (row.situacao === "Aberta" ? row.liquido : 0),
-        creditos: acc.creditos + row.creditos
-      }),
-      { consumo: 0, faturaFechada: 0, faturaAberta: 0, creditos: 0 }
-    ),
-    [resumoCartoesMensal]
-  );
 
   const saldoPrevisto = fluxoConsolidado.receitasPrevistas - fluxoConsolidado.despesasPrevistas;
   const saldoRealizado = fluxoConsolidado.receitasRecebidas - fluxoConsolidado.despesasPagas;
@@ -1122,13 +1083,6 @@ const RelatoriosPage = ({
               </KPICard>
             </section>
 
-            <section className="reports-metrics-grid">
-              <MetricCard title="Receitas recebidas" value={formatCurrency(fluxoConsolidado.receitasRecebidas)} subtitle={`Previsto ${formatCurrency(fluxoConsolidado.receitasPrevistas)}`} tone="positive" />
-              <MetricCard title="Despesas pagas" value={formatCurrency(fluxoConsolidado.despesasPagas)} subtitle={`Previsto ${formatCurrency(fluxoConsolidado.despesasPrevistas)}`} tone="negative" />
-              <MetricCard title="Saldo do periodo" value={formatCurrency(saldoRealizado)} subtitle={`Desvio de receitas ${formatPercent(desvioReceitas)}`} tone="neutral" />
-              <MetricCard title="Faturas em aberto" value={formatCurrency(totaisTecnicos.aberto)} subtitle={`Tecnicas ${formatCurrency(totaisTecnicos.aberto)} | Cartao ainda aberto ${formatCurrency(totaisCartao.faturaAberta)}`} tone="warning" />
-            </section>
-
             <section className="reports-grid reports-grid--two">
               <div className="panel reports-panel-card">
                 <div className="reports-section-head">
@@ -1194,10 +1148,9 @@ const RelatoriosPage = ({
         {activeTab === "categorias" && (
           <>
             <section className="reports-metrics-grid">
-              <MetricCard title="Despesas do orcamento" value={formatCurrency(totaisOperacionais.previsto)} subtitle={`Realizado ${formatCurrency(totaisOperacionais.pago)}`} tone="negative" />
-              <MetricCard title="Despesas financeiras" value={formatCurrency(totaisFinanceiros.previsto)} subtitle={`Pago ${formatCurrency(totaisFinanceiros.pago)}`} tone="warning" />
-              <MetricCard title="Consumo no cartao" value={formatCurrency(totaisCartao.consumo)} subtitle={`Ja fechado ${formatCurrency(totaisCartao.faturaFechada)}`} tone="highlight" />
-              <MetricCard title="Faturas em aberto" value={formatCurrency(totaisTecnicos.aberto + totaisCartao.faturaAberta)} subtitle="Soma de faturas tecnicas e consumo ainda nao fechado" tone="warning" />
+              <MetricCard title="Total analisado" value={formatCurrency(gastosTotais.referencia)} subtitle="Base oficial da tela Despesas no periodo" tone="negative" />
+              <MetricCard title="Ja realizado" value={formatCurrency(gastosTotais.realizado)} subtitle="Soma oficial das despesas pagas" tone="highlight" />
+              <MetricCard title="Em aberto" value={formatCurrency(gastosTotais.aberto)} subtitle="Parte oficial ainda pendente nas despesas" tone="warning" />
             </section>
 
             <section className="reports-grid reports-grid--two">
