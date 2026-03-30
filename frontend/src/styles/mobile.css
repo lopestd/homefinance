@@ -882,11 +882,30 @@
 
   .reports-filters {
     width: 100%;
-    flex-wrap: wrap;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .reports-filters__field--orcamento {
+    order: 1;
+  }
+
+  .reports-filters__field--visao {
+    order: 2;
+  }
+
+  .reports-filters__field--inicio {
+    order: 3;
+  }
+
+  .reports-filters__field--fim {
+    order: 4;
   }
 
   .reports-filters .field {
-    flex: 1 1 calc(50% - 6px);
+    flex: none;
+    width: 100%;
     min-width: 0;
   }
 

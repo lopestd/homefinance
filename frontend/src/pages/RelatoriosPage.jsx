@@ -916,12 +916,6 @@ const RelatoriosPage = ({
     [gastosResumo]
   );
 
-  const periodoSelecionadoLabel = useMemo(() => {
-    if (mesesSelecionados.length === 0) return "Nenhum mes selecionado";
-    if (mesesSelecionados.length === 1) return mesesSelecionados[0];
-    return `${mesInicio} a ${mesFim}`;
-  }, [mesesSelecionados, mesInicio, mesFim]);
-
   const tabs = useMemo(
     () => [
       { id: "visao-geral", label: "Visao Geral", icon: "\uD83D\uDCCA" },
@@ -1074,7 +1068,7 @@ const RelatoriosPage = ({
           </div>
 
           <form className="form-inline reports-filters" onSubmit={(event) => event.preventDefault()}>
-            <label className="field">
+            <label className="field reports-filters__field reports-filters__field--orcamento">
               Orcamento
               <select value={effectiveOrcamentoId} onChange={(event) => setFilters((prev) => ({ ...prev, orcamentoId: event.target.value }))}>
                 {orcamentos.length === 0 ? <option value="">Sem orcamentos</option> : orcamentos.map((orcamento) => (
@@ -1082,19 +1076,19 @@ const RelatoriosPage = ({
                 ))}
               </select>
             </label>
-            <label className="field">
+            <label className="field reports-filters__field reports-filters__field--inicio">
               Inicio
               <select value={mesInicio || ""} onChange={(event) => setFilters((prev) => ({ ...prev, mesInicio: event.target.value }))}>
                 {mesesOrcamento.map((mes) => <option key={mes} value={mes}>{mes}</option>)}
               </select>
             </label>
-            <label className="field">
+            <label className="field reports-filters__field reports-filters__field--fim">
               Fim
               <select value={mesFim || ""} onChange={(event) => setFilters((prev) => ({ ...prev, mesFim: event.target.value }))}>
                 {mesesOrcamento.map((mes) => <option key={mes} value={mes}>{mes}</option>)}
               </select>
             </label>
-            <label className="field">
+            <label className="field reports-filters__field reports-filters__field--visao">
               Visao
               <select value={filters.visao} onChange={(event) => setFilters((prev) => ({ ...prev, visao: event.target.value }))}>
                 <option value="Mensal">Mensal</option>
@@ -1104,20 +1098,6 @@ const RelatoriosPage = ({
           </form>
         </div>
 
-        <div className="reports-period-strip">
-          <div className="reports-period-chip">
-            <span className="reports-period-chip__label">Periodo</span>
-            <strong>{periodoSelecionadoLabel}</strong>
-          </div>
-          <div className="reports-period-chip">
-            <span className="reports-period-chip__label">Meses analisados</span>
-            <strong>{mesesSelecionados.length}</strong>
-          </div>
-          <div className="reports-period-chip">
-            <span className="reports-period-chip__label">Orcamento</span>
-            <strong>{currentOrcamento?.label || "-"}</strong>
-          </div>
-        </div>
       </section>
 
       <section className="panel">
