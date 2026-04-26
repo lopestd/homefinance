@@ -1,0 +1,13 @@
+services:
+  homefinance-local:
+    build:
+      context: ..
+      dockerfile: Build_Docker_Local/Dockerfile
+    container_name: homefinance-local
+    env_file:
+      - ./.env.docker.local
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${HOST_PORT:-3000}:3000"
+    restart: unless-stopped

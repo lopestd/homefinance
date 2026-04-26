@@ -39,7 +39,12 @@ build_docker
 # OS files
 Thumbs.db
 Desktop.ini
-create_first_user.bat
+create_first_user.sh
+
+# Runtime state
+.homefinance/
 
 # Kiro
 .kiro/
+node_modules
+node_modules

@@ -43,19 +43,29 @@ const HorizontalBar = ({
       if (containerRef.current) {
         const { offsetWidth } = containerRef.current;
         if (offsetWidth > 0) {
-          setWidth(offsetWidth);
+          setWidth((prevWidth) => (prevWidth === offsetWidth ? prevWidth : offsetWidth));
         }
       }
     };
 
-    const rafId = requestAnimationFrame(() => {
-      updateDimensions();
-    });
+    let rafId = requestAnimationFrame(updateDimensions);
+    let resizeObserver = null;
+
+    if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(updateDimensions);
+      });
+      resizeObserver.observe(containerRef.current);
+    }
 
     window.addEventListener('resize', updateDimensions);
 
     return () => {
       cancelAnimationFrame(rafId);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
       window.removeEventListener('resize', updateDimensions);
     };
   }, []);
@@ -74,6 +84,16 @@ const HorizontalBar = ({
   const calculatedMaxValue = maxValue || (data.length > 0 
     ? Math.max(...data.map(d => d.value)) * 1.1 
     : 100);
+  const compactMode = width > 0 && width < 460;
+  const yAxisWidth = compactMode ? 78 : 120;
+  const rightMargin = compactMode ? 16 : 84;
+  const shouldShowValueLabels = showValues && !compactMode;
+  const formatCategoryLabel = (label) => {
+    const text = String(label || '');
+    const maxLength = compactMode ? 14 : 22;
+    if (text.length <= maxLength) return text;
+    return `${text.slice(0, maxLength - 1)}…`;
+  };
 
   if (!data || data.length === 0) {
     return (
@@ -91,7 +111,7 @@ const HorizontalBar = ({
           height={height}
           data={data}
           layout="vertical"
-          margin={{ top: 0, right: 60, left: 0, bottom: 0 }}
+          margin={{ top: 0, right: rightMargin, left: 0, bottom: 0 }}
           maxBarSize={28}
         >
           {showGrid && (
@@ -107,22 +127,25 @@ const HorizontalBar = ({
           <YAxis
             type="category"
             dataKey="name"
+            tickFormatter={formatCategoryLabel}
             tick={{ fontSize: 12, fill: '#64748B' }}
             tickLine={false}
             axisLine={false}
-            width={100}
+            width={yAxisWidth}
           />
           <Tooltip content={<HorizontalBarTooltip formatCurrency={formatCurrency} />} cursor={{ fill: 'transparent' }} />
           <Bar
             dataKey="value"
             radius={[0, 4, 4, 0]}
             background={{ fill: '#F1F5F9', radius: [0, 4, 4, 0] }}
-            label={{
-              position: 'right',
-              formatter: (value) => showValues ? formatCurrency(value) : '',
-              fontSize: 11,
-              fill: '#64748B'
-            }}
+            label={shouldShowValueLabels
+              ? {
+                  position: 'right',
+                  formatter: (value) => formatCurrency(value),
+                  fontSize: 11,
+                  fill: '#64748B'
+                }
+              : false}
           >
             {data.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />

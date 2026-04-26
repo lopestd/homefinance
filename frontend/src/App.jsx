@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { loadConfigFromApi } from "./services/configApi";
 import useAuth from "./hooks/useAuth";
 import useCartao from "./hooks/useCartao";
@@ -29,6 +29,7 @@ function App() {
   const { cartoes, setCartoes, lancamentosCartao, setLancamentosCartao } = useCartao([], []);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const contentRef = useRef(null);
 
   const clearData = useCallback(() => {
     setCategorias([]);
@@ -166,6 +167,20 @@ function App() {
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
+  useEffect(() => {
+    if (!isMobile || activeKey !== "dashboard") return;
+    const contentEl = contentRef.current;
+    if (!contentEl) return;
+
+    const resetScroll = () => {
+      contentEl.scrollTo(0, 0);
+    };
+
+    resetScroll();
+    const rafId = window.requestAnimationFrame(resetScroll);
+    return () => window.cancelAnimationFrame(rafId);
+  }, [isMobile, activeKey, isDataLoaded]);
+
   const handleNavClick = () => {
     setIsMobileMenuOpen(false);
   };
@@ -245,7 +260,7 @@ function App() {
             <h2>{activePage.label}</h2>
           </div>
         </header>
-        <main className="content">
+        <main className="content" ref={contentRef}>
           {showSkeleton && (
             <div className="mobile-skeleton">
               <div className="skeleton-card">

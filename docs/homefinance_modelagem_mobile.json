@@ -1,0 +1,2571 @@
+{
+  "estudo": {
+    "titulo": "Estudo completo da modelagem HomeFinance para serializacao JSON no app mobile",
+    "generated_at": "2026-04-03T15:48:12.867Z",
+    "fonte": {
+      "arquivo_dump": "docs/homefinance_schema_dsv",
+      "schema": "admhomefinance",
+      "metadata_dump": {
+        "dumped_from_version": "17.1 (Debian 17.1-1.pgdg120+1)",
+        "dumped_by": "17.7"
+      }
+    }
+  },
+  "enums": {
+    "categoria_tipo": [
+      "RECEITA",
+      "DESPESA"
+    ],
+    "despesa_status": [
+      "Pendente",
+      "Pago"
+    ],
+    "receita_status": [
+      "Pendente",
+      "Recebido"
+    ],
+    "recorrencia_tipo": [
+      "EVENTUAL",
+      "FIXO",
+      "PARCELADO",
+      "RECORRENTE",
+      "CORRENTE"
+    ]
+  },
+  "bounded_contexts": {
+    "identidade_e_acesso": [
+      "usuarios",
+      "sessoes",
+      "audit_log"
+    ],
+    "configuracao_base_financeira": [
+      "orcamentos",
+      "orcamento_meses",
+      "categorias",
+      "gastos_predefinidos",
+      "tipos_receita",
+      "saldo_inicial_orcamento"
+    ],
+    "lancamentos_de_caixa": [
+      "receitas",
+      "receitas_meses",
+      "despesas",
+      "despesas_meses"
+    ],
+    "cartoes_de_credito": [
+      "cartoes",
+      "cartao_limites_mensais",
+      "cartao_faturas_fechadas",
+      "cartao_meses",
+      "cartao_lancamentos",
+      "lancamentos_cartao",
+      "lancamentos_cartao_meses"
+    ]
+  },
+  "tables": {
+    "audit_log": {
+      "name": "audit_log",
+      "columns": [
+        {
+          "name": "id_log",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "id_usuario",
+          "type": "bigint",
+          "nullable": true,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "acao",
+          "type": "character varying(50)",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "detalhes",
+          "type": "jsonb",
+          "nullable": true,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "ip_origem",
+          "type": "character varying(45)",
+          "nullable": true,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "user_agent",
+          "type": "character varying(500)",
+          "nullable": true,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "data_evento",
+          "type": "timestamp without time zone",
+          "nullable": true,
+          "default": "CURRENT_TIMESTAMP",
+          "is_enum": false
+        }
+      ],
+      "table_constraints_inline": [],
+      "primary_key": [
+        "id_log"
+      ],
+      "unique_constraints": [],
+      "foreign_keys": [
+        {
+          "name": "audit_log_id_usuario_fkey",
+          "columns": [
+            "id_usuario"
+          ],
+          "references": {
+            "table": "usuarios",
+            "columns": [
+              "id_usuario"
+            ]
+          },
+          "on_delete": "SET",
+          "on_update": null
+        }
+      ],
+      "checks": [],
+      "indexes": [
+        {
+          "name": "idx_audit_data",
+          "method": "btree",
+          "columns": [
+            "data_evento"
+          ],
+          "unique": false
+        },
+        {
+          "name": "idx_audit_usuario",
+          "method": "btree",
+          "columns": [
+            "id_usuario"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "cartao_faturas_fechadas": {
+      "name": "cartao_faturas_fechadas",
+      "columns": [
+        {
+          "name": "cartao_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "mes",
+          "type": "smallint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "id_usuario",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        }
+      ],
+      "table_constraints_inline": [
+        "CONSTRAINT cartao_faturas_fechadas_mes_check CHECK (((mes >= 1) AND (mes <= 12)))"
+      ],
+      "primary_key": [
+        "cartao_id",
+        "mes"
+      ],
+      "unique_constraints": [],
+      "foreign_keys": [
+        {
+          "name": "cartao_faturas_fechadas_cartao_id_fkey",
+          "columns": [
+            "cartao_id"
+          ],
+          "references": {
+            "table": "cartoes",
+            "columns": [
+              "id"
+            ]
+          },
+          "on_delete": "CASCADE",
+          "on_update": null
+        },
+        {
+          "name": "fk_cartao_faturas_usuario",
+          "columns": [
+            "id_usuario"
+          ],
+          "references": {
+            "table": "usuarios",
+            "columns": [
+              "id_usuario"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        }
+      ],
+      "checks": [],
+      "indexes": [
+        {
+          "name": "idx_cartao_faturas_usuario",
+          "method": "btree",
+          "columns": [
+            "id_usuario"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "cartao_lancamentos": {
+      "name": "cartao_lancamentos",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "cartao_mes_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "descricao",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "valor",
+          "type": "numeric(12,2)",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "tipo_recorrencia",
+          "type": "admhomefinance.recorrencia_tipo",
+          "nullable": false,
+          "default": null,
+          "is_enum": true
+        },
+        {
+          "name": "paga",
+          "type": "boolean",
+          "nullable": false,
+          "default": "false",
+          "is_enum": false
+        },
+        {
+          "name": "id_usuario",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        }
+      ],
+      "table_constraints_inline": [
+        "CONSTRAINT cartao_lancamentos_valor_check CHECK ((valor > (0)::numeric))"
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [],
+      "foreign_keys": [
+        {
+          "name": "cartao_lancamentos_cartao_mes_id_fkey",
+          "columns": [
+            "cartao_mes_id"
+          ],
+          "references": {
+            "table": "cartao_meses",
+            "columns": [
+              "id"
+            ]
+          },
+          "on_delete": "CASCADE",
+          "on_update": null
+        },
+        {
+          "name": "fk_cartao_lancamentos_usuario",
+          "columns": [
+            "id_usuario"
+          ],
+          "references": {
+            "table": "usuarios",
+            "columns": [
+              "id_usuario"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        }
+      ],
+      "checks": [],
+      "indexes": [
+        {
+          "name": "idx_cartao_lancamentos_usuario",
+          "method": "btree",
+          "columns": [
+            "id_usuario"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "cartao_limites_mensais": {
+      "name": "cartao_limites_mensais",
+      "columns": [
+        {
+          "name": "cartao_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "mes",
+          "type": "smallint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "limite",
+          "type": "numeric(12,2)",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "id_usuario",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        }
+      ],
+      "table_constraints_inline": [
+        "CONSTRAINT cartao_limites_mensais_limite_check CHECK ((limite >= (0)::numeric))",
+        "CONSTRAINT cartao_limites_mensais_mes_check CHECK (((mes >= 1) AND (mes <= 12)))"
+      ],
+      "primary_key": [
+        "cartao_id",
+        "mes"
+      ],
+      "unique_constraints": [],
+      "foreign_keys": [
+        {
+          "name": "cartao_limites_mensais_cartao_id_fkey",
+          "columns": [
+            "cartao_id"
+          ],
+          "references": {
+            "table": "cartoes",
+            "columns": [
+              "id"
+            ]
+          },
+          "on_delete": "CASCADE",
+          "on_update": null
+        },
+        {
+          "name": "fk_cartao_limites_usuario",
+          "columns": [
+            "id_usuario"
+          ],
+          "references": {
+            "table": "usuarios",
+            "columns": [
+              "id_usuario"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        }
+      ],
+      "checks": [],
+      "indexes": [
+        {
+          "name": "idx_cartao_limites_usuario",
+          "method": "btree",
+          "columns": [
+            "id_usuario"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "cartao_meses": {
+      "name": "cartao_meses",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "cartao_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "orcamento_mes_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "id_usuario",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        }
+      ],
+      "table_constraints_inline": [],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [
+        {
+          "name": "cartao_meses_cartao_id_orcamento_mes_id_key",
+          "columns": [
+            "cartao_id",
+            "orcamento_mes_id"
+          ]
+        }
+      ],
+      "foreign_keys": [
+        {
+          "name": "cartao_meses_cartao_id_fkey",
+          "columns": [
+            "cartao_id"
+          ],
+          "references": {
+            "table": "cartoes",
+            "columns": [
+              "id"
+            ]
+          },
+          "on_delete": "CASCADE",
+          "on_update": null
+        },
+        {
+          "name": "cartao_meses_orcamento_mes_id_fkey",
+          "columns": [
+            "orcamento_mes_id"
+          ],
+          "references": {
+            "table": "orcamento_meses",
+            "columns": [
+              "id"
+            ]
+          },
+          "on_delete": "CASCADE",
+          "on_update": null
+        },
+        {
+          "name": "fk_cartao_meses_usuario",
+          "columns": [
+            "id_usuario"
+          ],
+          "references": {
+            "table": "usuarios",
+            "columns": [
+              "id_usuario"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        }
+      ],
+      "checks": [],
+      "indexes": [
+        {
+          "name": "idx_cartao_meses_usuario",
+          "method": "btree",
+          "columns": [
+            "id_usuario"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "cartoes": {
+      "name": "cartoes",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "nome",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "limite",
+          "type": "numeric(12,2)",
+          "nullable": false,
+          "default": "0",
+          "is_enum": false
+        },
+        {
+          "name": "ativo",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "is_enum": false
+        },
+        {
+          "name": "id_usuario",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        }
+      ],
+      "table_constraints_inline": [],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [],
+      "foreign_keys": [
+        {
+          "name": "fk_cartoes_usuario",
+          "columns": [
+            "id_usuario"
+          ],
+          "references": {
+            "table": "usuarios",
+            "columns": [
+              "id_usuario"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        }
+      ],
+      "checks": [],
+      "indexes": [
+        {
+          "name": "idx_cartoes_usuario",
+          "method": "btree",
+          "columns": [
+            "id_usuario"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "categorias": {
+      "name": "categorias",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "nome",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "tipo",
+          "type": "admhomefinance.categoria_tipo",
+          "nullable": false,
+          "default": null,
+          "is_enum": true
+        },
+        {
+          "name": "ativa",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "is_enum": false
+        },
+        {
+          "name": "id_usuario",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        }
+      ],
+      "table_constraints_inline": [],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [],
+      "foreign_keys": [
+        {
+          "name": "fk_categorias_usuario",
+          "columns": [
+            "id_usuario"
+          ],
+          "references": {
+            "table": "usuarios",
+            "columns": [
+              "id_usuario"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        }
+      ],
+      "checks": [],
+      "indexes": [
+        {
+          "name": "idx_categorias_usuario",
+          "method": "btree",
+          "columns": [
+            "id_usuario"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "despesas": {
+      "name": "despesas",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "orcamento_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "categoria_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "descricao",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "complemento",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "valor",
+          "type": "numeric(12,2)",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "mes_referencia",
+          "type": "smallint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "data",
+          "type": "date",
+          "nullable": true,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "status",
+          "type": "admhomefinance.despesa_status",
+          "nullable": false,
+          "default": null,
+          "is_enum": true
+        },
+        {
+          "name": "tipo_recorrencia",
+          "type": "admhomefinance.recorrencia_tipo",
+          "nullable": true,
+          "default": null,
+          "is_enum": true
+        },
+        {
+          "name": "parcela_atual",
+          "type": "smallint",
+          "nullable": true,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "total_parcelas",
+          "type": "smallint",
+          "nullable": true,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "id_usuario",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        }
+      ],
+      "table_constraints_inline": [
+        "CONSTRAINT despesas_check CHECK (((parcela_atual IS NULL) OR (total_parcelas IS NULL) OR ((parcela_atual >= 1) AND (parcela_atual <= total_parcelas))))",
+        "CONSTRAINT despesas_mes_referencia_check CHECK (((mes_referencia >= 1) AND (mes_referencia <= 12)))",
+        "CONSTRAINT despesas_valor_check CHECK ((valor > (0)::numeric))"
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [],
+      "foreign_keys": [
+        {
+          "name": "despesas_categoria_id_fkey",
+          "columns": [
+            "categoria_id"
+          ],
+          "references": {
+            "table": "categorias",
+            "columns": [
+              "id"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        },
+        {
+          "name": "despesas_orcamento_id_fkey",
+          "columns": [
+            "orcamento_id"
+          ],
+          "references": {
+            "table": "orcamentos",
+            "columns": [
+              "id"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        },
+        {
+          "name": "fk_despesas_usuario",
+          "columns": [
+            "id_usuario"
+          ],
+          "references": {
+            "table": "usuarios",
+            "columns": [
+              "id_usuario"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        }
+      ],
+      "checks": [],
+      "indexes": [
+        {
+          "name": "idx_despesas_usuario",
+          "method": "btree",
+          "columns": [
+            "id_usuario"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "despesas_meses": {
+      "name": "despesas_meses",
+      "columns": [
+        {
+          "name": "despesa_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "mes",
+          "type": "smallint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "id_usuario",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        }
+      ],
+      "table_constraints_inline": [
+        "CONSTRAINT despesas_meses_mes_check CHECK (((mes >= 1) AND (mes <= 12)))"
+      ],
+      "primary_key": [
+        "despesa_id",
+        "mes"
+      ],
+      "unique_constraints": [],
+      "foreign_keys": [
+        {
+          "name": "despesas_meses_despesa_id_fkey",
+          "columns": [
+            "despesa_id"
+          ],
+          "references": {
+            "table": "despesas",
+            "columns": [
+              "id"
+            ]
+          },
+          "on_delete": "CASCADE",
+          "on_update": null
+        },
+        {
+          "name": "fk_despesas_meses_usuario",
+          "columns": [
+            "id_usuario"
+          ],
+          "references": {
+            "table": "usuarios",
+            "columns": [
+              "id_usuario"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        }
+      ],
+      "checks": [],
+      "indexes": [
+        {
+          "name": "idx_despesas_meses_usuario",
+          "method": "btree",
+          "columns": [
+            "id_usuario"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "gastos_predefinidos": {
+      "name": "gastos_predefinidos",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "categoria_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "descricao",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "ativo",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "is_enum": false
+        },
+        {
+          "name": "id_usuario",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        }
+      ],
+      "table_constraints_inline": [],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [],
+      "foreign_keys": [
+        {
+          "name": "fk_gastos_usuario",
+          "columns": [
+            "id_usuario"
+          ],
+          "references": {
+            "table": "usuarios",
+            "columns": [
+              "id_usuario"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        },
+        {
+          "name": "gastos_predefinidos_categoria_id_fkey",
+          "columns": [
+            "categoria_id"
+          ],
+          "references": {
+            "table": "categorias",
+            "columns": [
+              "id"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        }
+      ],
+      "checks": [],
+      "indexes": [
+        {
+          "name": "idx_gastos_usuario",
+          "method": "btree",
+          "columns": [
+            "id_usuario"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "lancamentos_cartao": {
+      "name": "lancamentos_cartao",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "cartao_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "categoria_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "descricao",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "complemento",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "valor",
+          "type": "numeric(12,2)",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "data",
+          "type": "date",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "mes_referencia",
+          "type": "smallint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "tipo_recorrencia",
+          "type": "admhomefinance.recorrencia_tipo",
+          "nullable": false,
+          "default": null,
+          "is_enum": true
+        },
+        {
+          "name": "parcela_atual",
+          "type": "smallint",
+          "nullable": true,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "total_parcelas",
+          "type": "smallint",
+          "nullable": true,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "id_usuario",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        }
+      ],
+      "table_constraints_inline": [
+        "CONSTRAINT lancamentos_cartao_check CHECK (((parcela_atual IS NULL) OR (total_parcelas IS NULL) OR ((parcela_atual >= 1) AND (parcela_atual <= total_parcelas))))",
+        "CONSTRAINT lancamentos_cartao_mes_referencia_check CHECK (((mes_referencia >= 1) AND (mes_referencia <= 12)))",
+        "CONSTRAINT lancamentos_cartao_valor_check CHECK ((valor > (0)::numeric))"
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [],
+      "foreign_keys": [
+        {
+          "name": "fk_lancamentos_cartao_usuario",
+          "columns": [
+            "id_usuario"
+          ],
+          "references": {
+            "table": "usuarios",
+            "columns": [
+              "id_usuario"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        },
+        {
+          "name": "lancamentos_cartao_cartao_id_fkey",
+          "columns": [
+            "cartao_id"
+          ],
+          "references": {
+            "table": "cartoes",
+            "columns": [
+              "id"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        },
+        {
+          "name": "lancamentos_cartao_categoria_id_fkey",
+          "columns": [
+            "categoria_id"
+          ],
+          "references": {
+            "table": "categorias",
+            "columns": [
+              "id"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        }
+      ],
+      "checks": [],
+      "indexes": [
+        {
+          "name": "idx_lancamentos_cartao_usuario",
+          "method": "btree",
+          "columns": [
+            "id_usuario"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "lancamentos_cartao_meses": {
+      "name": "lancamentos_cartao_meses",
+      "columns": [
+        {
+          "name": "lancamento_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "mes",
+          "type": "smallint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "id_usuario",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        }
+      ],
+      "table_constraints_inline": [
+        "CONSTRAINT lancamentos_cartao_meses_mes_check CHECK (((mes >= 1) AND (mes <= 12)))"
+      ],
+      "primary_key": [
+        "lancamento_id",
+        "mes"
+      ],
+      "unique_constraints": [],
+      "foreign_keys": [
+        {
+          "name": "fk_lancamentos_cartao_meses_usuario",
+          "columns": [
+            "id_usuario"
+          ],
+          "references": {
+            "table": "usuarios",
+            "columns": [
+              "id_usuario"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        },
+        {
+          "name": "lancamentos_cartao_meses_lancamento_id_fkey",
+          "columns": [
+            "lancamento_id"
+          ],
+          "references": {
+            "table": "lancamentos_cartao",
+            "columns": [
+              "id"
+            ]
+          },
+          "on_delete": "CASCADE",
+          "on_update": null
+        }
+      ],
+      "checks": [],
+      "indexes": [
+        {
+          "name": "idx_lancamentos_cartao_meses_usuario",
+          "method": "btree",
+          "columns": [
+            "id_usuario"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "orcamento_meses": {
+      "name": "orcamento_meses",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "orcamento_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "mes",
+          "type": "smallint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "id_usuario",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        }
+      ],
+      "table_constraints_inline": [
+        "CONSTRAINT orcamento_meses_mes_check CHECK (((mes >= 1) AND (mes <= 12)))"
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [
+        {
+          "name": "orcamento_meses_orcamento_id_mes_key",
+          "columns": [
+            "orcamento_id",
+            "mes"
+          ]
+        }
+      ],
+      "foreign_keys": [
+        {
+          "name": "fk_orcamento_meses_usuario",
+          "columns": [
+            "id_usuario"
+          ],
+          "references": {
+            "table": "usuarios",
+            "columns": [
+              "id_usuario"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        },
+        {
+          "name": "orcamento_meses_orcamento_id_fkey",
+          "columns": [
+            "orcamento_id"
+          ],
+          "references": {
+            "table": "orcamentos",
+            "columns": [
+              "id"
+            ]
+          },
+          "on_delete": "CASCADE",
+          "on_update": null
+        }
+      ],
+      "checks": [],
+      "indexes": [
+        {
+          "name": "idx_orcamento_meses_usuario",
+          "method": "btree",
+          "columns": [
+            "id_usuario"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "orcamentos": {
+      "name": "orcamentos",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "ano",
+          "type": "smallint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "ativo",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "is_enum": false
+        },
+        {
+          "name": "criado_em",
+          "type": "timestamp without time zone",
+          "nullable": true,
+          "default": "now()",
+          "is_enum": false
+        },
+        {
+          "name": "id_usuario",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        }
+      ],
+      "table_constraints_inline": [],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [
+        {
+          "name": "orcamentos_ano_key",
+          "columns": [
+            "ano"
+          ]
+        }
+      ],
+      "foreign_keys": [
+        {
+          "name": "fk_orcamentos_usuario",
+          "columns": [
+            "id_usuario"
+          ],
+          "references": {
+            "table": "usuarios",
+            "columns": [
+              "id_usuario"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        }
+      ],
+      "checks": [],
+      "indexes": [
+        {
+          "name": "idx_orcamentos_usuario",
+          "method": "btree",
+          "columns": [
+            "id_usuario"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "receitas": {
+      "name": "receitas",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "orcamento_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "categoria_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "descricao",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "complemento",
+          "type": "text",
+          "nullable": true,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "valor",
+          "type": "numeric(12,2)",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "mes_referencia",
+          "type": "smallint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "data",
+          "type": "date",
+          "nullable": true,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "status",
+          "type": "admhomefinance.receita_status",
+          "nullable": false,
+          "default": null,
+          "is_enum": true
+        },
+        {
+          "name": "tipo_recorrencia",
+          "type": "admhomefinance.recorrencia_tipo",
+          "nullable": true,
+          "default": null,
+          "is_enum": true
+        },
+        {
+          "name": "parcela_atual",
+          "type": "smallint",
+          "nullable": true,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "total_parcelas",
+          "type": "smallint",
+          "nullable": true,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "id_usuario",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        }
+      ],
+      "table_constraints_inline": [
+        "CONSTRAINT receitas_check CHECK (((parcela_atual IS NULL) OR (total_parcelas IS NULL) OR ((parcela_atual >= 1) AND (parcela_atual <= total_parcelas))))",
+        "CONSTRAINT receitas_mes_referencia_check CHECK (((mes_referencia >= 1) AND (mes_referencia <= 12)))",
+        "CONSTRAINT receitas_valor_check CHECK ((valor > (0)::numeric))"
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [],
+      "foreign_keys": [
+        {
+          "name": "fk_receitas_usuario",
+          "columns": [
+            "id_usuario"
+          ],
+          "references": {
+            "table": "usuarios",
+            "columns": [
+              "id_usuario"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        },
+        {
+          "name": "receitas_categoria_id_fkey",
+          "columns": [
+            "categoria_id"
+          ],
+          "references": {
+            "table": "categorias",
+            "columns": [
+              "id"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        },
+        {
+          "name": "receitas_orcamento_id_fkey",
+          "columns": [
+            "orcamento_id"
+          ],
+          "references": {
+            "table": "orcamentos",
+            "columns": [
+              "id"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        }
+      ],
+      "checks": [],
+      "indexes": [
+        {
+          "name": "idx_receitas_usuario",
+          "method": "btree",
+          "columns": [
+            "id_usuario"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "receitas_meses": {
+      "name": "receitas_meses",
+      "columns": [
+        {
+          "name": "receita_id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "mes",
+          "type": "smallint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "id_usuario",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        }
+      ],
+      "table_constraints_inline": [
+        "CONSTRAINT receitas_meses_mes_check CHECK (((mes >= 1) AND (mes <= 12)))"
+      ],
+      "primary_key": [
+        "receita_id",
+        "mes"
+      ],
+      "unique_constraints": [],
+      "foreign_keys": [
+        {
+          "name": "fk_receitas_meses_usuario",
+          "columns": [
+            "id_usuario"
+          ],
+          "references": {
+            "table": "usuarios",
+            "columns": [
+              "id_usuario"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        },
+        {
+          "name": "receitas_meses_receita_id_fkey",
+          "columns": [
+            "receita_id"
+          ],
+          "references": {
+            "table": "receitas",
+            "columns": [
+              "id"
+            ]
+          },
+          "on_delete": "CASCADE",
+          "on_update": null
+        }
+      ],
+      "checks": [],
+      "indexes": [
+        {
+          "name": "idx_receitas_meses_usuario",
+          "method": "btree",
+          "columns": [
+            "id_usuario"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "saldo_inicial_orcamento": {
+      "name": "saldo_inicial_orcamento",
+      "columns": [
+        {
+          "name": "id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "id_usuario",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "orcamento_id",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "ano",
+          "type": "integer",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "saldo_inicial",
+          "type": "numeric(15,2)",
+          "nullable": false,
+          "default": "0",
+          "is_enum": false
+        },
+        {
+          "name": "criado_em",
+          "type": "timestamp without time zone",
+          "nullable": true,
+          "default": "now()",
+          "is_enum": false
+        },
+        {
+          "name": "atualizado_em",
+          "type": "timestamp without time zone",
+          "nullable": true,
+          "default": "now()",
+          "is_enum": false
+        }
+      ],
+      "table_constraints_inline": [],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [
+        {
+          "name": "unique_saldo_inicial",
+          "columns": [
+            "id_usuario",
+            "orcamento_id",
+            "ano"
+          ]
+        }
+      ],
+      "foreign_keys": [],
+      "checks": [],
+      "indexes": [
+        {
+          "name": "idx_saldo_inicial_ano",
+          "method": "btree",
+          "columns": [
+            "ano"
+          ],
+          "unique": false
+        },
+        {
+          "name": "idx_saldo_inicial_orcamento",
+          "method": "btree",
+          "columns": [
+            "orcamento_id"
+          ],
+          "unique": false
+        },
+        {
+          "name": "idx_saldo_inicial_usuario",
+          "method": "btree",
+          "columns": [
+            "id_usuario"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "sessoes": {
+      "name": "sessoes",
+      "columns": [
+        {
+          "name": "id_sessao",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "id_usuario",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "token_hash",
+          "type": "character varying(64)",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "dispositivo",
+          "type": "character varying(255)",
+          "nullable": true,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "ip_origem",
+          "type": "character varying(45)",
+          "nullable": true,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "data_criacao",
+          "type": "timestamp without time zone",
+          "nullable": true,
+          "default": "CURRENT_TIMESTAMP",
+          "is_enum": false
+        },
+        {
+          "name": "data_expiracao",
+          "type": "timestamp without time zone",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "ativa",
+          "type": "boolean",
+          "nullable": true,
+          "default": "true",
+          "is_enum": false
+        }
+      ],
+      "table_constraints_inline": [],
+      "primary_key": [
+        "id_sessao"
+      ],
+      "unique_constraints": [],
+      "foreign_keys": [
+        {
+          "name": "sessoes_id_usuario_fkey",
+          "columns": [
+            "id_usuario"
+          ],
+          "references": {
+            "table": "usuarios",
+            "columns": [
+              "id_usuario"
+            ]
+          },
+          "on_delete": "CASCADE",
+          "on_update": null
+        }
+      ],
+      "checks": [],
+      "indexes": [
+        {
+          "name": "idx_sessoes_token",
+          "method": "btree",
+          "columns": [
+            "token_hash"
+          ],
+          "unique": false
+        },
+        {
+          "name": "idx_sessoes_usuario",
+          "method": "btree",
+          "columns": [
+            "id_usuario"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "tipos_receita": {
+      "name": "tipos_receita",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "descricao",
+          "type": "text",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "recorrente",
+          "type": "boolean",
+          "nullable": false,
+          "default": "false",
+          "is_enum": false
+        },
+        {
+          "name": "ativo",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true",
+          "is_enum": false
+        },
+        {
+          "name": "id_usuario",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        }
+      ],
+      "table_constraints_inline": [],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [],
+      "foreign_keys": [
+        {
+          "name": "fk_tipos_usuario",
+          "columns": [
+            "id_usuario"
+          ],
+          "references": {
+            "table": "usuarios",
+            "columns": [
+              "id_usuario"
+            ]
+          },
+          "on_delete": null,
+          "on_update": null
+        }
+      ],
+      "checks": [],
+      "indexes": [
+        {
+          "name": "idx_tipos_receita_usuario",
+          "method": "btree",
+          "columns": [
+            "id_usuario"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    "usuarios": {
+      "name": "usuarios",
+      "columns": [
+        {
+          "name": "id_usuario",
+          "type": "bigint",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "email",
+          "type": "character varying(255)",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "senha_hash",
+          "type": "character varying(255)",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "salt",
+          "type": "character varying(64)",
+          "nullable": false,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "nome",
+          "type": "character varying(100)",
+          "nullable": true,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "ativo",
+          "type": "boolean",
+          "nullable": true,
+          "default": "true",
+          "is_enum": false
+        },
+        {
+          "name": "email_verificado",
+          "type": "boolean",
+          "nullable": true,
+          "default": "false",
+          "is_enum": false
+        },
+        {
+          "name": "tentativas_login",
+          "type": "integer",
+          "nullable": true,
+          "default": "0",
+          "is_enum": false
+        },
+        {
+          "name": "bloqueado_ate",
+          "type": "timestamp without time zone",
+          "nullable": true,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "ultimo_login",
+          "type": "timestamp without time zone",
+          "nullable": true,
+          "default": null,
+          "is_enum": false
+        },
+        {
+          "name": "data_criacao",
+          "type": "timestamp without time zone",
+          "nullable": true,
+          "default": "CURRENT_TIMESTAMP",
+          "is_enum": false
+        },
+        {
+          "name": "data_atualizacao",
+          "type": "timestamp without time zone",
+          "nullable": true,
+          "default": "CURRENT_TIMESTAMP",
+          "is_enum": false
+        }
+      ],
+      "table_constraints_inline": [
+        "CONSTRAINT chk_email CHECK (((email)::text ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$'::text))"
+      ],
+      "primary_key": [
+        "id_usuario"
+      ],
+      "unique_constraints": [
+        {
+          "name": "usuarios_email_key",
+          "columns": [
+            "email"
+          ]
+        }
+      ],
+      "foreign_keys": [],
+      "checks": [],
+      "indexes": [
+        {
+          "name": "idx_usuarios_email",
+          "method": "btree",
+          "columns": [
+            "lower((email)::text)"
+          ],
+          "unique": false
+        },
+        {
+          "name": "idx_usuarios_email_unique",
+          "method": "btree",
+          "columns": [
+            "lower((email)::text)"
+          ],
+          "unique": true
+        }
+      ]
+    }
+  },
+  "relationships": [
+    {
+      "from_table": "audit_log",
+      "from_columns": [
+        "id_usuario"
+      ],
+      "to_table": "usuarios",
+      "to_columns": [
+        "id_usuario"
+      ],
+      "constraint_name": "audit_log_id_usuario_fkey",
+      "on_delete": "SET",
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "cartao_faturas_fechadas",
+      "from_columns": [
+        "cartao_id"
+      ],
+      "to_table": "cartoes",
+      "to_columns": [
+        "id"
+      ],
+      "constraint_name": "cartao_faturas_fechadas_cartao_id_fkey",
+      "on_delete": "CASCADE",
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "cartao_faturas_fechadas",
+      "from_columns": [
+        "id_usuario"
+      ],
+      "to_table": "usuarios",
+      "to_columns": [
+        "id_usuario"
+      ],
+      "constraint_name": "fk_cartao_faturas_usuario",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "cartao_lancamentos",
+      "from_columns": [
+        "cartao_mes_id"
+      ],
+      "to_table": "cartao_meses",
+      "to_columns": [
+        "id"
+      ],
+      "constraint_name": "cartao_lancamentos_cartao_mes_id_fkey",
+      "on_delete": "CASCADE",
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "cartao_lancamentos",
+      "from_columns": [
+        "id_usuario"
+      ],
+      "to_table": "usuarios",
+      "to_columns": [
+        "id_usuario"
+      ],
+      "constraint_name": "fk_cartao_lancamentos_usuario",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "cartao_limites_mensais",
+      "from_columns": [
+        "cartao_id"
+      ],
+      "to_table": "cartoes",
+      "to_columns": [
+        "id"
+      ],
+      "constraint_name": "cartao_limites_mensais_cartao_id_fkey",
+      "on_delete": "CASCADE",
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "cartao_limites_mensais",
+      "from_columns": [
+        "id_usuario"
+      ],
+      "to_table": "usuarios",
+      "to_columns": [
+        "id_usuario"
+      ],
+      "constraint_name": "fk_cartao_limites_usuario",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "cartao_meses",
+      "from_columns": [
+        "cartao_id"
+      ],
+      "to_table": "cartoes",
+      "to_columns": [
+        "id"
+      ],
+      "constraint_name": "cartao_meses_cartao_id_fkey",
+      "on_delete": "CASCADE",
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "cartao_meses",
+      "from_columns": [
+        "orcamento_mes_id"
+      ],
+      "to_table": "orcamento_meses",
+      "to_columns": [
+        "id"
+      ],
+      "constraint_name": "cartao_meses_orcamento_mes_id_fkey",
+      "on_delete": "CASCADE",
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "cartao_meses",
+      "from_columns": [
+        "id_usuario"
+      ],
+      "to_table": "usuarios",
+      "to_columns": [
+        "id_usuario"
+      ],
+      "constraint_name": "fk_cartao_meses_usuario",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "cartoes",
+      "from_columns": [
+        "id_usuario"
+      ],
+      "to_table": "usuarios",
+      "to_columns": [
+        "id_usuario"
+      ],
+      "constraint_name": "fk_cartoes_usuario",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "categorias",
+      "from_columns": [
+        "id_usuario"
+      ],
+      "to_table": "usuarios",
+      "to_columns": [
+        "id_usuario"
+      ],
+      "constraint_name": "fk_categorias_usuario",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "despesas",
+      "from_columns": [
+        "categoria_id"
+      ],
+      "to_table": "categorias",
+      "to_columns": [
+        "id"
+      ],
+      "constraint_name": "despesas_categoria_id_fkey",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "despesas",
+      "from_columns": [
+        "orcamento_id"
+      ],
+      "to_table": "orcamentos",
+      "to_columns": [
+        "id"
+      ],
+      "constraint_name": "despesas_orcamento_id_fkey",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "despesas",
+      "from_columns": [
+        "id_usuario"
+      ],
+      "to_table": "usuarios",
+      "to_columns": [
+        "id_usuario"
+      ],
+      "constraint_name": "fk_despesas_usuario",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "despesas_meses",
+      "from_columns": [
+        "despesa_id"
+      ],
+      "to_table": "despesas",
+      "to_columns": [
+        "id"
+      ],
+      "constraint_name": "despesas_meses_despesa_id_fkey",
+      "on_delete": "CASCADE",
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "despesas_meses",
+      "from_columns": [
+        "id_usuario"
+      ],
+      "to_table": "usuarios",
+      "to_columns": [
+        "id_usuario"
+      ],
+      "constraint_name": "fk_despesas_meses_usuario",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "gastos_predefinidos",
+      "from_columns": [
+        "id_usuario"
+      ],
+      "to_table": "usuarios",
+      "to_columns": [
+        "id_usuario"
+      ],
+      "constraint_name": "fk_gastos_usuario",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "gastos_predefinidos",
+      "from_columns": [
+        "categoria_id"
+      ],
+      "to_table": "categorias",
+      "to_columns": [
+        "id"
+      ],
+      "constraint_name": "gastos_predefinidos_categoria_id_fkey",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "lancamentos_cartao",
+      "from_columns": [
+        "id_usuario"
+      ],
+      "to_table": "usuarios",
+      "to_columns": [
+        "id_usuario"
+      ],
+      "constraint_name": "fk_lancamentos_cartao_usuario",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "lancamentos_cartao",
+      "from_columns": [
+        "cartao_id"
+      ],
+      "to_table": "cartoes",
+      "to_columns": [
+        "id"
+      ],
+      "constraint_name": "lancamentos_cartao_cartao_id_fkey",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "lancamentos_cartao",
+      "from_columns": [
+        "categoria_id"
+      ],
+      "to_table": "categorias",
+      "to_columns": [
+        "id"
+      ],
+      "constraint_name": "lancamentos_cartao_categoria_id_fkey",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "lancamentos_cartao_meses",
+      "from_columns": [
+        "id_usuario"
+      ],
+      "to_table": "usuarios",
+      "to_columns": [
+        "id_usuario"
+      ],
+      "constraint_name": "fk_lancamentos_cartao_meses_usuario",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "lancamentos_cartao_meses",
+      "from_columns": [
+        "lancamento_id"
+      ],
+      "to_table": "lancamentos_cartao",
+      "to_columns": [
+        "id"
+      ],
+      "constraint_name": "lancamentos_cartao_meses_lancamento_id_fkey",
+      "on_delete": "CASCADE",
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "orcamento_meses",
+      "from_columns": [
+        "id_usuario"
+      ],
+      "to_table": "usuarios",
+      "to_columns": [
+        "id_usuario"
+      ],
+      "constraint_name": "fk_orcamento_meses_usuario",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "orcamento_meses",
+      "from_columns": [
+        "orcamento_id"
+      ],
+      "to_table": "orcamentos",
+      "to_columns": [
+        "id"
+      ],
+      "constraint_name": "orcamento_meses_orcamento_id_fkey",
+      "on_delete": "CASCADE",
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "orcamentos",
+      "from_columns": [
+        "id_usuario"
+      ],
+      "to_table": "usuarios",
+      "to_columns": [
+        "id_usuario"
+      ],
+      "constraint_name": "fk_orcamentos_usuario",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "receitas",
+      "from_columns": [
+        "id_usuario"
+      ],
+      "to_table": "usuarios",
+      "to_columns": [
+        "id_usuario"
+      ],
+      "constraint_name": "fk_receitas_usuario",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "receitas",
+      "from_columns": [
+        "categoria_id"
+      ],
+      "to_table": "categorias",
+      "to_columns": [
+        "id"
+      ],
+      "constraint_name": "receitas_categoria_id_fkey",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "receitas",
+      "from_columns": [
+        "orcamento_id"
+      ],
+      "to_table": "orcamentos",
+      "to_columns": [
+        "id"
+      ],
+      "constraint_name": "receitas_orcamento_id_fkey",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "receitas_meses",
+      "from_columns": [
+        "id_usuario"
+      ],
+      "to_table": "usuarios",
+      "to_columns": [
+        "id_usuario"
+      ],
+      "constraint_name": "fk_receitas_meses_usuario",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "receitas_meses",
+      "from_columns": [
+        "receita_id"
+      ],
+      "to_table": "receitas",
+      "to_columns": [
+        "id"
+      ],
+      "constraint_name": "receitas_meses_receita_id_fkey",
+      "on_delete": "CASCADE",
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "sessoes",
+      "from_columns": [
+        "id_usuario"
+      ],
+      "to_table": "usuarios",
+      "to_columns": [
+        "id_usuario"
+      ],
+      "constraint_name": "sessoes_id_usuario_fkey",
+      "on_delete": "CASCADE",
+      "on_update": null,
+      "cardinality": "N:1"
+    },
+    {
+      "from_table": "tipos_receita",
+      "from_columns": [
+        "id_usuario"
+      ],
+      "to_table": "usuarios",
+      "to_columns": [
+        "id_usuario"
+      ],
+      "constraint_name": "fk_tipos_usuario",
+      "on_delete": null,
+      "on_update": null,
+      "cardinality": "N:1"
+    }
+  ],
+  "resumo_modelagem": {
+    "total_tabelas": 20,
+    "total_enums": 4,
+    "total_relacionamentos_fk": 34,
+    "tabelas_com_multi_tenant_por_usuario": [
+      "audit_log",
+      "cartao_faturas_fechadas",
+      "cartao_lancamentos",
+      "cartao_limites_mensais",
+      "cartao_meses",
+      "cartoes",
+      "categorias",
+      "despesas",
+      "despesas_meses",
+      "gastos_predefinidos",
+      "lancamentos_cartao",
+      "lancamentos_cartao_meses",
+      "orcamento_meses",
+      "orcamentos",
+      "receitas",
+      "receitas_meses",
+      "saldo_inicial_orcamento",
+      "sessoes",
+      "tipos_receita",
+      "usuarios"
+    ]
+  },
+  "mobile_guidance": {
+    "objetivos": [
+      "Suportar sincronizacao incremental por usuario",
+      "Permitir cache local com reconciliacao por entidade",
+      "Diminuir payload de bootstrap inicial no app mobile"
+    ],
+    "recomendacoes_modelagem_json": {
+      "estrutura_geral": {
+        "versao_schema": "2026-04-03",
+        "entidade_raiz": "usuario",
+        "envelope_sugerido": {
+          "sync_token": "string",
+          "generated_at": "ISO8601",
+          "data": "objetos por colecao"
+        }
+      },
+      "colecoes_sugeridas": [
+        "orcamentos",
+        "orcamento_meses",
+        "categorias",
+        "gastos_predefinidos",
+        "tipos_receita",
+        "receitas",
+        "receitas_meses",
+        "despesas",
+        "despesas_meses",
+        "cartoes",
+        "cartao_limites_mensais",
+        "cartao_faturas_fechadas",
+        "lancamentos_cartao",
+        "lancamentos_cartao_meses",
+        "saldo_inicial_orcamento"
+      ],
+      "chaveamento_e_merge": {
+        "id_numerico_backend": "manter campo id original",
+        "chave_local_mobile": "adicionar local_id UUID para inserts offline",
+        "estrategia_merge": "upsert por (id) e soft-delete por flag ativo quando existir"
+      },
+      "normalizacao_mobile": [
+        "manter tabelas de meses como colecoes separadas para evitar arrays gigantes em receitas/despesas",
+        "agrupar por orcamentoId e mes no cliente para telas de listagem",
+        "materializar visoes no app para dashboard (nao alterar schema fonte)"
+      ],
+      "validacoes_client": [
+        "mes entre 1 e 12",
+        "valor > 0 para lancamentos",
+        "enum coerente com tipos do banco",
+        "status coerente por tipo de entidade"
+      ]
+    },
+    "riscos_e_atencoes": [
+      "Tabela usuarios usa bigint para PK: no mobile evitar parse para float em JavaScript sem bigint-safe handling",
+      "Enums do PostgreSQL precisam ser mapeados para constantes de dominio no app",
+      "Relacoes N:N indiretas por tabelas de meses exigem cuidado em delecao em cascata no cliente"
+    ]
+  }
+}
