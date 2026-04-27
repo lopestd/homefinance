@@ -39,6 +39,17 @@ const stripCreditoTag = (descricao) => {
   return text;
 };
 
+const stripDescricaoParcela = (descricao) =>
+  String(descricao || "").replace(/\s*\(\d+\/\d+\)\s*$/, "").trim();
+
+const getDescricaoAgrupada = (descricao, tipoRecorrencia) => {
+  const text = String(descricao || "").trim();
+  if (!text) return "Sem descricao";
+  if (normalizeText(tipoRecorrencia) !== "parcelado") return text;
+  const semParcela = stripDescricaoParcela(text);
+  return semParcela || "Sem descricao";
+};
+
 const isCreditoLancamento = (lancamento) =>
   Number(lancamento?.valor) < 0 || String(lancamento?.descricao || "").startsWith(CREDITO_TAG);
 
@@ -351,6 +362,7 @@ const RelatoriosPage = ({
         receitasRecebidas: resumoMes.receitasRecebidas,
         despesasPrevistas: resumoMes.despesasPrevistas,
         despesasPagas: resumoMes.despesasPagas,
+        previstoMes: resumoMes.receitasPrevistas - resumoMes.despesasPrevistas,
         saldoMes,
         saldoAcumulado: saldoAcumuladoMap.get(mes) ?? saldoMes
       };
@@ -407,6 +419,7 @@ const RelatoriosPage = ({
       const referencia = roundMoney(payload.referencia ?? payload.valor ?? 0);
       const realizado = roundMoney(payload.realizado ?? 0);
       const aberto = roundMoney(referencia - realizado);
+      const descricao = String(payload.descricao || "Sem descricao").trim() || "Sem descricao";
       rows.push({
         quantidade: 1,
         valor: referencia,
@@ -414,7 +427,9 @@ const RelatoriosPage = ({
         realizado,
         aberto,
         conciliacao: payload.conciliacao || "NORMAL",
-        ...payload
+        ...payload,
+        descricao,
+        descricaoAgrupada: getDescricaoAgrupada(descricao, payload.tipoRecorrencia)
       });
     };
 
@@ -514,11 +529,12 @@ const RelatoriosPage = ({
   const gastosResumo = useMemo(() => {
     const map = new Map();
     gastosCanonicos.forEach((row) => {
-      const key = `${row.categoria}::${row.descricao}`;
+      const descricaoAgrupada = row.descricaoAgrupada || row.descricao || "Sem descricao";
+      const key = `${row.categoria}::${descricaoAgrupada}`;
       const current = map.get(key) || {
         id: key,
         categoria: row.categoria,
-        descricao: row.descricao,
+        descricao: descricaoAgrupada,
         origem: row.origem,
         tipoGasto: row.tipoGasto,
         quantidade: 0,
@@ -766,6 +782,15 @@ const RelatoriosPage = ({
       { key: "receitasRecebidas", label: "Receita recebida", render: (row) => formatCurrency(row.receitasRecebidas) },
       { key: "despesasPrevistas", label: "Despesa prevista", render: (row) => formatCurrency(row.despesasPrevistas) },
       { key: "despesasPagas", label: "Despesa paga", render: (row) => formatCurrency(row.despesasPagas) },
+      {
+        key: "previstoMes",
+        label: "Previsto no Mês",
+        render: (row) => (
+          <span className={row.previstoMes >= 0 ? "reports-value-previsto-positive" : "reports-value-previsto-negative"}>
+            {formatCurrency(row.previstoMes)}
+          </span>
+        )
+      },
       {
         key: "saldoMes",
         label: "Saldo do mes",

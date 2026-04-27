@@ -480,7 +480,7 @@ const ReceitasPage = ({
 
           <div className="summary-card">
             <h4 className="summary-card-title">Pendente</h4>
-            <strong className={`summary-card-value ${totals.pendenteNum > 0 ? "summary-card-value--warning" : "summary-card-value--neutral"}`}>
+            <strong className="summary-card-value summary-card-value--receitas-pendente">
               {totals.pendente}
             </strong>
           </div>

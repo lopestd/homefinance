@@ -82,6 +82,11 @@
   color: #64748b;
 }
 
+.summary-card-value--receitas-pendente {
+  color: #1e3a8a;
+  font-weight: 700;
+}
+
 .summary-card-subtext {
   font-size: 0.8em;
   font-weight: 500;
@@ -1235,6 +1240,15 @@
 .reports-value-neutral {
   color: #475569;
   font-weight: 700;
+}
+
+.reports-value-previsto-positive {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.reports-value-previsto-negative {
+  color: #92400e;
 }
 
 .reports-insights-list {
