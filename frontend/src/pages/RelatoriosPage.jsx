@@ -1,7 +1,7 @@
 ﻿import { useCallback, useMemo, useState } from "react";
 import useRelatorios from "../hooks/useRelatorios";
 import useSaldoAcumulado from "../hooks/useSaldoAcumulado";
-import { formatCurrency } from "../utils/appUtils";
+import { formatCurrency, MONTHS_ORDER } from "../utils/appUtils";
 import { TabNavigation } from "../components/reports";
 import { AreaChart, HorizontalBar, PieChart } from "../components/charts";
 import { KPICard } from "../components/dashboard";
@@ -15,6 +15,22 @@ const normalizeText = (value) =>
     .replace(/\p{Diacritic}/gu, "")
     .toLowerCase()
     .trim();
+
+const MONTH_INDEX_MAP = new Map(
+  MONTHS_ORDER.map((mes, index) => [normalizeText(mes), index])
+);
+
+const getMonthCalendarIndex = (mes) => {
+  const index = MONTH_INDEX_MAP.get(normalizeText(mes));
+  return Number.isInteger(index) ? index : Number.MAX_SAFE_INTEGER;
+};
+
+const sortLancamentosByMesData = (lancamentos) =>
+  [...lancamentos].sort((a, b) => {
+    const mesCompare = getMonthCalendarIndex(a?.mes) - getMonthCalendarIndex(b?.mes);
+    if (mesCompare !== 0) return mesCompare;
+    return String(a?.data || "").localeCompare(String(b?.data || ""));
+  });
 
 const stripCreditoTag = (descricao) => {
   const text = String(descricao || "").trim();
@@ -538,11 +554,7 @@ const RelatoriosPage = ({
     return Array.from(map.values())
       .map((row) => ({
         ...row,
-        lancamentos: [...row.lancamentos].sort((a, b) => {
-          const mesCompare = String(a.mes || "").localeCompare(String(b.mes || ""));
-          if (mesCompare !== 0) return mesCompare;
-          return String(a.data || "").localeCompare(String(b.data || ""));
-        })
+        lancamentos: sortLancamentosByMesData(row.lancamentos)
       }))
       .sort((a, b) => Math.abs(b.referencia) - Math.abs(a.referencia));
   }, [gastosCanonicos]);
@@ -597,6 +609,7 @@ const RelatoriosPage = ({
     return Array.from(map.values())
       .map((row) => ({
         ...row,
+        lancamentos: sortLancamentosByMesData(row.lancamentos),
         participacao: totalReferencia > 0 ? (row.referencia / totalReferencia) * 100 : 0
       }))
       .sort((a, b) => Math.abs(b.referencia) - Math.abs(a.referencia));

@@ -135,9 +135,12 @@ const DespesasPage = ({
       lancado += val;
       if (d.status === "Pago") pago += val;
     });
+    const pendente = Math.max(lancado - pago, 0);
     return {
       lancado: formatCurrency(lancado),
-      pago: formatCurrency(pago)
+      pago: formatCurrency(pago),
+      pendente: formatCurrency(pendente),
+      pendenteNum: pendente
     };
   }, [filteredSortedDespesas]);
 
@@ -531,7 +534,7 @@ const DespesasPage = ({
             </button>
           </div>
         </div>
-        <form className="form-inline" onSubmit={(event) => event.preventDefault()}>
+        <form className="form-inline form-inline--orcamento-mes-mobile" onSubmit={(event) => event.preventDefault()}>
           <label className="field">
             Orçamento
             <select
@@ -576,6 +579,13 @@ const DespesasPage = ({
           <div className="summary-card">
             <h4 className="summary-card-title">Total Pago</h4>
             <strong className="summary-card-value summary-card-value--positive">{totals.pago}</strong>
+          </div>
+
+          <div className="summary-card">
+            <h4 className="summary-card-title">Pendentes de Pagamento</h4>
+            <strong className={`summary-card-value ${totals.pendenteNum > 0 ? "summary-card-value--warning" : "summary-card-value--neutral"}`}>
+              {totals.pendente}
+            </strong>
           </div>
         </div>
       </section>

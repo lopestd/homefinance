@@ -258,6 +258,22 @@
     gap: 12px !important;
   }
 
+  .form-inline--orcamento-mes-mobile {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px !important;
+    align-items: end !important;
+  }
+
+  .form-inline--orcamento-mes-mobile .field {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .form-inline--cartao-filtros .field:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+
   .brand {
     padding: calc(14px + env(safe-area-inset-top)) 12px 14px !important;
     gap: 4px !important;

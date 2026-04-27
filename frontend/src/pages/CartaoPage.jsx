@@ -1008,7 +1008,7 @@ const CartaoPage = ({
             <button type="button" className="primary" onClick={() => openModal()} disabled={isSaving}>+ Novo lançamento</button>
           </div>
         </div>
-        <form className="form-inline" onSubmit={(e) => e.preventDefault()}>
+        <form className="form-inline form-inline--orcamento-mes-mobile form-inline--cartao-filtros" onSubmit={(e) => e.preventDefault()}>
           <label className="field">
             Orçamento
             <select
@@ -1023,18 +1023,18 @@ const CartaoPage = ({
             </select>
           </label>
           <label className="field">
-            Cartão
-            <select value={effectiveCartaoId} onChange={(e) => setSelectedCartaoId(e.target.value)}>
-              {cartoes.length === 0 && <option value="">Nenhum cartão cadastrado</option>}
-              {cartoes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-            </select>
-          </label>
-          <label className="field">
             Mês
             <select value={selectedMes} onChange={(e) => setSelectedMes(e.target.value)}>
               {mesesDisponiveis.length === 0
                 ? <option value="">Sem meses no orçamento</option>
                 : mesesDisponiveis.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </label>
+          <label className="field">
+            Cartão
+            <select value={effectiveCartaoId} onChange={(e) => setSelectedCartaoId(e.target.value)}>
+              {cartoes.length === 0 && <option value="">Nenhum cartão cadastrado</option>}
+              {cartoes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
           </label>
         </form>

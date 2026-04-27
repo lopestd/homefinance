@@ -190,17 +190,33 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!isMobile || activeKey !== "dashboard") return;
+    if (!("scrollRestoration" in window.history)) return undefined;
+    const previousRestoration = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+    return () => {
+      window.history.scrollRestoration = previousRestoration;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isMobile) return undefined;
     const contentEl = contentRef.current;
-    if (!contentEl) return;
+    if (!contentEl) return undefined;
 
     const resetScroll = () => {
-      contentEl.scrollTo(0, 0);
+      contentEl.scrollTop = 0;
+      contentEl.scrollLeft = 0;
+      window.scrollTo(0, 0);
     };
 
     resetScroll();
     const rafId = window.requestAnimationFrame(resetScroll);
-    return () => window.cancelAnimationFrame(rafId);
+    const timeoutId = window.setTimeout(resetScroll, 120);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.clearTimeout(timeoutId);
+    };
   }, [isMobile, activeKey, isDataLoaded]);
 
   const handleNavClick = () => {

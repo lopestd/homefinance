@@ -429,7 +429,7 @@ const ReceitasPage = ({
             </button>
           </div>
         </div>
-        <form className="form-inline" onSubmit={(event) => event.preventDefault()}>
+        <form className="form-inline form-inline--orcamento-mes-mobile" onSubmit={(event) => event.preventDefault()}>
           <label className="field">
             Orçamento
             <select
@@ -819,4 +819,3 @@ const ReceitasPage = ({
 };
 
 export { ReceitasPage };
-
