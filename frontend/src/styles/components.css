@@ -70,6 +70,13 @@ button.ghost:hover {
   border-bottom: 1px solid #e2e8f0;
 }
 
+.modal-header--with-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .modal-header h3 {
   margin: 0;
   font-size: 18px;
@@ -77,8 +84,24 @@ button.ghost:hover {
   color: #0f172a;
 }
 
+.modal-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
 .modal-body {
   padding: 16px 20px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid #e2e8f0;
 }
 
 .modal-actions {

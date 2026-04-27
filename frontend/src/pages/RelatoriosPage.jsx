@@ -48,6 +48,8 @@ const getSignedLancamentoValor = (lancamento) => {
   return isCreditoLancamento(lancamento) ? -valor : valor;
 };
 
+const roundMoney = (value) => Math.round((Number(value) || 0) * 100) / 100;
+
 const formatPercent = (value) => {
   if (value === null || value === undefined || Number.isNaN(value)) return "-";
   return `${value.toLocaleString("pt-BR", {
@@ -130,7 +132,7 @@ const RelatoriosPage = ({
   } = useRelatorios(orcamentos, selectedOrcamentoId);
 
   const currentOrcamento = useMemo(
-    () => orcamentos.find((orcamento) => orcamento.id === effectiveOrcamentoId),
+    () => orcamentos.find((orcamento) => String(orcamento.id) === String(effectiveOrcamentoId)),
     [orcamentos, effectiveOrcamentoId]
   );
 
@@ -148,11 +150,6 @@ const RelatoriosPage = ({
   const categoriasMap = useMemo(
     () => new Map((categorias || []).map((categoria) => [categoria.id, categoria.nome])),
     [categorias]
-  );
-
-  const cartoesMap = useMemo(
-    () => new Map((cartoes || []).map((cartao) => [String(cartao.id), cartao])),
-    [cartoes]
   );
 
   const mesesSelecionadosSet = useMemo(() => new Set(mesesSelecionados), [mesesSelecionados]);
@@ -181,12 +178,12 @@ const RelatoriosPage = ({
   );
 
   const receitasOrcamento = useMemo(
-    () => receitas.filter((receita) => receita.orcamentoId === effectiveOrcamentoId),
+    () => receitas.filter((receita) => String(receita.orcamentoId) === String(effectiveOrcamentoId)),
     [receitas, effectiveOrcamentoId]
   );
 
   const despesasOrcamento = useMemo(
-    () => despesas.filter((despesa) => despesa.orcamentoId === effectiveOrcamentoId),
+    () => despesas.filter((despesa) => String(despesa.orcamentoId) === String(effectiveOrcamentoId)),
     [despesas, effectiveOrcamentoId]
   );
 
@@ -198,37 +195,6 @@ const RelatoriosPage = ({
       descricao.startsWith("fatura cartao ")
     );
   }, []);
-
-  const isDespesaFinanceira = useCallback(
-    (despesa) => {
-      if (isFaturaTecnica(despesa)) return false;
-      const categoria = normalizeText(getCategoriaNome(despesa));
-      const descricao = normalizeText(despesa.descricao);
-      return (
-        categoria === "emprestimos" ||
-        categoria === "financiamentos" ||
-        categoria === "juros" ||
-        categoria === "tarifas" ||
-        descricao.includes("emprestimo") ||
-        descricao.includes("financiamento") ||
-        descricao.includes("juros") ||
-        descricao.includes("tarifa") ||
-        descricao.includes("anuidade") ||
-        descricao.includes("iof")
-      );
-    },
-    [getCategoriaNome, isFaturaTecnica]
-  );
-
-  const despesasOperacionais = useMemo(
-    () => despesasOrcamento.filter((despesa) => !isFaturaTecnica(despesa) && !isDespesaFinanceira(despesa)),
-    [despesasOrcamento, isFaturaTecnica, isDespesaFinanceira]
-  );
-
-  const despesasFinanceiras = useMemo(
-    () => despesasOrcamento.filter((despesa) => !isFaturaTecnica(despesa) && isDespesaFinanceira(despesa)),
-    [despesasOrcamento, isFaturaTecnica, isDespesaFinanceira]
-  );
 
   const despesasTecnicas = useMemo(
     () => despesasOrcamento.filter((despesa) => isFaturaTecnica(despesa)),
@@ -395,201 +361,310 @@ const RelatoriosPage = ({
     []
   );
 
-  const categoriasDespesasDetalhadas = useMemo(() => {
-    const map = new Map();
-    despesasOperacionais.forEach((despesa) => {
-      const ocorrencias = countOcorrencias(despesa, mesesSelecionadosSet);
-      if (ocorrencias === 0) return;
-      const categoria = getCategoriaNome(despesa);
-      const descricao = despesa.complemento ? `${despesa.descricao} - ${despesa.complemento}` : despesa.descricao || "Sem descricao";
-      const valor = Number(despesa.valor) || 0;
-      const previsto = valor * ocorrencias;
-      const pago = despesa.status === "Pago" ? previsto : 0;
-      const key = `${categoria}::${descricao}`;
-      const current = map.get(key) || { id: key, categoria, descricao, quantidade: 0, previsto: 0, pago: 0 };
-      map.set(key, {
-        ...current,
-        quantidade: current.quantidade + ocorrencias,
-        previsto: current.previsto + previsto,
-        pago: current.pago + pago
-      });
-    });
+  const gastosCanonicos = useMemo(() => {
+    const rows = [];
+    const faturaPrefixes = [
+      "fatura do cartao ",
+      "pagamento da fatura do cartao ",
+      "fatura cartao "
+    ];
 
-    const rows = Array.from(map.values()).map((row) => ({ ...row, emAberto: row.previsto - row.pago }));
-    const totalPrevisto = rows.reduce((acc, row) => acc + row.previsto, 0);
-    return rows.map((row) => ({
-      ...row,
-      participacao: totalPrevisto > 0 ? (row.previsto / totalPrevisto) * 100 : 0
-    })).sort((a, b) => b.previsto - a.previsto);
-  }, [despesasOperacionais, countOcorrencias, mesesSelecionadosSet, getCategoriaNome]);
+    const getCartaoDaFatura = (despesa) => {
+      const descricaoNormalizada = normalizeText(despesa.descricao);
+      const prefix = faturaPrefixes.find((item) => descricaoNormalizada.startsWith(item));
+      if (!prefix) return null;
+      const nomeCartaoNormalizado = descricaoNormalizada.slice(prefix.length).trim();
+      return (cartoes || []).find((cartao) => normalizeText(cartao.nome) === nomeCartaoNormalizado) || null;
+    };
 
-  const categoriasDespesasResumo = useMemo(() => {
-    const map = new Map();
-    categoriasDespesasDetalhadas.forEach((row) => {
-      const current = map.get(row.categoria) || { id: row.categoria, categoria: row.categoria, quantidade: 0, descricoes: 0, previsto: 0, pago: 0 };
-      map.set(row.categoria, {
-        ...current,
-        quantidade: current.quantidade + row.quantidade,
-        descricoes: current.descricoes + 1,
-        previsto: current.previsto + row.previsto,
-        pago: current.pago + row.pago
-      });
-    });
-
-    const rows = Array.from(map.values()).map((row) => ({ ...row, emAberto: row.previsto - row.pago }));
-    const totalPrevisto = rows.reduce((acc, row) => acc + row.previsto, 0);
-    return rows.map((row) => ({
-      ...row,
-      participacao: totalPrevisto > 0 ? (row.previsto / totalPrevisto) * 100 : 0
-    })).sort((a, b) => b.previsto - a.previsto);
-  }, [categoriasDespesasDetalhadas]);
-
-  const categoriasFinanceirasDetalhadas = useMemo(() => {
-    const map = new Map();
-    despesasFinanceiras.forEach((despesa) => {
-      const ocorrencias = countOcorrencias(despesa, mesesSelecionadosSet);
-      if (ocorrencias === 0) return;
-      const categoria = getCategoriaNome(despesa);
-      const descricao = despesa.complemento ? `${despesa.descricao} - ${despesa.complemento}` : despesa.descricao || "Sem descricao";
-      const valor = Number(despesa.valor) || 0;
-      const previsto = valor * ocorrencias;
-      const pago = despesa.status === "Pago" ? previsto : 0;
-      const key = `${categoria}::${descricao}`;
-      const current = map.get(key) || { id: key, categoria, descricao, quantidade: 0, previsto: 0, pago: 0 };
-      map.set(key, {
-        ...current,
-        quantidade: current.quantidade + ocorrencias,
-        previsto: current.previsto + previsto,
-        pago: current.pago + pago
-      });
-    });
-
-    const rows = Array.from(map.values()).map((row) => ({ ...row, emAberto: row.previsto - row.pago }));
-    const totalPrevisto = rows.reduce((acc, row) => acc + row.previsto, 0);
-    return rows.map((row) => ({
-      ...row,
-      participacao: totalPrevisto > 0 ? (row.previsto / totalPrevisto) * 100 : 0
-    })).sort((a, b) => b.previsto - a.previsto);
-  }, [despesasFinanceiras, countOcorrencias, mesesSelecionadosSet, getCategoriaNome]);
-
-  const categoriasCartaoDetalhadas = useMemo(() => {
-    const map = new Map();
+    const lancamentosPorCartaoMes = new Map();
     lancamentosPeriodo.forEach((lancamento) => {
       const mesesAtivos = getMesesItem(lancamento).filter((mes) => mesesSelecionadosSet.has(mes));
-      if (mesesAtivos.length === 0) return;
-      const categoria = getCategoriaNome(lancamento);
-      const descricaoBase = stripCreditoTag(lancamento.descricao) || "Sem descricao";
-      const descricao = lancamento.complemento ? `${descricaoBase} - ${lancamento.complemento}` : descricaoBase;
-      const valorAssinado = getSignedLancamentoValor(lancamento);
-      const cartao = cartoesMap.get(String(lancamento.cartaoId));
-      const fechadas = cartao?.faturasFechadas || [];
-      const key = `${categoria}::${descricao}`;
-      const current = map.get(key) || { id: key, categoria, descricao, quantidade: 0, consumo: 0, faturaFechada: 0, faturaAberta: 0 };
-      const quantidadeFechada = mesesAtivos.filter((mes) => fechadas.includes(mes)).length;
-      const quantidadeAberta = mesesAtivos.length - quantidadeFechada;
-      map.set(key, {
-        ...current,
-        quantidade: current.quantidade + mesesAtivos.length,
-        consumo: current.consumo + (valorAssinado * mesesAtivos.length),
-        faturaFechada: current.faturaFechada + (valorAssinado * quantidadeFechada),
-        faturaAberta: current.faturaAberta + (valorAssinado * quantidadeAberta)
+      mesesAtivos.forEach((mes) => {
+        const key = `${String(lancamento.cartaoId)}::${mes}`;
+        const current = lancamentosPorCartaoMes.get(key) || [];
+        lancamentosPorCartaoMes.set(key, [...current, lancamento]);
       });
     });
 
-    const rows = Array.from(map.values()).filter((row) => row.consumo !== 0 || row.faturaFechada !== 0 || row.faturaAberta !== 0);
-    const totalConsumo = rows.reduce((acc, row) => acc + Math.max(row.consumo, 0), 0);
-    return rows.map((row) => ({
-      ...row,
-      participacao: totalConsumo > 0 ? (Math.max(row.consumo, 0) / totalConsumo) * 100 : 0
-    })).sort((a, b) => b.consumo - a.consumo);
-  }, [lancamentosPeriodo, getMesesItem, mesesSelecionadosSet, getCategoriaNome, cartoesMap]);
-
-  const categoriasCartaoResumo = useMemo(() => {
-    const map = new Map();
-    categoriasCartaoDetalhadas.forEach((row) => {
-      const current = map.get(row.categoria) || { id: row.categoria, categoria: row.categoria, quantidade: 0, descricoes: 0, consumo: 0, faturaFechada: 0, faturaAberta: 0 };
-      map.set(row.categoria, {
-        ...current,
-        quantidade: current.quantidade + row.quantidade,
-        descricoes: current.descricoes + 1,
-        consumo: current.consumo + row.consumo,
-        faturaFechada: current.faturaFechada + row.faturaFechada,
-        faturaAberta: current.faturaAberta + row.faturaAberta
-      });
-    });
-
-    const rows = Array.from(map.values());
-    const totalConsumo = rows.reduce((acc, row) => acc + row.consumo, 0);
-    return rows.map((row) => ({
-      ...row,
-      participacao: totalConsumo > 0 ? (row.consumo / totalConsumo) * 100 : 0
-    })).sort((a, b) => b.consumo - a.consumo);
-  }, [categoriasCartaoDetalhadas]);
-
-  const categoriasDespesasGerenciaisResumo = useMemo(() => {
-    const map = new Map();
-
-    const appendRow = (categoria, valores) => {
-      const current = map.get(categoria) || {
-        id: categoria,
-        categoria,
-        quantidade: 0,
-        descricoes: 0,
-        total: 0,
-        realizado: 0,
-        aberto: 0
-      };
-
-      map.set(categoria, {
-        ...current,
-        quantidade: current.quantidade + (valores.quantidade || 0),
-        descricoes: current.descricoes + (valores.descricoes || 0),
-        total: current.total + (valores.total || 0),
-        realizado: current.realizado + (valores.realizado || 0),
-        aberto: current.aberto + (valores.aberto || 0)
+    const appendRow = (payload) => {
+      const referencia = roundMoney(payload.referencia ?? payload.valor ?? 0);
+      const realizado = roundMoney(payload.realizado ?? 0);
+      const aberto = roundMoney(referencia - realizado);
+      rows.push({
+        quantidade: 1,
+        valor: referencia,
+        referencia,
+        realizado,
+        aberto,
+        conciliacao: payload.conciliacao || "NORMAL",
+        ...payload
       });
     };
 
-    categoriasDespesasResumo.forEach((row) => {
-      appendRow(row.categoria, {
-        quantidade: row.quantidade,
-        descricoes: row.descricoes,
-        total: row.previsto,
-        realizado: row.pago,
-        aberto: row.emAberto
+    despesasOrcamento.forEach((despesa) => {
+      const mesesAtivos = getMesesItem(despesa).filter((mes) => mesesSelecionadosSet.has(mes));
+      if (mesesAtivos.length === 0) return;
+
+      const origemBase = isFaturaTecnica(despesa) ? "Fatura" : "Despesa";
+
+      mesesAtivos.forEach((mes, index) => {
+        const valorOficial = roundMoney(Math.abs(Number(despesa.valor) || 0));
+        const realizadoOficial = despesa.status === "Pago" ? valorOficial : 0;
+        const cartaoFatura = origemBase === "Fatura" ? getCartaoDaFatura(despesa) : null;
+        const lancamentosFatura = cartaoFatura
+          ? (lancamentosPorCartaoMes.get(`${String(cartaoFatura.id)}::${mes}`) || [])
+          : [];
+
+        if (origemBase === "Fatura" && lancamentosFatura.length > 0) {
+          const composicao = lancamentosFatura
+            .map((lancamento) => ({
+              lancamento,
+              valorOriginal: roundMoney(getSignedLancamentoValor(lancamento))
+            }))
+            .filter((item) => item.valorOriginal !== 0);
+
+          if (composicao.length > 0) {
+            composicao.forEach((item, composicaoIndex) => {
+              const valorLancamento = item.valorOriginal;
+              const realizado = despesa.status === "Pago" ? valorLancamento : 0;
+              appendRow({
+                id: `fatura-${despesa.id || despesa.descricao || "item"}-${mes}-${item.lancamento.id || composicaoIndex}`,
+                categoria: getCategoriaNome(item.lancamento),
+                tipoGasto: getTipoGasto(item.lancamento),
+                origem: "Cartao",
+                descricao: stripCreditoTag(item.lancamento.descricao) || despesa.descricao || "Sem descricao",
+                complemento: item.lancamento.complemento || despesa.complemento || "-",
+                mes,
+                data: item.lancamento.data || despesa.data || "",
+                referencia: valorLancamento,
+                valorOriginal: valorLancamento,
+                realizado,
+                status: despesa.status || "-",
+                cartao: cartaoFatura?.nome || "-",
+                tipoRecorrencia: item.lancamento.tipoRecorrencia || despesa.tipoRecorrencia || "EVENTUAL",
+                parcela: item.lancamento.parcela ?? despesa.parcela ?? "-",
+                totalParcelas: item.lancamento.totalParcelas ?? item.lancamento.qtdParcelas ?? despesa.totalParcelas ?? despesa.qtdParcelas ?? "-",
+                orcamento: currentOrcamento?.label || "-",
+                referenciaId: despesa.id || "-",
+                referenciaDescricao: despesa.descricao || "-",
+                observacao: "Lancamento de cartao vinculado a fatura",
+                conciliacao: "CONCILIADA"
+              });
+            });
+            return;
+          }
+        }
+
+        const categoriaFallback = origemBase === "Fatura" ? "Fatura nao conciliada" : getCategoriaNome(despesa);
+        appendRow({
+          id: `${origemBase.toLowerCase()}-${despesa.id || despesa.descricao || "item"}-${mes}-${index}`,
+          categoria: categoriaFallback,
+          tipoGasto: getTipoGasto(despesa),
+          origem: origemBase === "Fatura" ? "Fatura" : origemBase,
+          descricao: despesa.descricao || "Sem descricao",
+          complemento: despesa.complemento || "-",
+          mes,
+          data: despesa.data || "",
+          referencia: valorOficial,
+          realizado: realizadoOficial,
+          status: despesa.status || "-",
+          cartao: cartaoFatura?.nome || "-",
+          tipoRecorrencia: despesa.tipoRecorrencia || "EVENTUAL",
+          parcela: despesa.parcela ?? "-",
+          totalParcelas: despesa.totalParcelas ?? despesa.qtdParcelas ?? "-",
+          orcamento: currentOrcamento?.label || "-",
+          referenciaId: despesa.id || "-",
+          referenciaDescricao: despesa.descricao || "-",
+          observacao: origemBase === "Fatura" ? "Fatura sem composicao de cartao para o mes selecionado" : "-",
+          conciliacao: origemBase === "Fatura" ? "NAO_CONCILIADA" : "NORMAL"
+        });
       });
     });
 
-    categoriasFinanceirasDetalhadas.forEach((row) => {
-      appendRow(row.categoria, {
-        quantidade: row.quantidade,
-        descricoes: 1,
-        total: row.previsto,
-        realizado: row.pago,
-        aberto: row.emAberto
+    return rows.sort((a, b) => Math.abs(b.referencia) - Math.abs(a.referencia));
+  }, [
+    despesasOrcamento,
+    mesesSelecionadosSet,
+    cartoes,
+    lancamentosPeriodo,
+    getMesesItem,
+    isFaturaTecnica,
+    getCategoriaNome,
+    getTipoGasto,
+    currentOrcamento
+  ]);
+
+  const gastosResumo = useMemo(() => {
+    const map = new Map();
+    gastosCanonicos.forEach((row) => {
+      const key = `${row.categoria}::${row.descricao}`;
+      const current = map.get(key) || {
+        id: key,
+        categoria: row.categoria,
+        descricao: row.descricao,
+        origem: row.origem,
+        tipoGasto: row.tipoGasto,
+        quantidade: 0,
+        referencia: 0,
+        realizado: 0,
+        aberto: 0,
+        naoConciliadas: 0,
+        tiposGasto: new Set(),
+        origens: new Set(),
+        lancamentos: []
+      };
+
+      const tiposGasto = new Set(current.tiposGasto);
+      tiposGasto.add(row.tipoGasto);
+      const origens = new Set(current.origens);
+      origens.add(row.origem);
+
+      map.set(key, {
+        ...current,
+        origem: Array.from(origens).sort().join(" / "),
+        tipoGasto: Array.from(tiposGasto).sort().join(" / "),
+        quantidade: current.quantidade + (row.quantidade || 1),
+        referencia: roundMoney(current.referencia + row.referencia),
+        realizado: roundMoney(current.realizado + row.realizado),
+        aberto: roundMoney(current.aberto + row.aberto),
+        naoConciliadas: current.naoConciliadas + (row.conciliacao === "NAO_CONCILIADA" ? 1 : 0),
+        tiposGasto,
+        origens,
+        lancamentos: [...current.lancamentos, row]
       });
     });
 
-    categoriasCartaoResumo.forEach((row) => {
-      appendRow(row.categoria, {
-        quantidade: row.quantidade,
-        descricoes: row.descricoes,
-        total: Math.max(row.consumo, 0),
-        realizado: Math.max(row.faturaFechada, 0),
-        aberto: Math.max(row.faturaAberta, 0)
-      });
-    });
-
-    const rows = Array.from(map.values()).filter((row) => row.total > 0);
-    const totalGeral = rows.reduce((acc, row) => acc + row.total, 0);
-
-    return rows
+    return Array.from(map.values())
       .map((row) => ({
         ...row,
-        participacao: totalGeral > 0 ? (row.total / totalGeral) * 100 : 0
+        lancamentos: [...row.lancamentos].sort((a, b) => {
+          const mesCompare = String(a.mes || "").localeCompare(String(b.mes || ""));
+          if (mesCompare !== 0) return mesCompare;
+          return String(a.data || "").localeCompare(String(b.data || ""));
+        })
       }))
-      .sort((a, b) => b.total - a.total);
-  }, [categoriasDespesasResumo, categoriasFinanceirasDetalhadas, categoriasCartaoResumo]);
+      .sort((a, b) => Math.abs(b.referencia) - Math.abs(a.referencia));
+  }, [gastosCanonicos]);
+
+  const categoriasResumo = useMemo(() => {
+    const map = new Map();
+    gastosCanonicos.forEach((row) => {
+      const key = row.categoria || "Sem categoria";
+      const current = map.get(key) || {
+        id: key,
+        categoria: key,
+        descricao: "Consolidado por categoria",
+        origem: row.origem,
+        tipoGasto: row.tipoGasto,
+        quantidade: 0,
+        descricoes: 0,
+        referencia: 0,
+        realizado: 0,
+        aberto: 0,
+        naoConciliadas: 0,
+        origens: new Set(),
+        tiposGasto: new Set(),
+        descricoesSet: new Set(),
+        lancamentos: []
+      };
+
+      const origens = new Set(current.origens);
+      origens.add(row.origem);
+      const tiposGasto = new Set(current.tiposGasto);
+      tiposGasto.add(row.tipoGasto);
+      const descricoesSet = new Set(current.descricoesSet);
+      descricoesSet.add(row.descricao);
+
+      map.set(key, {
+        ...current,
+        origem: Array.from(origens).sort().join(" / "),
+        tipoGasto: Array.from(tiposGasto).sort().join(" / "),
+        quantidade: current.quantidade + (row.quantidade || 1),
+        descricoes: descricoesSet.size,
+        referencia: roundMoney(current.referencia + row.referencia),
+        realizado: roundMoney(current.realizado + row.realizado),
+        aberto: roundMoney(current.aberto + row.aberto),
+        naoConciliadas: current.naoConciliadas + (row.conciliacao === "NAO_CONCILIADA" ? 1 : 0),
+        origens,
+        tiposGasto,
+        descricoesSet,
+        lancamentos: [...current.lancamentos, row]
+      });
+    });
+
+    const totalReferencia = Array.from(map.values()).reduce((acc, row) => acc + row.referencia, 0);
+    return Array.from(map.values())
+      .map((row) => ({
+        ...row,
+        participacao: totalReferencia > 0 ? (row.referencia / totalReferencia) * 100 : 0
+      }))
+      .sort((a, b) => Math.abs(b.referencia) - Math.abs(a.referencia));
+  }, [gastosCanonicos]);
+
+  const categoriasCartaoResumo = useMemo(() => {
+    const map = new Map();
+    gastosCanonicos
+      .filter((row) => row.origem === "Cartao")
+      .forEach((row) => {
+        const current = map.get(row.categoria) || {
+          id: row.categoria,
+          categoria: row.categoria,
+          quantidade: 0,
+          consumo: 0,
+          faturaFechada: 0,
+          faturaAberta: 0
+        };
+        map.set(row.categoria, {
+          ...current,
+          quantidade: current.quantidade + 1,
+          consumo: roundMoney(current.consumo + row.referencia),
+          faturaFechada: roundMoney(current.faturaFechada + row.realizado),
+          faturaAberta: roundMoney(current.faturaAberta + row.aberto)
+        });
+      });
+
+    return Array.from(map.values()).sort((a, b) => b.consumo - a.consumo);
+  }, [gastosCanonicos]);
+
+  const gastosTotais = useMemo(
+    () => gastosResumo.reduce(
+      (acc, row) => ({
+        referencia: roundMoney(acc.referencia + row.referencia),
+        realizado: roundMoney(acc.realizado + row.realizado),
+        aberto: roundMoney(acc.aberto + row.aberto),
+        quantidade: acc.quantidade + row.quantidade
+      }),
+      { referencia: 0, realizado: 0, aberto: 0, quantidade: 0 }
+    ),
+    [gastosResumo]
+  );
+
+  const categoriasTotais = useMemo(
+    () => categoriasResumo.reduce(
+      (acc, row) => ({
+        referencia: roundMoney(acc.referencia + row.referencia),
+        realizado: roundMoney(acc.realizado + row.realizado),
+        aberto: roundMoney(acc.aberto + row.aberto),
+        quantidade: acc.quantidade + row.quantidade
+      }),
+      { referencia: 0, realizado: 0, aberto: 0, quantidade: 0 }
+    ),
+    [categoriasResumo]
+  );
+
+  const consistenciaCategoriasGastos = useMemo(() => {
+    const diffReferencia = roundMoney(categoriasTotais.referencia - gastosTotais.referencia);
+    const diffRealizado = roundMoney(categoriasTotais.realizado - gastosTotais.realizado);
+    const diffAberto = roundMoney(categoriasTotais.aberto - gastosTotais.aberto);
+    const ok = Math.abs(diffReferencia) <= 0.01 && Math.abs(diffRealizado) <= 0.01 && Math.abs(diffAberto) <= 0.01;
+    return {
+      ok,
+      diffReferencia,
+      diffRealizado,
+      diffAberto
+    };
+  }, [categoriasTotais, gastosTotais]);
 
   const categoriasReceitasDetalhadas = useMemo(() => {
     const map = new Map();
@@ -640,260 +715,24 @@ const RelatoriosPage = ({
     })).sort((a, b) => b.previsto - a.previsto);
   }, [categoriasReceitasDetalhadas]);
 
-  const categoriasTecnicasDetalhadas = useMemo(() => {
-    const map = new Map();
-    despesasTecnicas.forEach((despesa) => {
-      const ocorrencias = countOcorrencias(despesa, mesesSelecionadosSet);
-      if (ocorrencias === 0) return;
-      const descricao = despesa.descricao || "Fatura tecnica";
-      const valor = Number(despesa.valor) || 0;
-      const previsto = valor * ocorrencias;
-      const pago = despesa.status === "Pago" ? previsto : 0;
-      const current = map.get(descricao) || { id: descricao, descricao, quantidade: 0, previsto: 0, pago: 0 };
-      map.set(descricao, {
-        ...current,
-        quantidade: current.quantidade + ocorrencias,
-        previsto: current.previsto + previsto,
-        pago: current.pago + pago
-      });
-    });
-    return Array.from(map.values()).map((row) => ({ ...row, emAberto: row.previsto - row.pago })).sort((a, b) => b.previsto - a.previsto);
-  }, [despesasTecnicas, countOcorrencias, mesesSelecionadosSet]);
-
   const cartoesResumo = useMemo(() => resumoCartoesMensal, [resumoCartoesMensal]);
 
-  const topCategoriaDespesa = categoriasDespesasGerenciaisResumo[0] || null;
+  const topCategoriaDespesa = categoriasResumo[0] || null;
   const topCategoriaReceita = categoriasReceitasResumo[0] || null;
   const topCategoriaAberta = useMemo(
-    () => [...categoriasDespesasGerenciaisResumo]
+    () => [...categoriasResumo]
       .filter((row) => row.aberto > 0)
       .sort((a, b) => b.aberto - a.aberto)[0] || null,
-    [categoriasDespesasGerenciaisResumo]
+    [categoriasResumo]
+  );
+  const totalFaturasNaoConciliadas = useMemo(
+    () => gastosCanonicos.filter((row) => row.conciliacao === "NAO_CONCILIADA").length,
+    [gastosCanonicos]
   );
 
-  const despesasAnaliticas = useMemo(() => {
-    const rows = [
-      ...categoriasDespesasDetalhadas.map((row) => ({
-        id: `desp-${row.id}`,
-        categoria: row.categoria,
-        descricao: row.descricao,
-        origem: "Despesa",
-        quantidade: row.quantidade,
-        referencia: row.previsto,
-        realizado: row.pago,
-        aberto: row.emAberto
-      })),
-      ...categoriasFinanceirasDetalhadas.map((row) => ({
-        id: `fin-${row.id}`,
-        categoria: row.categoria,
-        descricao: row.descricao,
-        origem: "Financeiro",
-        quantidade: row.quantidade,
-        referencia: row.previsto,
-        realizado: row.pago,
-        aberto: row.emAberto
-      })),
-      ...categoriasCartaoDetalhadas.map((row) => ({
-        id: `cart-${row.id}`,
-        categoria: row.categoria,
-        descricao: row.descricao,
-        origem: "Cartao",
-        quantidade: row.quantidade,
-        referencia: row.consumo,
-        realizado: row.faturaFechada,
-        aberto: row.faturaAberta
-      }))
-    ];
-
-    const totalReferencia = rows.reduce((acc, row) => acc + Math.max(Number(row.referencia) || 0, 0), 0);
-
-    return rows
-      .map((row) => ({
-        ...row,
-        participacao: totalReferencia > 0 ? (Math.max(Number(row.referencia) || 0, 0) / totalReferencia) * 100 : 0
-      }))
-      .sort((a, b) => b.referencia - a.referencia);
-  }, [categoriasDespesasDetalhadas, categoriasFinanceirasDetalhadas, categoriasCartaoDetalhadas]);
-
-  const gastosDetalhados = useMemo(() => {
-    const rows = [];
-    const faturaPrefixes = [
-      "fatura do cartao ",
-      "pagamento da fatura do cartao ",
-      "fatura cartao "
-    ];
-
-    const getCartaoDaFatura = (despesa) => {
-      const descricaoNormalizada = normalizeText(despesa.descricao);
-      const prefix = faturaPrefixes.find((item) => descricaoNormalizada.startsWith(item));
-      if (!prefix) return null;
-      const nomeCartaoNormalizado = descricaoNormalizada.slice(prefix.length).trim();
-      return (cartoes || []).find((cartao) => normalizeText(cartao.nome) === nomeCartaoNormalizado) || null;
-    };
-
-    const pushRow = (row) => {
-      rows.push({
-        valorOriginal: row.valorOriginal ?? row.valor,
-        ...row
-      });
-    };
-
-    despesasOrcamento.forEach((despesa) => {
-      const mesesAtivos = getMesesItem(despesa).filter((mes) => mesesSelecionadosSet.has(mes));
-      if (mesesAtivos.length === 0) return;
-
-      const origemBase = isFaturaTecnica(despesa)
-        ? "Fatura"
-        : isDespesaFinanceira(despesa)
-          ? "Financeiro"
-          : "Despesa";
-
-      mesesAtivos.forEach((mes, index) => {
-        const valorOficial = Math.abs(Number(despesa.valor) || 0);
-        const realizadoOficial = despesa.status === "Pago" ? valorOficial : 0;
-        const cartaoFatura = isFaturaTecnica(despesa) ? getCartaoDaFatura(despesa) : null;
-        const lancamentosFatura = cartaoFatura
-          ? lancamentosPeriodo.filter((lancamento) =>
-            String(lancamento.cartaoId) === String(cartaoFatura.id) &&
-            getMesesItem(lancamento).includes(mes)
-          )
-          : [];
-        const totalLancamentosAssinado = lancamentosFatura.reduce(
-          (acc, lancamento) => acc + getSignedLancamentoValor(lancamento),
-          0
-        );
-
-        if (origemBase === "Fatura" && lancamentosFatura.length > 0 && totalLancamentosAssinado !== 0) {
-          lancamentosFatura.forEach((lancamento, lancamentoIndex) => {
-            const valorOriginal = getSignedLancamentoValor(lancamento);
-            if (valorOriginal === 0) return;
-            const proporcao = valorOriginal / totalLancamentosAssinado;
-            const valorRateado = valorOficial * proporcao;
-            const realizado = despesa.status === "Pago" ? valorRateado : 0;
-
-            pushRow({
-              id: `fatura-${despesa.id || despesa.descricao || "item"}-${mes}-${lancamento.id || lancamentoIndex}`,
-              categoria: getCategoriaNome(lancamento),
-              tipoGasto: getTipoGasto(lancamento),
-              origem: "Cartao",
-              descricao: stripCreditoTag(lancamento.descricao) || despesa.descricao || "Sem descricao",
-              complemento: lancamento.complemento || despesa.complemento || "-",
-              mes,
-              data: lancamento.data || despesa.data || "",
-              valor: valorRateado,
-              valorOriginal,
-              realizado,
-              aberto: valorRateado - realizado,
-              status: despesa.status || "-",
-              cartao: cartaoFatura?.nome || "-",
-              tipoRecorrencia: lancamento.tipoRecorrencia || despesa.tipoRecorrencia || "EVENTUAL",
-              parcela: lancamento.parcela ?? despesa.parcela ?? "-",
-              totalParcelas: lancamento.totalParcelas ?? lancamento.qtdParcelas ?? despesa.totalParcelas ?? despesa.qtdParcelas ?? "-",
-              orcamento: currentOrcamento?.label || "-",
-              referenciaId: despesa.id || "-",
-              referenciaDescricao: despesa.descricao || "-",
-              observacao: "Rateado a partir da despesa oficial da fatura"
-            });
-          });
-          return;
-        }
-
-        pushRow({
-          id: `${origemBase.toLowerCase()}-${despesa.id || despesa.descricao || "item"}-${mes}-${index}`,
-          categoria: getCategoriaNome(despesa),
-          tipoGasto: getTipoGasto(despesa),
-          origem: origemBase,
-          descricao: despesa.descricao || "Sem descricao",
-          complemento: despesa.complemento || "-",
-          mes,
-          data: despesa.data || "",
-          valor: valorOficial,
-          realizado: realizadoOficial,
-          aberto: valorOficial - realizadoOficial,
-          status: despesa.status || "-",
-          cartao: cartaoFatura?.nome || "-",
-          tipoRecorrencia: despesa.tipoRecorrencia || "EVENTUAL",
-          parcela: despesa.parcela ?? "-",
-          totalParcelas: despesa.totalParcelas ?? despesa.qtdParcelas ?? "-",
-          orcamento: currentOrcamento?.label || "-",
-          referenciaId: despesa.id || "-",
-          referenciaDescricao: despesa.descricao || "-",
-          observacao: origemBase === "Fatura" ? "Sem composicao encontrada no cartao para o periodo" : "-"
-        });
-      });
-    });
-
-    return rows.sort((a, b) => Math.abs(b.valor) - Math.abs(a.valor));
-  }, [
-    despesasOrcamento,
-    getMesesItem,
-    mesesSelecionadosSet,
-    isFaturaTecnica,
-    isDespesaFinanceira,
-    cartoes,
-    lancamentosPeriodo,
-    getCategoriaNome,
-    getTipoGasto,
-    currentOrcamento
-  ]);
-
-  const gastosResumo = useMemo(() => {
-    const map = new Map();
-
-    gastosDetalhados.forEach((row) => {
-      const key = `${row.categoria}::${row.descricao}`;
-      const current = map.get(key) || {
-        id: key,
-        categoria: row.categoria,
-        descricao: row.descricao,
-        tipoGasto: row.tipoGasto,
-        quantidade: 0,
-        referencia: 0,
-        realizado: 0,
-        aberto: 0,
-        tiposGasto: new Set(),
-        lancamentos: []
-      };
-
-      const tiposGasto = new Set(current.tiposGasto);
-      tiposGasto.add(row.tipoGasto);
-
-      map.set(key, {
-        ...current,
-        descricao: row.descricao,
-        tipoGasto: Array.from(tiposGasto).sort().join(" / "),
-        quantidade: current.quantidade + 1,
-        referencia: current.referencia + row.valor,
-        realizado: current.realizado + row.realizado,
-        aberto: current.aberto + row.aberto,
-        tiposGasto,
-        lancamentos: [...current.lancamentos, row]
-      });
-    });
-
-    return Array.from(map.values())
-      .map((row) => ({
-        ...row,
-        lancamentos: [...row.lancamentos].sort((a, b) => {
-          const mesCompare = String(a.mes || "").localeCompare(String(b.mes || ""));
-          if (mesCompare !== 0) return mesCompare;
-          return String(a.data || "").localeCompare(String(b.data || ""));
-        })
-      }))
-      .sort((a, b) => Math.abs(b.referencia) - Math.abs(a.referencia));
-  }, [gastosDetalhados]);
-
-  const gastosTotais = useMemo(
-    () => gastosResumo.reduce(
-      (acc, row) => ({
-        referencia: acc.referencia + row.referencia,
-        realizado: acc.realizado + row.realizado,
-        aberto: acc.aberto + row.aberto,
-        quantidade: acc.quantidade + row.quantidade
-      }),
-      { referencia: 0, realizado: 0, aberto: 0, quantidade: 0 }
-    ),
-    [gastosResumo]
+  const totalInconsistencias = useMemo(
+    () => gastosCanonicos.filter((row) => roundMoney(row.referencia - (row.realizado + row.aberto)) !== 0).length,
+    [gastosCanonicos]
   );
 
   const tabs = useMemo(
@@ -928,51 +767,19 @@ const RelatoriosPage = ({
     []
   );
 
-  const columnsDespesasAnaliticas = useMemo(
+  const columnsCategoriasResumo = useMemo(
     () => [
       { key: "categoria", label: "Categoria" },
-      { key: "descricao", label: "Descricao" },
+      { key: "descricoes", label: "Grupos" },
       { key: "origem", label: "Origem" },
-      { key: "quantidade", label: "Qtd." },
-      { key: "referencia", label: "Referencia", render: (row) => formatCurrency(row.referencia) },
+      { key: "tipoGasto", label: "Tipo de Gasto" },
+      { key: "quantidade", label: "Qtd. Lancamentos" },
+      { key: "referencia", label: "Total", render: (row) => formatCurrency(row.referencia) },
       { key: "realizado", label: "Realizado", render: (row) => formatCurrency(row.realizado) },
       {
         key: "aberto",
         label: "Em aberto",
         render: (row) => <span className={row.aberto > 0 ? "reports-value-warning" : "reports-value-positive"}>{formatCurrency(row.aberto)}</span>
-      },
-      { key: "participacao", label: "% do total", render: (row) => formatPercent(row.participacao) }
-    ],
-    []
-  );
-
-  const columnsReceitasDetalhe = useMemo(
-    () => [
-      { key: "categoria", label: "Categoria" },
-      { key: "descricao", label: "Descricao" },
-      { key: "quantidade", label: "Qtd." },
-      { key: "previsto", label: "Previsto", render: (row) => formatCurrency(row.previsto) },
-      { key: "recebido", label: "Recebido", render: (row) => formatCurrency(row.recebido) },
-      {
-        key: "emAberto",
-        label: "Em aberto",
-        render: (row) => <span className={row.emAberto > 0 ? "reports-value-warning" : "reports-value-positive"}>{formatCurrency(row.emAberto)}</span>
-      },
-      { key: "participacao", label: "% do total", render: (row) => formatPercent(row.participacao) }
-    ],
-    []
-  );
-
-  const columnsTecnicas = useMemo(
-    () => [
-      { key: "descricao", label: "Descricao" },
-      { key: "quantidade", label: "Qtd." },
-      { key: "previsto", label: "Valor da fatura", render: (row) => formatCurrency(row.previsto) },
-      { key: "pago", label: "Pago", render: (row) => formatCurrency(row.pago) },
-      {
-        key: "emAberto",
-        label: "Em aberto",
-        render: (row) => <span className={row.emAberto > 0 ? "reports-value-warning" : "reports-value-positive"}>{formatCurrency(row.emAberto)}</span>
       }
     ],
     []
@@ -1006,6 +813,7 @@ const RelatoriosPage = ({
     () => [
       { key: "categoria", label: "Categoria" },
       { key: "descricao", label: "Descricao" },
+      { key: "origem", label: "Origem" },
       { key: "tipoGasto", label: "Tipo de Gasto" },
       { key: "quantidade", label: "Qtd. Lancamentos" },
       { key: "referencia", label: "Total", render: (row) => formatCurrency(row.referencia) },
@@ -1014,7 +822,8 @@ const RelatoriosPage = ({
         key: "aberto",
         label: "Em aberto",
         render: (row) => <span className={row.aberto > 0 ? "reports-value-warning" : "reports-value-positive"}>{formatCurrency(row.aberto)}</span>
-      }
+      },
+      { key: "naoConciliadas", label: "Nao conciliadas" }
     ],
     []
   );
@@ -1028,9 +837,14 @@ const RelatoriosPage = ({
       { key: "descricao", label: "Descricao" },
       { key: "complemento", label: "Complemento" },
       { key: "cartao", label: "Cartao" },
-      { key: "valor", label: "Valor oficial", render: (row) => formatCurrency(row.valor) },
+      { key: "valor", label: "Valor do item", render: (row) => formatCurrency(row.valor) },
       { key: "realizado", label: "Realizado", render: (row) => formatCurrency(row.realizado) },
       { key: "aberto", label: "Em aberto", render: (row) => formatCurrency(row.aberto) },
+      {
+        key: "conciliacao",
+        label: "Conciliacao",
+        render: (row) => row.conciliacao === "NAO_CONCILIADA" ? "Nao conciliada" : row.conciliacao === "CONCILIADA" ? "Conciliada" : "Normal"
+      },
       { key: "status", label: "Status" }
     ],
     []
@@ -1117,7 +931,7 @@ const RelatoriosPage = ({
                   </div>
                 </div>
                 <div className="reports-mini-stack">
-                  <MetricCard title="Maior despesa" value={topCategoriaDespesa?.categoria || "-"} subtitle={topCategoriaDespesa ? formatCurrency(topCategoriaDespesa.total) : "Sem dados"} tone="negative" />
+                  <MetricCard title="Maior despesa" value={topCategoriaDespesa?.categoria || "-"} subtitle={topCategoriaDespesa ? formatCurrency(topCategoriaDespesa.referencia) : "Sem dados"} tone="negative" />
                   <MetricCard title="Maior receita" value={topCategoriaReceita?.categoria || "-"} subtitle={topCategoriaReceita ? formatCurrency(topCategoriaReceita.previsto) : "Sem dados"} tone="positive" />
                   <MetricCard title="Maior aberto" value={topCategoriaAberta?.categoria || "-"} subtitle={topCategoriaAberta ? formatCurrency(topCategoriaAberta.aberto) : "Sem dados"} tone="warning" />
                 </div>
@@ -1173,36 +987,67 @@ const RelatoriosPage = ({
         {activeTab === "categorias" && (
           <>
             <section className="reports-metrics-grid">
-              <MetricCard title="Total analisado" value={formatCurrency(gastosTotais.referencia)} subtitle="Base oficial da tela Despesas no periodo" tone="negative" />
-              <MetricCard title="Ja realizado" value={formatCurrency(gastosTotais.realizado)} subtitle="Soma oficial das despesas pagas" tone="highlight" />
-              <MetricCard title="Em aberto" value={formatCurrency(gastosTotais.aberto)} subtitle="Parte oficial ainda pendente nas despesas" tone="warning" />
+              <MetricCard title="Categorias de gastos" value={String(categoriasResumo.length)} subtitle={`${gastosResumo.length} grupos consolidados`} tone="neutral" />
+              <MetricCard title="Despesa total" value={formatCurrency(categoriasTotais.referencia)} subtitle="Base canonica da aba Gastos" tone="negative" />
+              <MetricCard title="Despesa paga" value={formatCurrency(categoriasTotais.realizado)} subtitle={`Em aberto ${formatCurrency(categoriasTotais.aberto)}`} tone="highlight" />
             </section>
+
+            {!consistenciaCategoriasGastos.ok && (
+              <section className="panel">
+                <div className="reports-section-head">
+                  <div>
+                    <h3 className="panel-title">Inconsistencia detectada</h3>
+                    <p className="reports-section-head__subtitle">
+                      Diferencas entre abas. Referencia {formatCurrency(consistenciaCategoriasGastos.diffReferencia)},
+                      Realizado {formatCurrency(consistenciaCategoriasGastos.diffRealizado)},
+                      Aberto {formatCurrency(consistenciaCategoriasGastos.diffAberto)}.
+                    </p>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {(totalFaturasNaoConciliadas > 0 || totalInconsistencias > 0) && (
+              <section className="panel">
+                <div className="reports-section-head">
+                  <div>
+                    <h3 className="panel-title">Alertas de conciliacao</h3>
+                    <p className="reports-section-head__subtitle">
+                      {`${totalFaturasNaoConciliadas} fatura(s) sem composicao no cartao e ${totalInconsistencias} linha(s) fora da igualdade referencia = realizado + aberto.`}
+                    </p>
+                  </div>
+                </div>
+              </section>
+            )}
 
             <section className="reports-grid reports-grid--two">
               <div className="panel report-card">
-                <div className="reports-section-head"><div><h4 className="report-card__title">Despesas por categoria</h4><p className="reports-section-head__subtitle">Participacao total das categorias considerando despesas do orcamento, financeiras e consumo no cartao, sem duplicar fatura tecnica.</p></div></div>
-                <PieChart data={categoriasDespesasGerenciaisResumo.slice(0, 6).map((row) => ({ name: row.categoria, value: row.total }))} height={280} showLegend={true} />
+                <div className="reports-section-head"><div><h4 className="report-card__title">Distribuicao por categoria</h4><p className="reports-section-head__subtitle">Mesmo conjunto canônico usado na aba Gastos, agregado por categoria.</p></div></div>
+                <PieChart data={categoriasResumo.slice(0, 6).map((row) => ({ name: row.categoria, value: row.referencia }))} height={280} showLegend={true} />
               </div>
               <div className="panel report-card">
-                <div className="reports-section-head"><div><h4 className="report-card__title">Receitas por categoria</h4><p className="reports-section-head__subtitle">Participacao das receitas previstas para o periodo selecionado.</p></div></div>
+                <div className="reports-section-head"><div><h4 className="report-card__title">Receitas por categoria</h4><p className="reports-section-head__subtitle">Visao de apoio para comparar composicao de entrada x saida.</p></div></div>
                 <PieChart data={categoriasReceitasResumo.slice(0, 6).map((row) => ({ name: row.categoria, value: row.previsto }))} height={280} showLegend={true} colors={["#10b981", "#14b8a6", "#06b6d4", "#0ea5e9", "#3b82f6", "#84cc16"]} />
               </div>
             </section>
 
             <section className="panel">
-              <div className="reports-section-head"><div><h3 className="panel-title">Categorias com detalhamento por descricao</h3><p className="reports-section-head__subtitle">Referencia mostra o valor planejado ou lancado. Realizado mostra o que ja foi pago ou ja virou fatura fechada.</p></div></div>
-              <DataTable columns={columnsDespesasAnaliticas} rows={despesasAnaliticas} emptyMessage="Sem despesas ou consumo no cartao no periodo." />
-            </section>
-
-            <section className="reports-grid reports-grid--two">
-              <div className="panel">
-                <div className="reports-section-head"><div><h3 className="panel-title">Receitas detalhadas</h3><p className="reports-section-head__subtitle">De onde vem a receita e o que ainda falta receber.</p></div></div>
-                <DataTable columns={columnsReceitasDetalhe} rows={categoriasReceitasDetalhadas} emptyMessage="Sem receitas no periodo." />
+              <div className="reports-section-head">
+                <div>
+                  <h3 className="panel-title">Categorias agrupadas</h3>
+                  <p className="reports-section-head__subtitle">Abertura por categoria usando os mesmos eventos de gasto da aba Gastos.</p>
+                </div>
               </div>
-              <div className="panel">
-                <div className="reports-section-head"><div><h3 className="panel-title">Faturas tecnicas separadas</h3><p className="reports-section-head__subtitle">Estas linhas mostram a obrigacao financeira da fatura sem duplicar a leitura do consumo.</p></div></div>
-                <DataTable columns={columnsTecnicas} rows={categoriasTecnicasDetalhadas} emptyMessage="Sem faturas tecnicas no periodo." />
-              </div>
+              <DataTable
+                columns={columnsCategoriasResumo}
+                rows={categoriasResumo}
+                emptyMessage="Sem categorias no periodo."
+                onRowClick={(row) => setSelectedGastoGrupo({
+                  ...row,
+                  descricao: "Consolidado por categoria",
+                  modalScope: "categorias"
+                })}
+              />
             </section>
           </>
         )}
@@ -1211,22 +1056,50 @@ const RelatoriosPage = ({
           <>
             <section className="reports-metrics-grid">
               <MetricCard title="Grupos de gastos" value={String(gastosResumo.length)} subtitle="Linhas agrupadas por categoria e descricao" tone="neutral" />
-              <MetricCard title="Despesa total" value={formatCurrency(gastosTotais.referencia)} subtitle="Base oficial da tela Despesas no periodo" tone="negative" />
+              <MetricCard title="Despesa total" value={formatCurrency(gastosTotais.referencia)} subtitle="Base canonica dos lancamentos de gasto" tone="negative" />
               <MetricCard title="Despesa paga" value={formatCurrency(gastosTotais.realizado)} subtitle={`Em aberto ${formatCurrency(gastosTotais.aberto)}`} tone="highlight" />
             </section>
+
+            {!consistenciaCategoriasGastos.ok && (
+              <section className="panel">
+                <div className="reports-section-head">
+                  <div>
+                    <h3 className="panel-title">Inconsistencia detectada</h3>
+                    <p className="reports-section-head__subtitle">
+                      Diferencas entre abas. Referencia {formatCurrency(consistenciaCategoriasGastos.diffReferencia)},
+                      Realizado {formatCurrency(consistenciaCategoriasGastos.diffRealizado)},
+                      Aberto {formatCurrency(consistenciaCategoriasGastos.diffAberto)}.
+                    </p>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {(totalFaturasNaoConciliadas > 0 || totalInconsistencias > 0) && (
+              <section className="panel">
+                <div className="reports-section-head">
+                  <div>
+                    <h3 className="panel-title">Alertas de conciliacao</h3>
+                    <p className="reports-section-head__subtitle">
+                      {`${totalFaturasNaoConciliadas} fatura(s) sem composicao no cartao e ${totalInconsistencias} linha(s) fora da igualdade referencia = realizado + aberto.`}
+                    </p>
+                  </div>
+                </div>
+              </section>
+            )}
 
             <section className="panel">
               <div className="reports-section-head">
                 <div>
                   <h3 className="panel-title">Gastos agrupados</h3>
-                  <p className="reports-section-head__subtitle">Cada linha totaliza a despesa oficial por categoria e descricao. O tipo de gasto continua visivel para contexto, mas nao define mais o agrupamento principal.</p>
+                  <p className="reports-section-head__subtitle">Cada linha totaliza eventos canônicos por categoria e descricao, com origem e status de conciliacao visiveis.</p>
                 </div>
               </div>
               <DataTable
                 columns={columnsGastosResumo}
                 rows={gastosResumo}
                 emptyMessage="Sem gastos no periodo."
-                onRowClick={setSelectedGastoGrupo}
+                onRowClick={(row) => setSelectedGastoGrupo({ ...row, modalScope: "gastos" })}
               />
             </section>
           </>
@@ -1255,9 +1128,25 @@ const RelatoriosPage = ({
 
       <Modal
         open={Boolean(selectedGastoGrupo)}
-        title={selectedGastoGrupo ? `Detalhamento de gastos - ${selectedGastoGrupo.categoria} / ${selectedGastoGrupo.descricao}` : "Detalhamento de gastos"}
+        title={
+          selectedGastoGrupo
+            ? selectedGastoGrupo.modalScope === "categorias"
+              ? `Detalhamento da categoria - ${selectedGastoGrupo.categoria}`
+              : `Detalhamento de gastos - ${selectedGastoGrupo.categoria} / ${selectedGastoGrupo.descricao}`
+            : "Detalhamento de gastos"
+        }
         onClose={() => setSelectedGastoGrupo(null)}
-        footer={<button type="button" className="ghost" onClick={() => setSelectedGastoGrupo(null)}>Fechar</button>}
+        headerActions={(
+          <button type="button" className="reports-gastos-modal__close-btn" onClick={() => setSelectedGastoGrupo(null)}>
+            Fechar
+          </button>
+        )}
+        footer={(
+          <button type="button" className="reports-gastos-modal__close-btn" onClick={() => setSelectedGastoGrupo(null)}>
+            Fechar
+          </button>
+        )}
+        footerClassName="reports-gastos-modal__footer"
         className="reports-gastos-modal"
       >
         <div className="reports-gastos-modal__content">
@@ -1267,7 +1156,7 @@ const RelatoriosPage = ({
               <strong className="reports-gastos-modal__stat-value">{selectedGastoGrupo?.categoria || "-"}</strong>
             </div>
             <div className="reports-gastos-modal__stat">
-              <span className="reports-gastos-modal__stat-label">Descricao</span>
+              <span className="reports-gastos-modal__stat-label">{selectedGastoGrupo?.modalScope === "categorias" ? "Escopo" : "Descricao"}</span>
               <strong className="reports-gastos-modal__stat-value">{selectedGastoGrupo?.descricao || "-"}</strong>
             </div>
             <div className="reports-gastos-modal__stat">
@@ -1287,7 +1176,7 @@ const RelatoriosPage = ({
               <h4 className="report-card__title">Lancamentos do grupo</h4>
               <p className="reports-section-head__subtitle">
                 {selectedGastoGrupo
-                  ? `Tipo ${selectedGastoGrupo.tipoGasto} | ${selectedGastoGrupo.quantidade} lancamento(s) no agrupamento`
+                  ? `Origem ${selectedGastoGrupo.origem || "-"} | Tipo ${selectedGastoGrupo.tipoGasto || "-"} | ${selectedGastoGrupo.quantidade} lancamento(s) no agrupamento`
                   : "Detalhamento dos lancamentos que compoem a linha selecionada."}
               </p>
             </div>

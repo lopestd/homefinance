@@ -65,7 +65,21 @@
     justify-content: flex-end;
   }
 
+  .modal-footer {
+    padding: 8px 10px !important;
+    gap: 8px !important;
+    justify-content: flex-end;
+  }
+
   .modal-actions button {
+    width: auto;
+    min-width: 80px;
+    padding: 8px 14px !important;
+    font-size: 13px !important;
+    min-height: 38px;
+  }
+
+  .modal-footer button {
     width: auto;
     min-width: 80px;
     padding: 8px 14px !important;
@@ -961,10 +975,20 @@
   .reports-gastos-modal {
     width: calc(100vw - 20px) !important;
     max-width: calc(100vw - 20px) !important;
+    border-radius: 14px !important;
   }
 
   .reports-gastos-modal .modal-header {
     padding: 12px 14px !important;
+  }
+
+  .reports-gastos-modal .modal-header--with-actions {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .reports-gastos-modal .modal-header-actions {
+    margin-left: auto;
   }
 
   .reports-gastos-modal .modal-header h3 {
@@ -990,6 +1014,16 @@
 
   .reports-gastos-modal__table .reports-table__table {
     min-width: 980px;
+  }
+
+  .reports-gastos-modal__close-btn {
+    min-width: 84px;
+    padding: 7px 12px !important;
+    font-size: 13px;
+  }
+
+  .reports-gastos-modal__footer {
+    padding: 10px 14px 14px !important;
   }
 
   /* KPI Card */
