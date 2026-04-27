@@ -31,12 +31,30 @@ const resolveLimiteCartao = (cartao, orcamentoId, mes) => {
   return 0;
 };
 
-const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, lancamentosCartao }) => {
-  const [selectedOrcamentoId, setSelectedOrcamentoId] = useState("");
+const resolveEffectiveOrcamentoId = (orcamentos, selectedOrcamentoId) => {
+  if (!Array.isArray(orcamentos) || orcamentos.length === 0) return "";
+  if (selectedOrcamentoId !== null && selectedOrcamentoId !== undefined && selectedOrcamentoId !== "") {
+    const match = orcamentos.find((orcamento) => String(orcamento.id) === String(selectedOrcamentoId));
+    if (match) return match.id;
+  }
+  const currentYear = String(new Date().getFullYear());
+  const currentYearMatch = orcamentos.find((orcamento) => String(orcamento.label) === currentYear);
+  return currentYearMatch?.id ?? orcamentos[0]?.id ?? "";
+};
+
+const DashboardPage = ({
+  receitas,
+  despesas,
+  orcamentos,
+  selectedOrcamentoId,
+  setSelectedOrcamentoId,
+  categorias,
+  cartoes,
+  lancamentosCartao
+}) => {
   const [selectedMes, setSelectedMes] = useState("");
   
-  const initialOrcamentoId = orcamentos[0]?.id ?? "";
-  const effectiveOrcamentoId = selectedOrcamentoId || initialOrcamentoId;
+  const effectiveOrcamentoId = resolveEffectiveOrcamentoId(orcamentos, selectedOrcamentoId);
   const currentOrcamento = orcamentos.find((o) => o.id === effectiveOrcamentoId);
   const anoOrcamento = Number.parseInt(currentOrcamento?.label, 10) || new Date().getFullYear();
   
@@ -285,7 +303,13 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
           <form className="form-inline dashboard-filters" onSubmit={(e) => e.preventDefault()}>
             <label className="field">
               {"Or\u00e7amento"}
-              <select value={effectiveOrcamentoId} onChange={(e) => setSelectedOrcamentoId(e.target.value)}>
+              <select
+                value={effectiveOrcamentoId}
+                onChange={(event) => {
+                  const nextId = orcamentos.find((orcamento) => String(orcamento.id) === event.target.value)?.id ?? "";
+                  setSelectedOrcamentoId(nextId);
+                }}
+              >
                 {orcamentos.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
               </select>
             </label>

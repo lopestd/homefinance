@@ -40,6 +40,17 @@ const MONTHS = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
 ];
 
+const resolveEffectiveOrcamentoId = (orcamentos, selectedOrcamentoId) => {
+  if (!Array.isArray(orcamentos) || orcamentos.length === 0) return "";
+  if (selectedOrcamentoId !== null && selectedOrcamentoId !== undefined && selectedOrcamentoId !== "") {
+    const match = orcamentos.find((orcamento) => String(orcamento.id) === String(selectedOrcamentoId));
+    if (match) return match.id;
+  }
+  const currentYear = String(new Date().getFullYear());
+  const currentYearMatch = orcamentos.find((orcamento) => String(orcamento.label) === currentYear);
+  return currentYearMatch?.id ?? orcamentos[0]?.id ?? "";
+};
+
 const MonthlySummaryCard = ({ summary, isCurrentMonth }) => {
   const {
     mes,
@@ -138,6 +149,8 @@ const CartaoPage = ({
   lancamentosCartao,
   setLancamentosCartao,
   orcamentos,
+  selectedOrcamentoId,
+  setSelectedOrcamentoId,
   despesas,
   setDespesas,
   categorias,
@@ -148,6 +161,15 @@ const CartaoPage = ({
   const previousCartaoIdRef = useRef("");
   const [isManualDescricao, setIsManualDescricao] = useState(false);
   const effectiveCartaoId = selectedCartaoId || cartoes[0]?.id || "";
+  const effectiveOrcamentoId = resolveEffectiveOrcamentoId(orcamentos, selectedOrcamentoId);
+  const effectiveOrcamento = useMemo(
+    () => orcamentos.find((orcamento) => String(orcamento.id) === String(effectiveOrcamentoId)) || null,
+    [orcamentos, effectiveOrcamentoId]
+  );
+  const mesesDisponiveis = useMemo(
+    () => Array.isArray(effectiveOrcamento?.meses) ? effectiveOrcamento.meses : [],
+    [effectiveOrcamento]
+  );
   const despesasCategorias = useMemo(
     () => categorias.filter((categoria) => categoria.tipo === "DESPESA"),
     [categorias]
@@ -205,42 +227,35 @@ const CartaoPage = ({
    * Determina qual mês deve ser carregado inicialmente na tela Cartões.
    * Se a fatura do mês atual está fechada, busca a próxima fatura aberta.
    */
-  const determineInitialMonth = useCallback((cartoesList, cartaoId, orcamentosList) => {
+  const determineInitialMonth = useCallback((cartoesList, cartaoId, mesesDisponiveisList) => {
+    if (!Array.isArray(mesesDisponiveisList) || mesesDisponiveisList.length === 0) return "";
     const currentMonth = getCurrentMonthName();
+    const defaultMonth = mesesDisponiveisList.includes(currentMonth)
+      ? currentMonth
+      : mesesDisponiveisList[0];
     
-    // Se não há cartão selecionado, retorna mês atual
+    // Se não há cartão selecionado, retorna mês padrão do orçamento.
     if (!cartaoId) {
-      return currentMonth;
+      return defaultMonth;
     }
     
     const cartao = cartoesList.find((c) => String(c.id) === String(cartaoId));
     if (!cartao) {
-      return currentMonth;
+      return defaultMonth;
     }
     
-    // Verifica se a fatura do mês atual está fechada
-    const isCurrentMonthFechada = cartao.faturasFechadas?.includes(currentMonth) || false;
+    // Verifica se a fatura do mês padrão está fechada.
+    const isCurrentMonthFechada = cartao.faturasFechadas?.includes(defaultMonth) || false;
     
-    // Se a fatura do mês atual está aberta, retorna mês atual
+    // Se a fatura do mês padrão está aberta, retorna mês padrão.
     if (!isCurrentMonthFechada) {
-      return currentMonth;
+      return defaultMonth;
     }
     
-    // Fatura do mês atual está fechada - buscar próxima fatura aberta
-    const currentMonthIndex = months.indexOf(currentMonth);
+    // Fatura fechada - buscar a próxima fatura aberta dentro dos meses válidos do orçamento.
+    const currentMonthIndex = mesesDisponiveisList.indexOf(defaultMonth);
+    const mesesSeguintes = mesesDisponiveisList.slice(currentMonthIndex);
     
-    // Determina o orçamento ativo (que contém o mês atual)
-    const activeOrcamento = orcamentosList.find((o) => o.meses && o.meses.includes(currentMonth));
-    if (!activeOrcamento || !activeOrcamento.meses) {
-      return currentMonth;
-    }
-    
-    // Filtra os meses do orçamento a partir do mês atual e ordena
-    const mesesSeguintes = activeOrcamento.meses
-      .filter((mes) => months.indexOf(mes) >= currentMonthIndex)
-      .sort((a, b) => months.indexOf(a) - months.indexOf(b));
-    
-    // Busca a primeira fatura aberta
     for (const mes of mesesSeguintes) {
       const isFechada = cartao.faturasFechadas?.includes(mes) || false;
       if (!isFechada) {
@@ -248,33 +263,27 @@ const CartaoPage = ({
       }
     }
     
-    // Se todas as faturas subsequentes estão fechadas, retorna o próximo mês
-    return months[(currentMonthIndex + 1) % 12];
-  }, [months]);
+    // Se todos os meses disponíveis estão fechados, mantém mês padrão.
+    return defaultMonth;
+  }, []);
 
   // Efeito para determinar o mês inicial baseado no status da fatura
   useEffect(() => {
-    const initialMonth = determineInitialMonth(cartoes, effectiveCartaoId, orcamentos);
+    const initialMonth = determineInitialMonth(cartoes, effectiveCartaoId, mesesDisponiveis);
     const cardChanged = previousCartaoIdRef.current !== effectiveCartaoId;
 
     setSelectedMes((prevSelectedMes) => {
       if (!initialMonth) return prevSelectedMes;
-      if (cardChanged || !prevSelectedMes || !months.includes(prevSelectedMes)) {
+      if (cardChanged || !prevSelectedMes || !mesesDisponiveis.includes(prevSelectedMes)) {
         return initialMonth;
       }
       return prevSelectedMes;
     });
 
     previousCartaoIdRef.current = effectiveCartaoId;
-  }, [cartoes, determineInitialMonth, effectiveCartaoId, months, orcamentos]);
+  }, [cartoes, determineInitialMonth, effectiveCartaoId, mesesDisponiveis]);
 
   const selectedCartao = useMemo(() => cartoes.find((c) => String(c.id) === String(effectiveCartaoId)) || {}, [cartoes, effectiveCartaoId]);
-
-  const effectiveOrcamento = useMemo(() => {
-    return orcamentos.find((o) => o.meses && o.meses.includes(selectedMes));
-  }, [orcamentos, selectedMes]);
-
-  const effectiveOrcamentoId = effectiveOrcamento?.id || orcamentos[0]?.id || "";
 
   const resolveLimiteCartao = useCallback((cartao, orcamentoId, mes) => {
     const limitesMensais = cartao?.limitesMensais || {};
@@ -480,39 +489,38 @@ const CartaoPage = ({
     meses: []
   });
 
-  const resolveOrcamentoIdForLancamento = useCallback((lancamento) => {
-    const mes = lancamento?.mesReferencia;
-    const data = String(lancamento?.data || "");
-    const ano = Number.parseInt(data.slice(0, 4), 10);
-    if (!mes || Number.isNaN(ano)) return null;
+  const anoOrcamentoSelecionado = useMemo(() => {
+    const ano = Number.parseInt(String(effectiveOrcamento?.label || ""), 10);
+    return Number.isInteger(ano) ? ano : new Date().getFullYear();
+  }, [effectiveOrcamento]);
 
-    const match = orcamentos.find((orcamento) => {
-      const anoOrcamento = Number.parseInt(String(orcamento?.label || ""), 10);
-      return (
-        anoOrcamento === ano &&
-        Array.isArray(orcamento?.meses) &&
-        orcamento.meses.includes(mes)
-      );
-    });
-
-    return match?.id || null;
-  }, [orcamentos]);
+  const normalizeDateForSelectedOrcamento = useCallback((mesReferencia, baseDate) => {
+    const monthIndex = months.indexOf(mesReferencia);
+    if (monthIndex === -1) return baseDate;
+    const dateText = String(baseDate || "");
+    const match = dateText.match(/^\d{4}-\d{2}-(\d{2})$/);
+    const desiredDay = match ? Number(match[1]) : new Date().getDate();
+    const safeDay = Number.isInteger(desiredDay) && desiredDay > 0 ? desiredDay : 1;
+    const lastDay = new Date(anoOrcamentoSelecionado, monthIndex + 1, 0).getDate();
+    const adjustedDay = Math.min(safeDay, lastDay);
+    return `${anoOrcamentoSelecionado}-${String(monthIndex + 1).padStart(2, "0")}-${String(adjustedDay).padStart(2, "0")}`;
+  }, [months, anoOrcamentoSelecionado]);
 
   const toApiPayload = useCallback((lancamento) => ({
-    orcamentoId: resolveOrcamentoIdForLancamento(lancamento),
+    orcamentoId: effectiveOrcamentoId,
     cartaoId: lancamento.cartaoId,
     categoriaId: lancamento.categoriaId,
     descricao: lancamento.descricao,
     complemento: lancamento.complemento || "",
     valor: lancamento.valor,
-    data: lancamento.data,
+    data: normalizeDateForSelectedOrcamento(lancamento.mesReferencia, lancamento.data),
     mesReferencia: lancamento.mesReferencia,
     tipoRecorrencia: lancamento.tipoRecorrencia,
     qtdParcelas: lancamento.qtdParcelas,
     totalParcelas: lancamento.totalParcelas,
     parcela: lancamento.parcela,
     meses: Array.isArray(lancamento.meses) ? lancamento.meses : []
-  }), [resolveOrcamentoIdForLancamento]);
+  }), [effectiveOrcamentoId, normalizeDateForSelectedOrcamento]);
 
   const toggleMesLancamento = (mes) => {
     setForm((prev) => {
@@ -567,7 +575,7 @@ const CartaoPage = ({
         complemento: "",
         valor: "",
         tipoMovimento: "DEBITO",
-        data: new Date().toLocaleDateString('en-CA'),
+        data: normalizeDateForSelectedOrcamento(selectedMes, new Date().toLocaleDateString("en-CA")),
         mesReferencia: selectedMes,
         categoriaId: "",
         tipoRecorrencia: "EVENTUAL",
@@ -589,7 +597,7 @@ const CartaoPage = ({
     // Regra de negócio: não permitir reabrir fatura se a despesa vinculada já foi paga.
     if (!isClosing) {
       const cartaoAtual = cartoes.find((c) => String(c.id) === String(effectiveCartaoId));
-      const orcamentoAtual = orcamentos.find((o) => o.meses && o.meses.includes(selectedMes));
+      const orcamentoAtual = effectiveOrcamento;
       const descricaoEsperada = cartaoAtual ? `Fatura do cartão ${cartaoAtual.nome}` : "";
 
       const despesaFaturaPaga = despesas.find((d) => {
@@ -627,11 +635,16 @@ const CartaoPage = ({
 
   // Calcula os dados de sincronização para um mês específico (sem chamar setDespesas)
   const calculateSyncData = (mes, cartaoId, currentLancamentos, cartoesList) => {
+    if (!effectiveOrcamentoId) return null;
     const cartao = cartoesList.find((c) => String(c.id) === String(cartaoId));
     if (!cartao) return null;
 
     const totalGastos = currentLancamentos
-      .filter((l) => String(l.cartaoId) === String(cartaoId) && (l.mesReferencia === mes || (l.meses && l.meses.includes(mes))))
+      .filter((l) =>
+        String(l.orcamentoId) === String(effectiveOrcamentoId) &&
+        String(l.cartaoId) === String(cartaoId) &&
+        (l.mesReferencia === mes || (l.meses && l.meses.includes(mes)))
+      )
       .reduce((acc, l) => {
         const val = Math.abs(parseFloat(l.valor) || 0);
         return acc + (isCreditoLancamento(l) ? -val : val);
@@ -642,8 +655,7 @@ const CartaoPage = ({
 
     let valorFinal = totalLiquido;
     if (!isFechada) {
-      const orcamentoMes = orcamentos.find((o) => o.meses && o.meses.includes(mes));
-      let limite = resolveLimiteCartao(cartao, orcamentoMes?.id, mes);
+      let limite = resolveLimiteCartao(cartao, effectiveOrcamentoId, mes);
 
       if (!isNaN(limite) && limite > 0) {
         valorFinal = totalLiquido > limite ? totalLiquido : limite;
@@ -664,14 +676,11 @@ const CartaoPage = ({
       catId = fallbackCat ? fallbackCat.id : "";
     }
 
-    const orcamento = orcamentos.find((o) => o.meses && o.meses.includes(mes));
-    if (!orcamento) return null;
-
     const despesaDescricao = `Fatura do cartão ${cartao.nome}`;
 
     return {
       mes,
-      orcamentoId: orcamento.id,
+      orcamentoId: effectiveOrcamentoId,
       despesaDescricao,
       valorFinal,
       catId,
@@ -806,6 +815,7 @@ const CartaoPage = ({
   const handleSave = async (e) => {
     e.preventDefault();
     if (!effectiveCartaoId) return;
+    if (!effectiveOrcamentoId || !selectedMes) return;
     if (isFaturaFechada) {
       showAlert("Fatura do mês está fechada.\nPara lançar ou editar itens, necessário reabrir a fatura.");
       return;
@@ -820,10 +830,12 @@ const CartaoPage = ({
     
     setIsSaving(true);
     try {
+      const monthsForOrcamento = mesesDisponiveis.length > 0 ? mesesDisponiveis : months;
       const getNextMonth = (current, offset) => {
-        const idx = months.indexOf(current);
-        if (idx === -1) return current;
-        return months[(idx + offset) % 12];
+        if (monthsForOrcamento.length === 0) return current;
+        const idx = monthsForOrcamento.indexOf(current);
+        if (idx === -1) return monthsForOrcamento[0];
+        return monthsForOrcamento[(idx + offset) % monthsForOrcamento.length];
       };
 
       let newEntries = [];
@@ -917,9 +929,7 @@ const CartaoPage = ({
       const apiPayloads = newEntries.map((entry) => toApiPayload(entry));
       const invalidPayload = apiPayloads.find((payload) => !payload.orcamentoId);
       if (invalidPayload) {
-        showAlert(
-          "Não foi possível identificar o orçamento do lançamento pelo Ano da data e Mês de referência. Ajuste a data ou o mês antes de salvar."
-        );
+        showAlert("Não foi possível identificar o orçamento selecionado para salvar o lançamento.");
         return;
       }
 
@@ -1000,6 +1010,19 @@ const CartaoPage = ({
         </div>
         <form className="form-inline" onSubmit={(e) => e.preventDefault()}>
           <label className="field">
+            Orçamento
+            <select
+              value={effectiveOrcamentoId}
+              onChange={(event) => {
+                const nextId = orcamentos.find((orcamento) => String(orcamento.id) === event.target.value)?.id ?? "";
+                setSelectedOrcamentoId(nextId);
+              }}
+            >
+              {orcamentos.length === 0 && <option value="">Nenhum orçamento cadastrado</option>}
+              {orcamentos.map((orcamento) => <option key={orcamento.id} value={orcamento.id}>{orcamento.label}</option>)}
+            </select>
+          </label>
+          <label className="field">
             Cartão
             <select value={effectiveCartaoId} onChange={(e) => setSelectedCartaoId(e.target.value)}>
               {cartoes.length === 0 && <option value="">Nenhum cartão cadastrado</option>}
@@ -1009,7 +1032,9 @@ const CartaoPage = ({
           <label className="field">
             Mês
             <select value={selectedMes} onChange={(e) => setSelectedMes(e.target.value)}>
-              {months.map((m) => <option key={m} value={m}>{m}</option>)}
+              {mesesDisponiveis.length === 0
+                ? <option value="">Sem meses no orçamento</option>
+                : mesesDisponiveis.map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
           </label>
         </form>
@@ -1320,7 +1345,7 @@ const CartaoPage = ({
             <label className="field">
               Mês da fatura
               <select value={form.mesReferencia} onChange={(e) => setForm({ ...form, mesReferencia: e.target.value })}>
-                {months.map((m) => <option key={m} value={m}>{m}</option>)}
+                {mesesDisponiveis.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
             </label>
           </div>
@@ -1337,12 +1362,12 @@ const CartaoPage = ({
                 <label className="select-all" style={{ fontSize: "0.9em", cursor: "pointer" }}>
                   <input
                     type="checkbox"
-                    checked={form.meses.length === months.length && months.length > 0}
+                    checked={form.meses.length === mesesDisponiveis.length && mesesDisponiveis.length > 0}
                     onChange={() => {
-                      const allSelected = form.meses.length === months.length;
+                      const allSelected = form.meses.length === mesesDisponiveis.length;
                       setForm((prev) => ({
                         ...prev,
-                        meses: allSelected ? [] : [...months]
+                        meses: allSelected ? [] : [...mesesDisponiveis]
                       }));
                     }}
                   />
@@ -1350,7 +1375,7 @@ const CartaoPage = ({
                 </label>
               </div>
               <div className="months-grid-mini">
-                {months.map((mes) => (
+                {mesesDisponiveis.map((mes) => (
                   <label key={mes} className="checkbox-card small">
                     <input
                       type="checkbox"

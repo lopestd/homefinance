@@ -20,24 +20,35 @@ const normalizeCategoriaNome = (value) =>
     .replace(/\p{Diacritic}/gu, "")
     .toLowerCase();
 
+const resolveEffectiveOrcamentoId = (orcamentos, selectedOrcamentoId) => {
+  if (!Array.isArray(orcamentos) || orcamentos.length === 0) return "";
+  if (selectedOrcamentoId !== null && selectedOrcamentoId !== undefined && selectedOrcamentoId !== "") {
+    const match = orcamentos.find((orcamento) => String(orcamento.id) === String(selectedOrcamentoId));
+    if (match) return match.id;
+  }
+  const currentYear = String(new Date().getFullYear());
+  const currentYearMatch = orcamentos.find((orcamento) => String(orcamento.label) === currentYear);
+  return currentYearMatch?.id ?? orcamentos[0]?.id ?? "";
+};
+
 const DespesasPage = ({
   categorias,
   setCategorias,
   gastosPredefinidos,
   orcamentos,
+  selectedOrcamentoId,
+  setSelectedOrcamentoId,
   despesas,
   setDespesas,
   cartoes,
   lancamentosCartao
 }) => {
   const despesasCategorias = categorias.filter((categoria) => categoria.tipo === "DESPESA");
-  const initialOrcamentoId = orcamentos[0]?.id ?? "";
   const [filters, setFilters] = useState({
-    orcamentoId: initialOrcamentoId,
     mes: ""
   });
 
-  const effectiveOrcamentoId = filters.orcamentoId || initialOrcamentoId;
+  const effectiveOrcamentoId = resolveEffectiveOrcamentoId(orcamentos, selectedOrcamentoId);
   const currentOrcamento = orcamentos.find((o) => o.id === effectiveOrcamentoId);
   const mesesDisponiveis = useMemo(
     () => currentOrcamento?.meses || [],
@@ -525,9 +536,10 @@ const DespesasPage = ({
             Orçamento
             <select
               value={effectiveOrcamentoId}
-              onChange={(event) =>
-                setFilters((prev) => ({ ...prev, orcamentoId: event.target.value }))
-              }
+              onChange={(event) => {
+                const nextId = orcamentos.find((orcamento) => String(orcamento.id) === event.target.value)?.id ?? "";
+                setSelectedOrcamentoId(nextId);
+              }}
             >
               {orcamentos.map((orcamento) => (
                 <option key={orcamento.id} value={orcamento.id}>

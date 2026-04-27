@@ -18,6 +18,21 @@ const getHashPage = () => {
   return hash || "dashboard";
 };
 
+const resolveGlobalOrcamentoId = (orcamentos = [], preferredId = "") => {
+  if (!Array.isArray(orcamentos) || orcamentos.length === 0) return "";
+
+  const preferred = preferredId === null || preferredId === undefined ? "" : String(preferredId);
+  if (preferred && orcamentos.some((orcamento) => String(orcamento.id) === preferred)) {
+    return orcamentos.find((orcamento) => String(orcamento.id) === preferred)?.id ?? "";
+  }
+
+  const currentYear = String(new Date().getFullYear());
+  const currentYearOrcamento = orcamentos.find((orcamento) => String(orcamento.label) === currentYear);
+  if (currentYearOrcamento) return currentYearOrcamento.id;
+
+  return orcamentos[0]?.id ?? "";
+};
+
 function App() {
   const [activeKey, setActiveKey] = useState(getHashPage());
   const [categorias, setCategorias] = useState([]);
@@ -26,6 +41,7 @@ function App() {
   const { receitas, setReceitas } = useReceitas([]);
   const { despesas, setDespesas } = useDespesas([]);
   const [orcamentos, setOrcamentos] = useState([]);
+  const [selectedOrcamentoId, setSelectedOrcamentoId] = useState("");
   const { cartoes, setCartoes, lancamentosCartao, setLancamentosCartao } = useCartao([], []);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -38,6 +54,7 @@ function App() {
     setReceitas([]);
     setDespesas([]);
     setOrcamentos([]);
+    setSelectedOrcamentoId("");
     setCartoes([]);
     setLancamentosCartao([]);
     setIsDataLoaded(false);
@@ -48,6 +65,7 @@ function App() {
     setReceitas,
     setDespesas,
     setOrcamentos,
+    setSelectedOrcamentoId,
     setCartoes,
     setLancamentosCartao,
     setIsDataLoaded
@@ -105,6 +123,10 @@ function App() {
   const bottomNavPages = pages.filter((page) =>
     ["dashboard", "receitas", "despesas", "cartao"].includes(page.key)
   );
+
+  useEffect(() => {
+    setSelectedOrcamentoId((previous) => resolveGlobalOrcamentoId(orcamentos, previous));
+  }, [orcamentos]);
 
   useEffect(() => {
     if (!authUser || !authToken) return;
@@ -285,6 +307,8 @@ function App() {
               receitas={receitas}
               despesas={despesas}
               orcamentos={orcamentos}
+              selectedOrcamentoId={selectedOrcamentoId}
+              setSelectedOrcamentoId={setSelectedOrcamentoId}
               categorias={categorias}
               cartoes={cartoes}
               lancamentosCartao={lancamentosCartao}
@@ -295,6 +319,8 @@ function App() {
               categorias={categorias}
               tiposReceita={tiposReceita}
               orcamentos={orcamentos}
+              selectedOrcamentoId={selectedOrcamentoId}
+              setSelectedOrcamentoId={setSelectedOrcamentoId}
               receitas={receitas}
               setReceitas={setReceitas}
             />
@@ -305,6 +331,8 @@ function App() {
               setCategorias={setCategorias}
               gastosPredefinidos={gastosPredefinidos}
               orcamentos={orcamentos}
+              selectedOrcamentoId={selectedOrcamentoId}
+              setSelectedOrcamentoId={setSelectedOrcamentoId}
               despesas={despesas}
               setDespesas={setDespesas}
               cartoes={cartoes}
@@ -318,6 +346,8 @@ function App() {
               lancamentosCartao={lancamentosCartao}
               setLancamentosCartao={setLancamentosCartao}
               orcamentos={orcamentos}
+              selectedOrcamentoId={selectedOrcamentoId}
+              setSelectedOrcamentoId={setSelectedOrcamentoId}
               despesas={despesas}
               setDespesas={setDespesas}
               categorias={categorias}
@@ -328,6 +358,8 @@ function App() {
           {activeKey === "relatorios" && (
             <RelatoriosPage
               orcamentos={orcamentos}
+              selectedOrcamentoId={selectedOrcamentoId}
+              setSelectedOrcamentoId={setSelectedOrcamentoId}
               receitas={receitas}
               despesas={despesas}
               cartoes={cartoes}

@@ -108,6 +108,8 @@ const DataTable = ({ columns, rows, emptyMessage, className = "", onRowClick }) 
 
 const RelatoriosPage = ({
   orcamentos,
+  selectedOrcamentoId,
+  setSelectedOrcamentoId,
   receitas,
   despesas,
   cartoes,
@@ -125,7 +127,7 @@ const RelatoriosPage = ({
     mesInicio,
     mesFim,
     mesesSelecionados
-  } = useRelatorios(orcamentos);
+  } = useRelatorios(orcamentos, selectedOrcamentoId);
 
   const currentOrcamento = useMemo(
     () => orcamentos.find((orcamento) => orcamento.id === effectiveOrcamentoId),
@@ -1048,7 +1050,13 @@ const RelatoriosPage = ({
           <form className="form-inline reports-filters" onSubmit={(event) => event.preventDefault()}>
             <label className="field reports-filters__field reports-filters__field--orcamento">
               Orcamento
-              <select value={effectiveOrcamentoId} onChange={(event) => setFilters((prev) => ({ ...prev, orcamentoId: event.target.value }))}>
+              <select
+                value={effectiveOrcamentoId}
+                onChange={(event) => {
+                  const nextId = orcamentos.find((orcamento) => String(orcamento.id) === event.target.value)?.id ?? "";
+                  setSelectedOrcamentoId(nextId);
+                }}
+              >
                 {orcamentos.length === 0 ? <option value="">Sem orcamentos</option> : orcamentos.map((orcamento) => (
                   <option key={orcamento.id} value={orcamento.id}>{orcamento.label}</option>
                 ))}

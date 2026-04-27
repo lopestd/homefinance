@@ -1,16 +1,25 @@
 import { useMemo, useState } from "react";
 import { MONTHS_ORDER, getCurrentMonthName } from "../utils/appUtils";
 
-const useRelatorios = (orcamentos) => {
-  const initialOrcamentoId = orcamentos[0]?.id ?? "";
+const resolveEffectiveOrcamentoId = (orcamentos, selectedOrcamentoId) => {
+  if (!Array.isArray(orcamentos) || orcamentos.length === 0) return "";
+  if (selectedOrcamentoId !== null && selectedOrcamentoId !== undefined && selectedOrcamentoId !== "") {
+    const match = orcamentos.find((orcamento) => String(orcamento.id) === String(selectedOrcamentoId));
+    if (match) return match.id;
+  }
+  const currentYear = String(new Date().getFullYear());
+  const currentYearMatch = orcamentos.find((orcamento) => String(orcamento.label) === currentYear);
+  return currentYearMatch?.id ?? orcamentos[0]?.id ?? "";
+};
+
+const useRelatorios = (orcamentos, selectedOrcamentoId) => {
   const [filters, setFilters] = useState({
-    orcamentoId: initialOrcamentoId,
     mesInicio: "",
     mesFim: "",
     visao: "Acumulada"
   });
 
-  const effectiveOrcamentoId = filters.orcamentoId || initialOrcamentoId;
+  const effectiveOrcamentoId = resolveEffectiveOrcamentoId(orcamentos, selectedOrcamentoId);
   const currentOrcamento = orcamentos.find((o) => o.id === effectiveOrcamentoId);
   const mesesOrcamento = MONTHS_ORDER.filter((mes) => currentOrcamento?.meses?.includes(mes));
   const defaultMes = useMemo(() => {
