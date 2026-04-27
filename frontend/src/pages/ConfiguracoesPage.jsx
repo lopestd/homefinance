@@ -104,16 +104,12 @@ const ConfiguracoesPage = ({
   const handleDeleteOrcamento = (id) => {
     const orcamento = orcamentos.find(o => o.id === id);
     if (!orcamento) return;
-
-    const mesesOrcamento = orcamento.meses || [];
     
     const hasLinkedDespesas = despesas.some(d => d.orcamentoId === id);
     const hasLinkedReceitas = receitas.some(r => r.orcamentoId === id);
-    const hasLinkedCartao = lancamentosCartao.some(l => {
-       if (mesesOrcamento.includes(l.mesReferencia)) return true;
-       if (l.meses && l.meses.some(m => mesesOrcamento.includes(m))) return true;
-       return false;
-    });
+    const hasLinkedCartao = lancamentosCartao.some(
+      (lancamento) => String(lancamento.orcamentoId) === String(id)
+    );
 
     if (hasLinkedDespesas || hasLinkedReceitas || hasLinkedCartao) {
       showAlert("Este período não pode ser excluído pois possui lançamentos vinculados (Despesas, Receitas ou Cartão de Crédito).");

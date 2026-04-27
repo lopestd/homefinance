@@ -19,6 +19,41 @@ const resolveMonth = (value) => {
   return monthNameToNumber(value);
 };
 
+const parseYearFromDate = (value) => {
+  const text = String(value || "").trim();
+  const match = text.match(/^(\d{4})-\d{2}-\d{2}$/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  return Number.isInteger(year) ? year : null;
+};
+
+const assertOrcamentoByAnoMes = async (client, userId, payload) => {
+  const ano = parseYearFromDate(payload?.data);
+  if (!ano) {
+    throwBadRequest("Data do lançamento de cartão inválida. Use o formato YYYY-MM-DD.");
+  }
+
+  const result = await client.query(
+    `SELECT 1
+       FROM admhomefinance.orcamentos o
+       JOIN admhomefinance.orcamento_meses om
+         ON om.orcamento_id = o.id
+        AND om.id_usuario = o.id_usuario
+      WHERE o.id_usuario = $1
+        AND o.id = $2
+        AND o.ano = $3
+        AND om.mes = $4
+      LIMIT 1`,
+    [userId, payload.orcamentoId, ano, payload.mesReferencia]
+  );
+
+  if (result.rowCount === 0) {
+    throwBadRequest(
+      `Orçamento ${payload.orcamentoId} não corresponde ao ano/data e mês de referência do lançamento.`
+    );
+  }
+};
+
 
 const parseDespesaOrReceita = (payload, tipo) => {
   const orcamentoId = toPositiveInt(payload?.orcamentoId);
@@ -60,6 +95,7 @@ const parseDespesaOrReceita = (payload, tipo) => {
 };
 
 const parseLancamentoCartao = (payload) => {
+  const orcamentoId = toPositiveInt(payload?.orcamentoId);
   const cartaoId = toPositiveInt(payload?.cartaoId);
   const categoriaId = toPositiveInt(payload?.categoriaId);
   const descricao = String(payload?.descricao || "").trim();
@@ -68,6 +104,7 @@ const parseLancamentoCartao = (payload) => {
     resolveMonth(payload?.mes) ||
     resolveMonth((payload?.meses || [])[0]);
   const valor = Number(payload?.valor) || 0;
+  const data = payload?.data ? String(payload.data).trim() : "";
   const meses = Array.isArray(payload?.meses) ? payload.meses : [];
   const rawTipo = String(payload?.tipoRecorrencia || "").trim().toUpperCase();
   const tipoRecorrencia = ["EVENTUAL", "FIXO", "PARCELADO"].includes(rawTipo) ? rawTipo : null;
@@ -85,17 +122,18 @@ const parseLancamentoCartao = (payload) => {
     totalParcelasFromDescricao = Number(parcelaMatch[2]);
   }
 
-  if (!cartaoId || !categoriaId || !descricao || !mesReferencia) {
+  if (!orcamentoId || !cartaoId || !categoriaId || !descricao || !mesReferencia || !data) {
     throwBadRequest("Dados de lançamento de cartão inválidos para criação em lote.");
   }
 
   return {
+    orcamentoId,
     cartaoId,
     categoriaId,
     descricao,
     complemento: payload?.complemento || null,
     valor,
-    data: payload?.data || null,
+    data,
     mesReferencia,
     tipoRecorrencia,
     parcelaAtual: parcelaFromPayload ?? parcelaFromDescricao,
@@ -319,14 +357,17 @@ const createLancamentosCartaoBatch = async (payload, userId) => {
   const parsed = items.map((item) => parseLancamentoCartao(item));
   const categoriaIds = new Set(parsed.map((item) => item.categoriaId));
   const cartaoIds = new Set(parsed.map((item) => item.cartaoId));
+  const orcamentoIds = new Set(parsed.map((item) => item.orcamentoId));
 
   const client = await configRepository.beginTransaction();
   try {
     await configRepository.acquireUserLock(client, userId);
     await assertExistingIds(client, "categorias", "id", userId, categoriaIds, "Categoria");
     await assertExistingIds(client, "cartoes", "id", userId, cartaoIds, "Cartão");
+    await assertExistingIds(client, "orcamentos", "id", userId, orcamentoIds, "Orçamento");
 
     for (const item of parsed) {
+      await assertOrcamentoByAnoMes(client, userId, item);
       const result = await configRepository.insertLancamentoCartao(client, { ...item, userId });
       const lancamentoId = result.rows[0].id;
       for (const mesNome of item.meses) {
@@ -353,6 +394,8 @@ const createLancamentoCartao = async (payload, userId) => {
     await configRepository.acquireUserLock(client, userId);
     await assertExistingIds(client, "categorias", "id", userId, new Set([parsed.categoriaId]), "Categoria");
     await assertExistingIds(client, "cartoes", "id", userId, new Set([parsed.cartaoId]), "Cartão");
+    await assertExistingIds(client, "orcamentos", "id", userId, new Set([parsed.orcamentoId]), "Orçamento");
+    await assertOrcamentoByAnoMes(client, userId, parsed);
 
     const result = await configRepository.insertLancamentoCartao(client, { ...parsed, userId });
     const lancamentoId = result.rows[0].id;
@@ -381,6 +424,8 @@ const updateLancamentoCartao = async (lancamentoId, payload, userId) => {
     await configRepository.acquireUserLock(client, userId);
     await assertExistingIds(client, "categorias", "id", userId, new Set([parsed.categoriaId]), "Categoria");
     await assertExistingIds(client, "cartoes", "id", userId, new Set([parsed.cartaoId]), "Cartão");
+    await assertExistingIds(client, "orcamentos", "id", userId, new Set([parsed.orcamentoId]), "Orçamento");
+    await assertOrcamentoByAnoMes(client, userId, parsed);
 
     const exists = await client.query(
       "SELECT id, tipo_recorrencia, parcela_atual, total_parcelas FROM admhomefinance.lancamentos_cartao WHERE id = $1 AND id_usuario = $2",
@@ -402,8 +447,9 @@ const updateLancamentoCartao = async (lancamentoId, payload, userId) => {
     }
 
     const updated = await client.query(
-      "UPDATE admhomefinance.lancamentos_cartao SET cartao_id = $1, categoria_id = $2, descricao = $3, complemento = $4, valor = $5, data = $6, mes_referencia = $7, tipo_recorrencia = $8, parcela_atual = $9, total_parcelas = $10 WHERE id = $11 AND id_usuario = $12 RETURNING id",
+      "UPDATE admhomefinance.lancamentos_cartao SET orcamento_id = $1, cartao_id = $2, categoria_id = $3, descricao = $4, complemento = $5, valor = $6, data = $7, mes_referencia = $8, tipo_recorrencia = $9, parcela_atual = $10, total_parcelas = $11 WHERE id = $12 AND id_usuario = $13 RETURNING id",
       [
+        parsed.orcamentoId,
         parsed.cartaoId,
         parsed.categoriaId,
         parsed.descricao,
@@ -512,7 +558,7 @@ const listReceitas = async (userId) => {
 const listLancamentosCartao = async (userId) => {
   const [lancamentosRes, mesesRes] = await Promise.all([
     pool.query(
-      "SELECT id, cartao_id, categoria_id, descricao, complemento, valor, data, mes_referencia, tipo_recorrencia, parcela_atual, total_parcelas FROM admhomefinance.lancamentos_cartao WHERE id_usuario = $1 ORDER BY id",
+      "SELECT id, orcamento_id, cartao_id, categoria_id, descricao, complemento, valor, data, mes_referencia, tipo_recorrencia, parcela_atual, total_parcelas FROM admhomefinance.lancamentos_cartao WHERE id_usuario = $1 ORDER BY id",
       [userId]
     ),
     pool.query("SELECT lancamento_id, mes FROM admhomefinance.lancamentos_cartao_meses WHERE id_usuario = $1", [userId])
@@ -527,6 +573,7 @@ const listLancamentosCartao = async (userId) => {
 
   return lancamentosRes.rows.map((row) => ({
     id: toId(row.id),
+    orcamentoId: toId(row.orcamento_id),
     cartaoId: toId(row.cartao_id),
     descricao: row.descricao,
     complemento: row.complemento || "",

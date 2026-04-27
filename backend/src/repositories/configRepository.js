@@ -23,13 +23,13 @@ const fetchConfigData = async (userId) => {
     pool.query("SELECT id, descricao, categoria_id, ativo FROM admhomefinance.gastos_predefinidos WHERE id_usuario = $1 ORDER BY id", [userId]),
     pool.query("SELECT id, descricao, recorrente, ativo FROM admhomefinance.tipos_receita WHERE id_usuario = $1 ORDER BY id", [userId]),
     pool.query("SELECT id, nome, limite, ativo FROM admhomefinance.cartoes WHERE id_usuario = $1 ORDER BY id", [userId]),
-    pool.query("SELECT cartao_id, mes, limite FROM admhomefinance.cartao_limites_mensais WHERE id_usuario = $1", [userId]),
+    pool.query("SELECT cartao_id, orcamento_id, mes, limite FROM admhomefinance.cartao_limites_mensais WHERE id_usuario = $1", [userId]),
     pool.query("SELECT cartao_id, mes FROM admhomefinance.cartao_faturas_fechadas WHERE id_usuario = $1", [userId]),
     pool.query("SELECT id, orcamento_id, categoria_id, descricao, complemento, valor, mes_referencia, data, status, tipo_recorrencia, parcela_atual, total_parcelas FROM admhomefinance.receitas WHERE id_usuario = $1 ORDER BY id", [userId]),
     pool.query("SELECT receita_id, mes FROM admhomefinance.receitas_meses WHERE id_usuario = $1", [userId]),
     pool.query("SELECT id, orcamento_id, categoria_id, descricao, complemento, valor, mes_referencia, data, status, tipo_recorrencia, parcela_atual, total_parcelas FROM admhomefinance.despesas WHERE id_usuario = $1 ORDER BY id", [userId]),
     pool.query("SELECT despesa_id, mes FROM admhomefinance.despesas_meses WHERE id_usuario = $1", [userId]),
-    pool.query("SELECT id, cartao_id, categoria_id, descricao, complemento, valor, data, mes_referencia, tipo_recorrencia, parcela_atual, total_parcelas FROM admhomefinance.lancamentos_cartao WHERE id_usuario = $1 ORDER BY id", [userId]),
+    pool.query("SELECT id, orcamento_id, cartao_id, categoria_id, descricao, complemento, valor, data, mes_referencia, tipo_recorrencia, parcela_atual, total_parcelas FROM admhomefinance.lancamentos_cartao WHERE id_usuario = $1 ORDER BY id", [userId]),
     pool.query("SELECT lancamento_id, mes FROM admhomefinance.lancamentos_cartao_meses WHERE id_usuario = $1", [userId])
   ]);
 
@@ -505,10 +505,10 @@ const insertCartao = async (client, { nome, limite, ativo, userId }) => {
   );
 };
 
-const insertCartaoLimite = async (client, { cartaoId, mes, limite, userId }) => {
+const insertCartaoLimite = async (client, { cartaoId, orcamentoId, mes, limite, userId }) => {
   return client.query(
-    "INSERT INTO admhomefinance.cartao_limites_mensais (cartao_id, mes, limite, id_usuario) VALUES ($1, $2, $3, $4)",
-    [cartaoId, mes, limite, userId]
+    "INSERT INTO admhomefinance.cartao_limites_mensais (cartao_id, orcamento_id, mes, limite, id_usuario) VALUES ($1, $2, $3, $4, $5)",
+    [cartaoId, orcamentoId, mes, limite, userId]
   );
 };
 
@@ -575,8 +575,9 @@ const insertDespesaMes = async (client, { despesaId, mes, userId }) => {
 
 const insertLancamentoCartao = async (client, payload) => {
   return client.query(
-    "INSERT INTO admhomefinance.lancamentos_cartao (cartao_id, categoria_id, descricao, complemento, valor, data, mes_referencia, tipo_recorrencia, parcela_atual, total_parcelas, id_usuario) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id",
+    "INSERT INTO admhomefinance.lancamentos_cartao (orcamento_id, cartao_id, categoria_id, descricao, complemento, valor, data, mes_referencia, tipo_recorrencia, parcela_atual, total_parcelas, id_usuario) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id",
     [
+      payload.orcamentoId,
       payload.cartaoId,
       payload.categoriaId,
       payload.descricao,
@@ -640,27 +641,28 @@ const deleteCartoesByIds = async (client, userId, cartaoIds) => {
   );
 };
 
-const upsertCartaoLimite = async (client, { cartaoId, mes, limite, userId }) => {
+const upsertCartaoLimite = async (client, { cartaoId, orcamentoId, mes, limite, userId }) => {
   return client.query(
-    `INSERT INTO admhomefinance.cartao_limites_mensais (cartao_id, mes, limite, id_usuario)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (cartao_id, mes)
+    `INSERT INTO admhomefinance.cartao_limites_mensais (cartao_id, orcamento_id, mes, limite, id_usuario)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (cartao_id, orcamento_id, mes)
      DO UPDATE SET limite = EXCLUDED.limite`,
-    [cartaoId, mes, limite, userId]
+    [cartaoId, orcamentoId, mes, limite, userId]
   );
 };
 
 const bulkUpsertCartaoLimites = async (client, { cartaoId, limites, userId }) => {
   if (!limites || limites.length === 0) return;
+  const orcamentoIds = limites.map((l) => l.orcamentoId);
   const meses = limites.map(l => l.mes);
   const valores = limites.map(l => l.limite);
   
   return client.query(
-    `INSERT INTO admhomefinance.cartao_limites_mensais (cartao_id, mes, limite, id_usuario)
-     SELECT $1, unnest($2::int[]), unnest($3::numeric[]), $4
-     ON CONFLICT (cartao_id, mes)
+    `INSERT INTO admhomefinance.cartao_limites_mensais (cartao_id, orcamento_id, mes, limite, id_usuario)
+     SELECT $1, unnest($2::bigint[]), unnest($3::int[]), unnest($4::numeric[]), $5
+     ON CONFLICT (cartao_id, orcamento_id, mes)
      DO UPDATE SET limite = EXCLUDED.limite`,
-    [cartaoId, meses, valores, userId]
+    [cartaoId, orcamentoIds, meses, valores, userId]
   );
 };
 
@@ -685,6 +687,13 @@ const deleteCartaoLimitesNotIn = async (client, { cartaoId, mesesMantidos, userI
   return client.query(
     "DELETE FROM admhomefinance.cartao_limites_mensais WHERE cartao_id = $1 AND id_usuario = $2 AND mes <> ALL($3)",
     [cartaoId, userId, mesesMantidos]
+  );
+};
+
+const clearCartaoLimites = async (client, { cartaoId, userId }) => {
+  return client.query(
+    "DELETE FROM admhomefinance.cartao_limites_mensais WHERE cartao_id = $1 AND id_usuario = $2",
+    [cartaoId, userId]
   );
 };
 
@@ -795,6 +804,7 @@ module.exports = {
   upsertCartaoLimite,
   bulkUpsertCartaoLimites,
   deleteCartaoLimitesNotIn,
+  clearCartaoLimites,
   upsertCartaoFatura,
   bulkUpsertCartaoFaturas,
   deleteCartaoFaturasNotIn,

@@ -14,6 +14,23 @@ const stripCreditoTag = (descricao) => {
 const isCreditoLancamento = (lancamento) =>
   Number(lancamento?.valor) < 0 || String(lancamento?.descricao || "").startsWith(CREDITO_TAG);
 
+const resolveLimiteCartao = (cartao, orcamentoId, mes) => {
+  const limitesMensais = cartao?.limitesMensais || {};
+
+  const nestedValue = limitesMensais?.[String(orcamentoId)]?.[mes];
+  if (nestedValue !== undefined && nestedValue !== null && nestedValue !== "") {
+    return parseFloat(nestedValue) || 0;
+  }
+
+  // Compatibilidade com payload legado (flat).
+  const flatValue = limitesMensais?.[mes];
+  if (flatValue !== undefined && flatValue !== null && flatValue !== "") {
+    return parseFloat(flatValue) || 0;
+  }
+
+  return 0;
+};
+
 const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, lancamentosCartao }) => {
   const [selectedOrcamentoId, setSelectedOrcamentoId] = useState("");
   const [selectedMes, setSelectedMes] = useState("");
@@ -197,6 +214,7 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
 
     return cartoes.map((cartao) => {
       const lancamentosDoMes = (lancamentosCartao || []).filter((l) =>
+        String(l.orcamentoId) === String(effectiveOrcamentoId) &&
         String(l.cartaoId) === String(cartao.id) &&
         (l.mesReferencia === effectiveMes || (l.meses && l.meses.includes(effectiveMes)))
       );
@@ -224,10 +242,7 @@ const DashboardPage = ({ receitas, despesas, orcamentos, categorias, cartoes, la
         .slice(0, 5);
 
       const totalGasto = Math.max(totalDebitos - totalCreditos, 0);
-      const limitesMensais = cartao.limitesMensais || {};
-      const limite = limitesMensais[effectiveMes] !== undefined && limitesMensais[effectiveMes] !== null && limitesMensais[effectiveMes] !== ""
-        ? parseFloat(limitesMensais[effectiveMes])
-        : parseFloat(cartao.limite) || 0;
+      const limite = resolveLimiteCartao(cartao, effectiveOrcamentoId, effectiveMes);
 
       return {
         cartao,

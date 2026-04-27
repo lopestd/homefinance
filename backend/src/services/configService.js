@@ -61,7 +61,10 @@ const loadConfig = async (userId) => {
   const limitesByCartao = new Map();
   limitesRes.rows.forEach((row) => {
     const entry = limitesByCartao.get(row.cartao_id) || {};
-    entry[monthNumberToName(row.mes)] = Number(row.limite);
+    const orcamentoKey = String(toId(row.orcamento_id));
+    const limitesPorOrcamento = entry[orcamentoKey] || {};
+    limitesPorOrcamento[monthNumberToName(row.mes)] = Number(row.limite);
+    entry[orcamentoKey] = limitesPorOrcamento;
     limitesByCartao.set(row.cartao_id, entry);
   });
 
@@ -142,6 +145,7 @@ const loadConfig = async (userId) => {
     })),
     lancamentosCartao: lancamentosRes.rows.map((row) => ({
       id: toId(row.id),
+      orcamentoId: toId(row.orcamento_id),
       cartaoId: toId(row.cartao_id),
       descricao: row.descricao,
       complemento: row.complemento || "",
@@ -173,6 +177,55 @@ const resolveId = (map, value) => {
   return normalizeId(value);
 };
 
+const extractCartaoLimitesPayload = (limitesMensais, orcamentoMesesRows = []) => {
+  if (!limitesMensais || typeof limitesMensais !== "object" || Array.isArray(limitesMensais)) {
+    return [];
+  }
+
+  const orcamentosPorMes = new Map();
+  for (const row of orcamentoMesesRows) {
+    const mes = Number(row.mes);
+    const orcamentoId = normalizeId(row.orcamento_id);
+    if (!mes || !orcamentoId) continue;
+    const list = orcamentosPorMes.get(mes) || [];
+    list.push(orcamentoId);
+    orcamentosPorMes.set(mes, list);
+  }
+
+  const map = new Map();
+
+  for (const [key, value] of Object.entries(limitesMensais)) {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const orcamentoId = normalizeId(key);
+      if (!orcamentoId) continue;
+      for (const [mesNome, limiteValue] of Object.entries(value)) {
+        const mes = monthNameToNumber(mesNome);
+        if (!mes) continue;
+        map.set(`${orcamentoId}:${mes}`, {
+          orcamentoId,
+          mes,
+          limite: Number(limiteValue) || 0
+        });
+      }
+      continue;
+    }
+
+    // Compatibilidade com payload legado (flat): mes -> limite.
+    const mesLegado = monthNameToNumber(key);
+    if (!mesLegado) continue;
+    const candidatosOrcamento = orcamentosPorMes.get(mesLegado) || [];
+    for (const orcamentoId of candidatosOrcamento) {
+      map.set(`${orcamentoId}:${mesLegado}`, {
+        orcamentoId,
+        mes: mesLegado,
+        limite: Number(value) || 0
+      });
+    }
+  }
+
+  return Array.from(map.values());
+};
+
 const saveConfig = async (payload, userId) => {
   const client = await configRepository.beginTransaction();
   try {
@@ -191,6 +244,10 @@ const saveConfig = async (payload, userId) => {
       if (Object.prototype.hasOwnProperty.call(payload, "cartoes")) {
         const cartoesPayload = Array.isArray(payload.cartoes) ? payload.cartoes : [];
         const existingCartoesRes = await client.query("SELECT id FROM admhomefinance.cartoes WHERE id_usuario = $1", [userId]);
+        const orcamentoMesesRes = await client.query(
+          "SELECT orcamento_id, mes FROM admhomefinance.orcamento_meses WHERE id_usuario = $1",
+          [userId]
+        );
         const existingCartaoIds = new Set(existingCartoesRes.rows.map(r => normalizeId(r.id)));
         const payloadIds = new Set();
 
@@ -207,28 +264,20 @@ const saveConfig = async (payload, userId) => {
             });
             
             // Sincronização granular de Limites Mensais
-            const limites = cartao.limitesMensais || {};
-            const mesesLimitesPayload = [];
-            const limitesData = [];
+            const limitesData = extractCartaoLimitesPayload(
+              cartao.limitesMensais || {},
+              orcamentoMesesRes.rows
+            );
 
-            for (const [mesNome, limite] of Object.entries(limites)) {
-              const mes = monthNameToNumber(mesNome);
-              if (!mes) continue;
-              mesesLimitesPayload.push(mes);
-              limitesData.push({ mes, limite: Number(limite) || 0 });
-            }
+            await configRepository.clearCartaoLimites(client, {
+              cartaoId: id,
+              userId
+            });
 
             await configRepository.bulkUpsertCartaoLimites(client, {
               cartaoId: id,
               limites: limitesData,
               userId
-            });
-
-            // Remove limites que não estão mais no payload
-            await configRepository.deleteCartaoLimitesNotIn(client, {
-               cartaoId: id,
-               mesesMantidos: mesesLimitesPayload,
-               userId
             });
 
             // Sincronização granular de Faturas Fechadas
@@ -265,13 +314,10 @@ const saveConfig = async (payload, userId) => {
             });
             const newId = result.rows[0].id;
             // Inserir detalhes
-            const limites = cartao.limitesMensais || {};
-            const limitesData = [];
-            for (const [mesNome, limite] of Object.entries(limites)) {
-              const mes = monthNameToNumber(mesNome);
-              if (!mes) continue;
-              limitesData.push({ mes, limite: Number(limite) || 0 });
-            }
+            const limitesData = extractCartaoLimitesPayload(
+              cartao.limitesMensais || {},
+              orcamentoMesesRes.rows
+            );
             await configRepository.bulkUpsertCartaoLimites(client, { cartaoId: newId, limites: limitesData, userId });
 
             const faturasFechadas = Array.isArray(cartao.faturasFechadas) ? cartao.faturasFechadas : [];
@@ -452,18 +498,24 @@ const saveConfig = async (payload, userId) => {
         const cartoesDb = await client.query("SELECT id FROM admhomefinance.cartoes WHERE id_usuario = $1", [userId]);
         const cartaoIdMap = new Map();
         cartoesDb.rows.forEach(r => cartaoIdMap.set(toId(r.id), toId(r.id)));
+        
+        const orcamentosDb = await configRepository.listOrcamentos(client, userId);
+        const orcamentoIdMap = new Map();
+        orcamentosDb.rows.forEach(r => orcamentoIdMap.set(toId(r.id), toId(r.id)));
 
         const lancamentosPayload = Array.isArray(payload.lancamentosCartao) ? payload.lancamentosCartao : [];
         // Ordenar lançamentos por data/ID para garantir ordem de inserção determinística (opcional mas bom para debug)
         
         for (const lancamento of lancamentosPayload) {
+          const orcamentoId = resolveId(orcamentoIdMap, lancamento.orcamentoId);
           const cartaoId = resolveId(cartaoIdMap, lancamento.cartaoId);
           const categoriaId = resolveId(categoriaIdMap, lancamento.categoriaId);
-          if (!cartaoId || !categoriaId || !lancamento?.descricao) continue;
+          if (!orcamentoId || !cartaoId || !categoriaId || !lancamento?.descricao) continue;
           const mesReferencia = monthNameToNumber(lancamento.mesReferencia) || monthNameToNumber(lancamento.mes);
           if (!mesReferencia) continue;
           
           const result = await configRepository.insertLancamentoCartao(client, {
+            orcamentoId,
             cartaoId,
             categoriaId,
             descricao: lancamento.descricao,

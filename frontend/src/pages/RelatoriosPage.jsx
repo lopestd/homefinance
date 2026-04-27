@@ -26,6 +26,23 @@ const stripCreditoTag = (descricao) => {
 const isCreditoLancamento = (lancamento) =>
   Number(lancamento?.valor) < 0 || String(lancamento?.descricao || "").startsWith(CREDITO_TAG);
 
+const resolveLimiteCartao = (cartao, orcamentoId, mes) => {
+  const limitesMensais = cartao?.limitesMensais || {};
+
+  const nestedValue = limitesMensais?.[String(orcamentoId)]?.[mes];
+  if (nestedValue !== undefined && nestedValue !== null && nestedValue !== "") {
+    return Number(nestedValue) || 0;
+  }
+
+  // Compatibilidade com payload legado (flat).
+  const flatValue = limitesMensais?.[mes];
+  if (flatValue !== undefined && flatValue !== null && flatValue !== "") {
+    return Number(flatValue) || 0;
+  }
+
+  return 0;
+};
+
 const getSignedLancamentoValor = (lancamento) => {
   const valor = Math.abs(Number(lancamento?.valor) || 0);
   return isCreditoLancamento(lancamento) ? -valor : valor;
@@ -217,8 +234,11 @@ const RelatoriosPage = ({
   );
 
   const lancamentosPeriodo = useMemo(
-    () => lancamentosCartao.filter((lancamento) => countOcorrencias(lancamento, mesesSelecionadosSet) > 0),
-    [lancamentosCartao, countOcorrencias, mesesSelecionadosSet]
+    () => lancamentosCartao.filter((lancamento) =>
+      String(lancamento.orcamentoId) === String(effectiveOrcamentoId) &&
+      countOcorrencias(lancamento, mesesSelecionadosSet) > 0
+    ),
+    [lancamentosCartao, effectiveOrcamentoId, countOcorrencias, mesesSelecionadosSet]
   );
 
   const resumoCartoesMensal = useMemo(() => {
@@ -249,10 +269,7 @@ const RelatoriosPage = ({
 
         const eventual = Math.max(debitos - fixo - parcelado, 0);
         const liquido = Math.max(debitos - creditos, 0);
-        const limiteMensal = cartao.limitesMensais || {};
-        const limite = limiteMensal[mes] !== undefined && limiteMensal[mes] !== null && limiteMensal[mes] !== ""
-          ? Number(limiteMensal[mes]) || 0
-          : Number(cartao.limite) || 0;
+        const limite = resolveLimiteCartao(cartao, effectiveOrcamentoId, mes);
         const utilizacao = limite > 0 ? (liquido / limite) * 100 : 0;
         const fechada = cartao.faturasFechadas?.includes(mes) || false;
 
@@ -277,7 +294,7 @@ const RelatoriosPage = ({
     });
 
     return rows;
-  }, [cartoes, mesesSelecionados, lancamentosPeriodo, getMesesItem]);
+  }, [cartoes, mesesSelecionados, lancamentosPeriodo, getMesesItem, effectiveOrcamentoId]);
 
   const calcResumoFluxo = useCallback(
     (monthsSet) => {

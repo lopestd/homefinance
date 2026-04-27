@@ -270,13 +270,37 @@ const CartaoPage = ({
 
   const selectedCartao = useMemo(() => cartoes.find((c) => String(c.id) === String(effectiveCartaoId)) || {}, [cartoes, effectiveCartaoId]);
 
+  const effectiveOrcamento = useMemo(() => {
+    return orcamentos.find((o) => o.meses && o.meses.includes(selectedMes));
+  }, [orcamentos, selectedMes]);
+
+  const effectiveOrcamentoId = effectiveOrcamento?.id || orcamentos[0]?.id || "";
+
+  const resolveLimiteCartao = useCallback((cartao, orcamentoId, mes) => {
+    const limitesMensais = cartao?.limitesMensais || {};
+
+    const nestedValue = limitesMensais?.[String(orcamentoId)]?.[mes];
+    if (nestedValue !== undefined && nestedValue !== null && nestedValue !== "") {
+      return parseFloat(nestedValue) || 0;
+    }
+
+    // Compatibilidade com payload legado (flat).
+    const flatValue = limitesMensais?.[mes];
+    if (flatValue !== undefined && flatValue !== null && flatValue !== "") {
+      return parseFloat(flatValue) || 0;
+    }
+
+    return 0;
+  }, []);
+
   const filteredLancamentos = useMemo(() => {
     if (!effectiveCartaoId) return [];
     return lancamentosCartao.filter((l) =>
+      String(l.orcamentoId) === String(effectiveOrcamentoId) &&
       String(l.cartaoId) === String(effectiveCartaoId) &&
       (l.mesReferencia === selectedMes || (l.meses && l.meses.includes(selectedMes))))
     ;
-  }, [lancamentosCartao, effectiveCartaoId, selectedMes]);
+  }, [lancamentosCartao, effectiveOrcamentoId, effectiveCartaoId, selectedMes]);
 
   const filteredLancamentosWithCategoria = useMemo(
     () =>
@@ -337,26 +361,17 @@ const CartaoPage = ({
 
   const valorAlocado = useMemo(() => {
     if (!selectedCartao) return 0;
-    const limitesMensais = selectedCartao.limitesMensais || {};
-    if (limitesMensais[selectedMes] !== undefined && limitesMensais[selectedMes] !== null && limitesMensais[selectedMes] !== "") {
-      return parseFloat(limitesMensais[selectedMes]);
-    }
-    return parseFloat(selectedCartao.limite) || 0;
-  }, [selectedCartao, selectedMes]);
+    return resolveLimiteCartao(selectedCartao, effectiveOrcamentoId, selectedMes);
+  }, [selectedCartao, effectiveOrcamentoId, selectedMes, resolveLimiteCartao]);
 
   const saldoMes = valorAlocado - totalMes;
 
-  const effectiveOrcamento = useMemo(() => {
-    return orcamentos.find((o) => o.meses && o.meses.includes(selectedMes));
-  }, [orcamentos, selectedMes]);
-
-  const effectiveOrcamentoId = effectiveOrcamento?.id || orcamentos[0]?.id || "";
-
-  const calculateMonthSummary = useCallback((cartaoId, mes) => {
+  const calculateMonthSummary = useCallback((cartaoId, orcamentoId, mes) => {
     const cartao = cartoes.find((c) => String(c.id) === String(cartaoId));
     if (!cartao) return null;
 
     const lancamentosDoMes = lancamentosCartao.filter((l) =>
+      String(l.orcamentoId) === String(orcamentoId) &&
       String(l.cartaoId) === String(cartaoId) &&
       (l.mesReferencia === mes || (l.meses && l.meses.includes(mes)))
     );
@@ -381,10 +396,7 @@ const CartaoPage = ({
       }
     });
 
-    const limitesMensais = cartao.limitesMensais || {};
-    const limite = limitesMensais[mes] !== undefined && limitesMensais[mes] !== null && limitesMensais[mes] !== ""
-      ? parseFloat(limitesMensais[mes])
-      : parseFloat(cartao.limite) || 0;
+    const limite = resolveLimiteCartao(cartao, orcamentoId, mes);
 
     const totalFatura = Math.max((fixoMes + parceladoMes + eventualMes) - creditoMes, 0);
     const saldo = limite - totalFatura;
@@ -401,7 +413,7 @@ const CartaoPage = ({
       saldo,
       isFechada
     };
-  }, [cartoes, lancamentosCartao]);
+  }, [cartoes, lancamentosCartao, resolveLimiteCartao]);
 
   const allMonthsSummary = useMemo(() => {
     if (!effectiveCartaoId || !effectiveOrcamentoId) return [];
@@ -410,7 +422,7 @@ const CartaoPage = ({
     if (!orcamento || !orcamento.meses) return [];
 
     return orcamento.meses
-      .map((mes) => calculateMonthSummary(effectiveCartaoId, mes))
+      .map((mes) => calculateMonthSummary(effectiveCartaoId, effectiveOrcamentoId, mes))
       .filter((summary) => summary !== null);
   }, [effectiveCartaoId, effectiveOrcamentoId, orcamentos, calculateMonthSummary]);
 
@@ -468,7 +480,26 @@ const CartaoPage = ({
     meses: []
   });
 
+  const resolveOrcamentoIdForLancamento = useCallback((lancamento) => {
+    const mes = lancamento?.mesReferencia;
+    const data = String(lancamento?.data || "");
+    const ano = Number.parseInt(data.slice(0, 4), 10);
+    if (!mes || Number.isNaN(ano)) return null;
+
+    const match = orcamentos.find((orcamento) => {
+      const anoOrcamento = Number.parseInt(String(orcamento?.label || ""), 10);
+      return (
+        anoOrcamento === ano &&
+        Array.isArray(orcamento?.meses) &&
+        orcamento.meses.includes(mes)
+      );
+    });
+
+    return match?.id || null;
+  }, [orcamentos]);
+
   const toApiPayload = useCallback((lancamento) => ({
+    orcamentoId: resolveOrcamentoIdForLancamento(lancamento),
     cartaoId: lancamento.cartaoId,
     categoriaId: lancamento.categoriaId,
     descricao: lancamento.descricao,
@@ -481,7 +512,7 @@ const CartaoPage = ({
     totalParcelas: lancamento.totalParcelas,
     parcela: lancamento.parcela,
     meses: Array.isArray(lancamento.meses) ? lancamento.meses : []
-  }), []);
+  }), [resolveOrcamentoIdForLancamento]);
 
   const toggleMesLancamento = (mes) => {
     setForm((prev) => {
@@ -611,10 +642,8 @@ const CartaoPage = ({
 
     let valorFinal = totalLiquido;
     if (!isFechada) {
-      let limite = parseFloat(cartao.limite);
-      if (cartao.limitesMensais && cartao.limitesMensais[mes] !== undefined && cartao.limitesMensais[mes] !== null && cartao.limitesMensais[mes] !== "") {
-        limite = parseFloat(cartao.limitesMensais[mes]);
-      }
+      const orcamentoMes = orcamentos.find((o) => o.meses && o.meses.includes(mes));
+      let limite = resolveLimiteCartao(cartao, orcamentoMes?.id, mes);
 
       if (!isNaN(limite) && limite > 0) {
         valorFinal = totalLiquido > limite ? totalLiquido : limite;
@@ -746,11 +775,22 @@ const CartaoPage = ({
     e.preventDefault();
     const novoLimite = parseFloat(limiteEditValue);
     if (isNaN(novoLimite) || novoLimite < 0) return;
+    if (!effectiveOrcamentoId) return;
 
     const updatedCartoes = cartoes.map((c) => {
       if (String(c.id) === String(effectiveCartaoId)) {
         const limites = c.limitesMensais || {};
-        return { ...c, limitesMensais: { ...limites, [selectedMes]: novoLimite } };
+        const limitesDoOrcamento = limites[String(effectiveOrcamentoId)] || {};
+        return {
+          ...c,
+          limitesMensais: {
+            ...limites,
+            [String(effectiveOrcamentoId)]: {
+              ...limitesDoOrcamento,
+              [selectedMes]: novoLimite
+            }
+          }
+        };
       }
       return c;
     });
@@ -794,14 +834,15 @@ const CartaoPage = ({
         const parcValue = val / qtd;
 
         for (let i = 0; i < qtd; i++) {
+          const parcelaMes = getNextMonth(form.mesReferencia, i);
           newEntries.push({
             id: createId("lanc-card-parc"),
             cartaoId: effectiveCartaoId,
             descricao: `${form.descricao} (${i + 1}/${qtd})`,
             complemento: form.complemento || "",
             valor: parcValue,
-            data: form.data,
-            mesReferencia: getNextMonth(form.mesReferencia, i),
+            data: calculateDateForMonth(parcelaMes, form.data),
+            mesReferencia: parcelaMes,
             categoriaId: form.categoriaId,
             tipoRecorrencia: "PARCELADO",
             parcela: i + 1,
@@ -873,8 +914,17 @@ const CartaoPage = ({
           (tipoRecorrenciaFinal === "FIXO" && form.meses && form.meses.length > 0)
         );
 
+      const apiPayloads = newEntries.map((entry) => toApiPayload(entry));
+      const invalidPayload = apiPayloads.find((payload) => !payload.orcamentoId);
+      if (invalidPayload) {
+        showAlert(
+          "Não foi possível identificar o orçamento do lançamento pelo Ano da data e Mês de referência. Ajuste a data ou o mês antes de salvar."
+        );
+        return;
+      }
+
       if (isBatchCreateMode) {
-        await createLancamentosCartaoBatch(newEntries.map((entry) => toApiPayload(entry)));
+        await createLancamentosCartaoBatch(apiPayloads);
         const refreshedLancamentos = await loadLancamentosCartaoFromApi();
         setLancamentosCartao(refreshedLancamentos);
         setModalOpen(false);
@@ -883,9 +933,9 @@ const CartaoPage = ({
       }
 
       if (editId) {
-        await updateLancamentoCartao(editId, toApiPayload(newEntries[0]));
+        await updateLancamentoCartao(editId, apiPayloads[0]);
       } else {
-        await createLancamentoCartao(toApiPayload(newEntries[0]));
+        await createLancamentoCartao(apiPayloads[0]);
       }
 
       const refreshedLancamentos = await loadLancamentosCartaoFromApi();
@@ -1384,4 +1434,3 @@ const CartaoPage = ({
 };
 
 export { CartaoPage };
-
