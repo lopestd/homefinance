@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { loadConfigFromApi } from "./services/configApi";
 import useAuth from "./hooks/useAuth";
 import useCartao from "./hooks/useCartao";
 import useDespesas from "./hooks/useDespesas";
 import useReceitas from "./hooks/useReceitas";
+import Modal from "./components/Modal";
 import { CartaoPage } from "./pages/CartaoPage";
 import { ConfiguracoesPage } from "./pages/ConfiguracoesPage";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -11,6 +12,7 @@ import { DespesasPage } from "./pages/DespesasPage";
 import { LoginScreen } from "./pages/LoginScreen";
 import { ReceitasPage } from "./pages/ReceitasPage";
 import { RelatoriosPage } from "./pages/RelatoriosPage";
+import { formatCurrency, MONTHS_ORDER } from "./utils/appUtils";
 import "./styles/index.css";
 
 const getHashPage = () => {
@@ -33,6 +35,65 @@ const resolveGlobalOrcamentoId = (orcamentos = [], preferredId = "") => {
   return orcamentos[0]?.id ?? "";
 };
 
+const normalizeText = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+
+const MONTH_INDEX_MAP = new Map(
+  MONTHS_ORDER.map((mes, index) => [normalizeText(mes), index])
+);
+
+const getMonthIndex = (mes) => {
+  const index = MONTH_INDEX_MAP.get(normalizeText(mes));
+  return Number.isInteger(index) ? index : -1;
+};
+
+const parseOrcamentoYear = (label) => {
+  const match = String(label || "").match(/\d{4}/);
+  return match ? Number(match[0]) : NaN;
+};
+
+const getPreviousMonthsWindow = (count = 2, referenceDate = new Date()) => {
+  const months = [];
+  for (let offset = count; offset >= 1; offset -= 1) {
+    const date = new Date(referenceDate.getFullYear(), referenceDate.getMonth() - offset, 1);
+    months.push({
+      year: date.getFullYear(),
+      monthIndex: date.getMonth(),
+      monthName: MONTHS_ORDER[date.getMonth()]
+    });
+  }
+  return months;
+};
+
+const getItemMonths = (item) => {
+  const rawMonths = [];
+  if (item?.mes) rawMonths.push(item.mes);
+  if (Array.isArray(item?.meses)) rawMonths.push(...item.meses);
+
+  const unique = new Set();
+  rawMonths.forEach((mes) => {
+    const monthIndex = getMonthIndex(mes);
+    if (monthIndex >= 0) unique.add(MONTHS_ORDER[monthIndex]);
+  });
+  return Array.from(unique);
+};
+
+const toCurrencyNumber = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.abs(parsed) : 0;
+};
+
+const formatPendingDate = (value) => {
+  if (!value) return "-";
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+};
+
 function App() {
   const [activeKey, setActiveKey] = useState(getHashPage());
   const [categorias, setCategorias] = useState([]);
@@ -45,6 +106,8 @@ function App() {
   const { cartoes, setCartoes, lancamentosCartao, setLancamentosCartao } = useCartao([], []);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isPendingModalOpen, setIsPendingModalOpen] = useState(false);
+  const [pendingModalShown, setPendingModalShown] = useState(false);
   const contentRef = useRef(null);
 
   const clearData = useCallback(() => {
@@ -58,6 +121,8 @@ function App() {
     setCartoes([]);
     setLancamentosCartao([]);
     setIsDataLoaded(false);
+    setIsPendingModalOpen(false);
+    setPendingModalShown(false);
   }, [
     setCategorias,
     setGastosPredefinidos,
@@ -68,7 +133,9 @@ function App() {
     setSelectedOrcamentoId,
     setCartoes,
     setLancamentosCartao,
-    setIsDataLoaded
+    setIsDataLoaded,
+    setIsPendingModalOpen,
+    setPendingModalShown
   ]);
 
   const {
@@ -218,6 +285,93 @@ function App() {
       window.clearTimeout(timeoutId);
     };
   }, [isMobile, activeKey, isDataLoaded]);
+
+  const pendingOpenData = useMemo(() => {
+    const previousMonths = getPreviousMonthsWindow(2, new Date());
+    const targetMonthKeys = new Set(previousMonths.map((item) => `${item.year}-${item.monthIndex}`));
+
+    const orcamentoYearById = new Map();
+    orcamentos.forEach((orcamento) => {
+      const year = parseOrcamentoYear(orcamento?.label);
+      if (Number.isInteger(year)) {
+        orcamentoYearById.set(String(orcamento.id), year);
+      }
+    });
+
+    const items = [];
+    const dedupeKeys = new Set();
+
+    const appendPendingItems = (entries, tipo) => {
+      entries.forEach((entry) => {
+        const status = String(entry?.status || "").trim();
+        const isClosed = tipo === "RECEITA" ? status === "Recebido" : status === "Pago";
+        if (isClosed) return;
+
+        const year = orcamentoYearById.get(String(entry?.orcamentoId));
+        if (!Number.isInteger(year)) return;
+
+        const months = getItemMonths(entry);
+        if (months.length === 0) return;
+
+        months.forEach((mes) => {
+          const monthIndex = getMonthIndex(mes);
+          if (monthIndex < 0) return;
+          if (!targetMonthKeys.has(`${year}-${monthIndex}`)) return;
+
+          const dedupeKey = `${tipo}-${entry?.id || "sem-id"}-${year}-${monthIndex}`;
+          if (dedupeKeys.has(dedupeKey)) return;
+          dedupeKeys.add(dedupeKey);
+
+          items.push({
+            key: dedupeKey,
+            tipo,
+            tipoLabel: tipo === "RECEITA" ? "Receita" : "Despesa",
+            ano: year,
+            monthIndex,
+            mes: MONTHS_ORDER[monthIndex],
+            data: entry?.data || "",
+            categoria: entry?.categoria || "Sem categoria",
+            descricao: entry?.descricao || "Sem descricao",
+            complemento: entry?.complemento || "",
+            status: status || "-",
+            valor: toCurrencyNumber(entry?.valor)
+          });
+        });
+      });
+    };
+
+    appendPendingItems(receitas, "RECEITA");
+    appendPendingItems(despesas, "DESPESA");
+
+    items.sort((a, b) =>
+      a.ano - b.ano ||
+      a.monthIndex - b.monthIndex ||
+      String(a.data || "").localeCompare(String(b.data || "")) ||
+      String(a.descricao || "").localeCompare(String(b.descricao || ""))
+    );
+
+    const totalReceitas = items
+      .filter((item) => item.tipo === "RECEITA")
+      .reduce((acc, item) => acc + item.valor, 0);
+    const totalDespesas = items
+      .filter((item) => item.tipo === "DESPESA")
+      .reduce((acc, item) => acc + item.valor, 0);
+
+    return {
+      items,
+      totalReceitas,
+      totalDespesas,
+      referenceLabel: previousMonths.map((item) => `${item.monthName}/${item.year}`).join(" e ")
+    };
+  }, [receitas, despesas, orcamentos]);
+
+  useEffect(() => {
+    if (!authUser || !isDataLoaded || pendingModalShown) return;
+    setPendingModalShown(true);
+    if (pendingOpenData.items.length > 0) {
+      setIsPendingModalOpen(true);
+    }
+  }, [authUser, isDataLoaded, pendingModalShown, pendingOpenData.items.length]);
 
   const handleNavClick = () => {
     setIsMobileMenuOpen(false);
@@ -413,6 +567,85 @@ function App() {
             </a>
           ))}
         </nav>
+
+        <Modal
+          open={isPendingModalOpen}
+          title="Pendências dos 2 meses anteriores"
+          onClose={() => setIsPendingModalOpen(false)}
+          className="pending-open-modal"
+          footerClassName="pending-open-modal__footer"
+          footer={(
+            <button
+              type="button"
+              className="pending-open-modal__ok-btn"
+              onClick={() => setIsPendingModalOpen(false)}
+            >
+              OK
+            </button>
+          )}
+        >
+          <div className="pending-open-modal__content">
+            <p className="pending-open-modal__subtitle">
+              Referência de consulta: {pendingOpenData.referenceLabel}
+            </p>
+
+            <div className="pending-open-modal__summary">
+              <div className="pending-open-modal__summary-card pending-open-modal__summary-card--receita">
+                <span>Receitas pendentes</span>
+                <strong>{formatCurrency(pendingOpenData.totalReceitas)}</strong>
+              </div>
+              <div className="pending-open-modal__summary-card pending-open-modal__summary-card--despesa">
+                <span>Despesas pendentes</span>
+                <strong>{formatCurrency(pendingOpenData.totalDespesas)}</strong>
+              </div>
+            </div>
+
+            <div className="pending-open-modal__table-wrapper">
+              <table className="pending-open-modal__table">
+                <thead>
+                  <tr>
+                    <th>Tipo</th>
+                    <th>Orçamento</th>
+                    <th>Mês</th>
+                    <th>Data</th>
+                    <th>Categoria</th>
+                    <th>Descrição</th>
+                    <th>Status</th>
+                    <th>Valor pendente</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingOpenData.items.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="pending-open-modal__empty">
+                        Não há pendências nos 2 meses anteriores.
+                      </td>
+                    </tr>
+                  ) : (
+                    pendingOpenData.items.map((item) => (
+                      <tr key={item.key}>
+                        <td>
+                          <span className={`pending-open-modal__tipo pending-open-modal__tipo--${item.tipo.toLowerCase()}`}>
+                            {item.tipoLabel}
+                          </span>
+                        </td>
+                        <td>{item.ano}</td>
+                        <td>{item.mes}</td>
+                        <td>{formatPendingDate(item.data)}</td>
+                        <td>{item.categoria}</td>
+                        <td>{item.complemento ? `${item.descricao} - ${item.complemento}` : item.descricao}</td>
+                        <td>{item.status}</td>
+                        <td className={item.tipo === "RECEITA" ? "pending-open-modal__value--receita" : "pending-open-modal__value--despesa"}>
+                          {formatCurrency(item.valor)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </Modal>
       </div>
     </div>
   );

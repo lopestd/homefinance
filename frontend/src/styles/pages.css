@@ -1405,3 +1405,163 @@
   border-top: 1px solid #dbe3f0;
   background: #ffffff;
 }
+
+.pending-open-modal {
+  width: min(1080px, calc(100vw - 40px));
+  max-width: min(1080px, calc(100vw - 40px));
+  border: 1px solid #dbe3f0;
+  background: #f8fafc;
+}
+
+.pending-open-modal .modal-header {
+  padding: 18px 22px 16px;
+  background: linear-gradient(180deg, #f3f7ff 0%, #ffffff 100%);
+}
+
+.pending-open-modal .modal-body {
+  padding: 16px 22px 18px;
+}
+
+.pending-open-modal__content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pending-open-modal__subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #475569;
+}
+
+.pending-open-modal__summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pending-open-modal__summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #dbe3f0;
+  background: #ffffff;
+}
+
+.pending-open-modal__summary-card span {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.pending-open-modal__summary-card strong {
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.pending-open-modal__summary-card--receita strong {
+  color: #059669;
+}
+
+.pending-open-modal__summary-card--despesa strong {
+  color: #dc2626;
+}
+
+.pending-open-modal__table-wrapper {
+  width: 100%;
+  border: 1px solid #dbe3f0;
+  border-radius: 12px;
+  overflow-x: auto;
+  background: #ffffff;
+}
+
+.pending-open-modal__table {
+  width: 100%;
+  min-width: 840px;
+  border-collapse: collapse;
+}
+
+.pending-open-modal__table th,
+.pending-open-modal__table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  font-size: 13px;
+  color: #0f172a;
+  vertical-align: top;
+}
+
+.pending-open-modal__table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pending-open-modal__table tr:last-child td {
+  border-bottom: none;
+}
+
+.pending-open-modal__empty {
+  text-align: center;
+  color: #64748b !important;
+  padding: 16px !important;
+}
+
+.pending-open-modal__tipo {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pending-open-modal__tipo--receita {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.pending-open-modal__tipo--despesa {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.pending-open-modal__value--receita {
+  color: #059669;
+  font-weight: 700;
+}
+
+.pending-open-modal__value--despesa {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.pending-open-modal__footer {
+  justify-content: flex-end;
+  padding: 12px 22px 18px;
+  border-top: 1px solid #dbe3f0;
+  background: #ffffff;
+}
+
+.pending-open-modal__ok-btn {
+  min-width: 84px;
+  border-radius: 10px;
+  border: 1px solid #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.pending-open-modal__ok-btn:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
