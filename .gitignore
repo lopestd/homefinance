@@ -35,6 +35,7 @@ build
 plans
 test
 build_docker
+docs
 
 # OS files
 Thumbs.db
