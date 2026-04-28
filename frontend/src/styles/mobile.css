@@ -873,10 +873,166 @@
     min-width: 0;
   }
 
-  /* Dashboard Cards */
-  .dashboard-cards {
+  .dashboard-metrics-grid,
+  .dashboard-tracking-grid {
     grid-template-columns: 1fr;
     gap: 12px;
+  }
+
+  .dashboard-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-metric-card,
+  .dashboard-progress-card {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .dashboard-metric-card {
+    padding: 16px;
+    gap: 10px;
+    min-height: 0;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.1);
+  }
+
+  .dashboard-metric-card__header {
+    gap: 8px;
+  }
+
+  .dashboard-metric-card--primary {
+    grid-column: 1 / -1;
+    padding: 20px;
+    background:
+      radial-gradient(circle at 90% 4%, rgba(37, 99, 235, 0.16) 0, rgba(37, 99, 235, 0) 34%),
+      linear-gradient(135deg, #eff6ff 0%, #ffffff 68%);
+    border-color: #93c5fd;
+    box-shadow: 0 14px 28px rgba(37, 99, 235, 0.16);
+  }
+
+  .dashboard-metric-card--primary .dashboard-metric-card__header {
+    gap: 12px;
+  }
+
+  .dashboard-metric-card--primary .dashboard-metric-card__icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+
+  .dashboard-metric-card--primary .dashboard-metric-card__icon svg {
+    width: 25px;
+    height: 25px;
+  }
+
+  .dashboard-metric-card:not(.dashboard-metric-card--primary) {
+    gap: 0;
+  }
+
+  .dashboard-metric-card:not(.dashboard-metric-card--primary) .dashboard-metric-card__icon {
+    width: 34px;
+    height: 34px;
+    font-size: 18px;
+  }
+
+  .dashboard-metric-card__value {
+    margin-top: 12px;
+    font-size: 24px;
+    overflow-wrap: anywhere;
+  }
+
+  .dashboard-metric-card--primary .dashboard-metric-card__value {
+    margin-top: 16px;
+    font-size: 34px;
+  }
+
+  .dashboard-metric-card__title {
+    font-size: 14px;
+  }
+
+  .dashboard-metric-card--primary .dashboard-metric-card__title {
+    font-size: 19px;
+    line-height: 1.15;
+  }
+
+  .dashboard-metric-card--primary .dashboard-metric-card__description {
+    display: block;
+    max-width: 260px;
+    margin-top: 10px;
+    font-size: 13px;
+    line-height: 1.35;
+    color: #334155;
+  }
+
+  .dashboard-metric-card--primary .dashboard-metric-card__breakdown {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    margin-top: 14px;
+    padding-top: 14px;
+  }
+
+  .dashboard-metric-card--primary .dashboard-metric-card__breakdown-item {
+    padding: 9px 8px;
+    border-radius: 12px;
+  }
+
+  .dashboard-metric-card--primary .dashboard-metric-card__breakdown-item span {
+    font-size: 10px;
+    line-height: 1.15;
+  }
+
+  .dashboard-metric-card--primary .dashboard-metric-card__breakdown-item strong {
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .dashboard-metric-card:not(.dashboard-metric-card--primary) .dashboard-metric-card__breakdown {
+    display: none;
+  }
+
+  .dashboard-metric-card:not(.dashboard-metric-card--primary) .dashboard-metric-card__mobile-summary {
+    display: block;
+    margin: 8px 0 0;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #475569;
+  }
+
+  .dashboard-metric-card__description,
+  .dashboard-metric-card__detail {
+    margin-top: 8px;
+  }
+
+  .dashboard-metric-card:not(.dashboard-metric-card--primary) .dashboard-metric-card__description,
+  .dashboard-metric-card:not(.dashboard-metric-card--primary) .dashboard-metric-card__detail {
+    display: none;
+  }
+
+  .dashboard-metric-card__badge {
+    margin-top: 10px;
+    padding: 5px 9px;
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  .dashboard-progress-card {
+    padding: 16px;
+  }
+
+  .dashboard-progress-card__values {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .dashboard-progress-card__value-item strong {
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+
+  .dashboard-progress-card__value-item {
+    padding-right: 8px;
   }
 
   /* Dashboard Categories */
@@ -1102,6 +1258,43 @@
     gap: 12px;
   }
 
+  /* Dashboard Metrics Grid */
+  .dashboard-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Dashboard Metric Cards */
+  .dashboard-metric-card {
+    padding: 14px;
+  }
+
+  .dashboard-metric-card--primary {
+    grid-column: 1 / -1;
+    padding: 18px;
+  }
+
+  .dashboard-metric-card--primary .dashboard-metric-card__breakdown {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .dashboard-metric-card--primary .dashboard-metric-card__breakdown-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .dashboard-metric-card--primary .dashboard-metric-card__breakdown-item span {
+    margin-bottom: 0;
+    font-size: 12px;
+  }
+
+  .dashboard-metric-card--primary .dashboard-metric-card__breakdown-item strong {
+    font-size: 13px;
+    text-align: right;
+  }
+
   /* Dashboard Hero */
   .dashboard-hero .kpi-card {
     padding: 20px;
@@ -1232,6 +1425,33 @@
   /* Reports Header Title */
   .reports-header__title {
     font-size: 16px;
+  }
+
+  /* Dashboard Metric Cards */
+  .dashboard-metric-card__value {
+    font-size: 20px;
+  }
+
+  .dashboard-metric-card--primary .dashboard-metric-card__value {
+    font-size: 30px;
+  }
+
+  .dashboard-metric-card:not(.dashboard-metric-card--primary) .dashboard-metric-card__icon {
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+  }
+
+  .dashboard-progress-card__value-item span {
+    font-size: 11px;
+  }
+
+  .dashboard-progress-card__values {
+    gap: 6px;
+  }
+
+  .dashboard-progress-card__value-item {
+    padding-right: 6px;
   }
 
   /* Filters */

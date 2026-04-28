@@ -1,7 +1,7 @@
 ﻿import { useMemo, useState } from "react";
-import { formatCurrency, getCurrentMonthName, MONTHS_ORDER } from "../utils/appUtils";
-import { KPICard, SummaryCard, CardTopGastosCartao } from "../components/dashboard";
-import { AreaChart, HorizontalBar } from "../components/charts";
+import { formatCurrency, getCurrentMonthName } from "../utils/appUtils";
+import { CardTopGastosCartao } from "../components/dashboard";
+import { HorizontalBar } from "../components/charts";
 import useSaldoAcumulado from "../hooks/useSaldoAcumulado";
 
 const CREDITO_TAG = "[CREDITO]";
@@ -42,6 +42,164 @@ const resolveEffectiveOrcamentoId = (orcamentos, selectedOrcamentoId) => {
   return currentYearMatch?.id ?? orcamentos[0]?.id ?? "";
 };
 
+const safeNumber = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const safePercentage = (value, total) => {
+  if (!total || total <= 0) return 0;
+  return (value / total) * 100;
+};
+
+const clampProgress = (value) => Math.min(100, Math.max(0, value));
+
+const formatPercent = (value) => `${Math.round(value)}%`;
+
+const IconSaldoAtual = () => (
+  <svg viewBox="0 0 24 24" role="img" aria-label="Saldo atual">
+    <path d="M4 7.5C4 6.12 5.12 5 6.5 5h11C18.88 5 20 6.12 20 7.5v9c0 1.38-1.12 2.5-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5v-9Z" />
+    <path d="M4 9h16" />
+    <path d="M15.75 13.25h1.5" />
+  </svg>
+);
+
+const IconResultadoMes = () => (
+  <svg viewBox="0 0 24 24" role="img" aria-label="Resultado do mês">
+    <path d="M4 17.5h16" />
+    <path d="M6 15l4.1-4.1 3.1 3.1L19 8.2" />
+    <path d="M15.5 8.2H19v3.5" />
+  </svg>
+);
+
+const IconSaldoPrevisto = () => (
+  <svg viewBox="0 0 24 24" role="img" aria-label="Saldo previsto">
+    <path d="M7 3.5v3" />
+    <path d="M17 3.5v3" />
+    <path d="M5.5 6h13A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5v-9A2.5 2.5 0 0 1 5.5 6Z" />
+    <path d="M3 10h18" />
+    <path d="M8 15h3.25L13 12.5l1.75 4L16 15h1" />
+  </svg>
+);
+
+const calculateDashboardSummary = ({
+  saldoInicial = 0,
+  receitasPrevistas = 0,
+  receitasRecebidas = 0,
+  despesasPrevistas = 0,
+  despesasPagas = 0
+}) => {
+  const resultadoDoMes = receitasRecebidas - despesasPagas;
+  const resultadoPrevisto = receitasPrevistas - despesasPrevistas;
+  const saldoAtualEmConta = saldoInicial + resultadoDoMes;
+  const saldoPrevisto = saldoInicial + resultadoPrevisto;
+  const diferencaResultado = resultadoDoMes - resultadoPrevisto;
+  const percentualReceitas = safePercentage(receitasRecebidas, receitasPrevistas);
+  const percentualDespesas = safePercentage(despesasPagas, despesasPrevistas);
+  const faltaReceber = receitasPrevistas - receitasRecebidas;
+  const restantePrevisto = despesasPrevistas - despesasPagas;
+
+  return {
+    resultadoDoMes,
+    resultadoPrevisto,
+    saldoAtualEmConta,
+    saldoPrevisto,
+    diferencaResultado,
+    percentualReceitas,
+    percentualDespesas,
+    faltaReceber,
+    restantePrevisto
+  };
+};
+
+const DashboardMetricCard = ({
+  title,
+  value,
+  description,
+  detail,
+  breakdown,
+  mobileSummary,
+  badge,
+  variant = "neutral",
+  icon
+}) => (
+  <article className={`dashboard-metric-card dashboard-metric-card--${variant}`}>
+    <div className="dashboard-metric-card__header">
+      <span className="dashboard-metric-card__icon" aria-hidden="true">{icon}</span>
+      <h3 className="dashboard-metric-card__title">{title}</h3>
+    </div>
+    <strong className="dashboard-metric-card__value">{formatCurrency(value)}</strong>
+    {description ? <p className="dashboard-metric-card__description">{description}</p> : null}
+    {breakdown?.length ? (
+      <div className="dashboard-metric-card__breakdown">
+        {breakdown.map((item) => (
+          <div
+            className={`dashboard-metric-card__breakdown-item ${item.tone ? `dashboard-metric-card__breakdown-item--${item.tone}` : ""}`}
+            key={item.label}
+          >
+            <span>{item.label}</span>
+            <strong>{formatCurrency(item.value)}</strong>
+          </div>
+        ))}
+      </div>
+    ) : null}
+    {detail ? <p className="dashboard-metric-card__detail">{detail}</p> : null}
+    {mobileSummary ? <p className="dashboard-metric-card__mobile-summary">{mobileSummary}</p> : null}
+    {badge ? <span className="dashboard-metric-card__badge">{badge}</span> : null}
+  </article>
+);
+
+const DashboardProgressCard = ({
+  title,
+  percentage,
+  plannedLabel,
+  plannedValue,
+  realizedLabel,
+  realizedValue,
+  remainingLabel,
+  remainingValue,
+  variant,
+  icon
+}) => {
+  const isOver = remainingValue < 0;
+  const displayRemaining = Math.abs(remainingValue);
+  const displayRemainingLabel = isOver ? "Acima do previsto" : remainingLabel;
+
+  return (
+    <article className={`dashboard-progress-card dashboard-progress-card--${variant}`}>
+      <div className="dashboard-progress-card__header">
+        <div className="dashboard-progress-card__title-group">
+          <span className="dashboard-progress-card__icon" aria-hidden="true">{icon}</span>
+          <h3 className="dashboard-progress-card__title">{title}</h3>
+        </div>
+        <strong className="dashboard-progress-card__percent">{formatPercent(percentage)}</strong>
+      </div>
+
+      <div className="dashboard-progress-card__bar" aria-hidden="true">
+        <span
+          className="dashboard-progress-card__bar-fill"
+          style={{ width: `${clampProgress(percentage)}%` }}
+        />
+      </div>
+
+      <div className="dashboard-progress-card__values">
+        <div className="dashboard-progress-card__value-item">
+          <span>{plannedLabel}</span>
+          <strong>{formatCurrency(plannedValue)}</strong>
+        </div>
+        <div className="dashboard-progress-card__value-item">
+          <span>{realizedLabel}</span>
+          <strong>{formatCurrency(realizedValue)}</strong>
+        </div>
+        <div className={`dashboard-progress-card__value-item ${isOver ? "dashboard-progress-card__value-item--alert" : ""}`}>
+          <span>{displayRemainingLabel}</span>
+          <strong>{formatCurrency(displayRemaining)}</strong>
+        </div>
+      </div>
+    </article>
+  );
+};
+
 const DashboardPage = ({
   receitas,
   despesas,
@@ -63,11 +221,6 @@ const DashboardPage = ({
     [currentOrcamento]
   );
 
-  const mesesOrdenados = useMemo(
-    () => MONTHS_ORDER.filter((mes) => mesesDisponiveis.includes(mes)),
-    [mesesDisponiveis]
-  );
-  
   const defaultMes = useMemo(() => {
     if (mesesDisponiveis.length === 0) return "";
     const currentMonth = getCurrentMonthName();
@@ -75,18 +228,8 @@ const DashboardPage = ({
   }, [mesesDisponiveis]);
   
   const effectiveMes = selectedMes && mesesDisponiveis.includes(selectedMes) ? selectedMes : defaultMes;
-  const { getSaldoDoMes, getSaldoFinalDoMes } = useSaldoAcumulado(effectiveOrcamentoId, anoOrcamento);
+  const { getSaldoDoMes } = useSaldoAcumulado(effectiveOrcamentoId, anoOrcamento);
   const saldoMesAtual = useMemo(() => getSaldoDoMes(effectiveMes), [getSaldoDoMes, effectiveMes]);
-  const mesIndex = mesesOrdenados.indexOf(effectiveMes);
-  const mesAnterior = mesIndex > 0 ? mesesOrdenados[mesIndex - 1] : "";
-  const saldoAcumuladoAnterior = useMemo(() => {
-    if (!effectiveMes) return 0;
-    if (mesIndex <= 0) {
-      const value = saldoMesAtual ? parseFloat(saldoMesAtual.saldoInicial) : 0;
-      return Number.isNaN(value) ? 0 : value;
-    }
-    return getSaldoFinalDoMes(mesAnterior);
-  }, [effectiveMes, mesIndex, saldoMesAtual, getSaldoFinalDoMes, mesAnterior]);
 
   // Map de categorias
   const categoriasMap = useMemo(
@@ -273,27 +416,30 @@ const DashboardPage = ({
     });
   }, [cartoes, lancamentosCartao, effectiveOrcamentoId, effectiveMes]);
 
-  // Calcular tendencia
-  const calcularTendencia = (atual, previsto) => {
-    if (previsto === 0) return { trend: 'neutral', trendValue: 'N/A' };
-    const diff = atual - previsto;
-    const percent = ((diff / previsto) * 100).toFixed(1);
-    if (diff > 0) {
-      return { trend: 'up', trendValue: `+${percent}% acima do previsto` };
-    } else if (diff < 0) {
-      return { trend: 'down', trendValue: `${percent}% abaixo do previsto` };
-    }
-    return { trend: 'neutral', trendValue: 'Dentro do previsto' };
-  };
-
-  const saldoPrevistoMes = resumoMensal.recLancadas - resumoMensal.despLancadas;
-  const saldoConsolidado = saldoAcumuladoAnterior + saldoPrevistoMes;
-  const saldoTendencia = calcularTendencia(resumoMensal.saldo, saldoPrevistoMes);
-  const saldoConsolidadoClass = saldoConsolidado >= 0 ? "summary-card-value--positive" : "summary-card-value--negative";
   const saldoInicialMes = saldoMesAtual ? parseFloat(saldoMesAtual.saldoInicial) : 0;
-  const receitasRecebidasMes = saldoMesAtual ? parseFloat(saldoMesAtual.receitasRecebidas) : 0;
-  const despesasPagasMes = saldoMesAtual ? parseFloat(saldoMesAtual.despesasPagas) : 0;
-  const saldoFinalMes = saldoMesAtual ? parseFloat(saldoMesAtual.saldoFinal) : 0;
+  const dashboardSummary = calculateDashboardSummary({
+    saldoInicial: safeNumber(saldoInicialMes),
+    receitasPrevistas: resumoMensal.recLancadas,
+    receitasRecebidas: resumoMensal.recRecebidas,
+    despesasPrevistas: resumoMensal.despLancadas,
+    despesasPagas: resumoMensal.despPagas
+  });
+  const saldoAtualBreakdown = [
+    { label: "Saldo inicial", value: safeNumber(saldoInicialMes) },
+    { label: "Entradas", value: resumoMensal.recRecebidas, tone: "income" },
+    { label: "Saídas", value: resumoMensal.despPagas, tone: "expense" }
+  ];
+  const resultadoMesBreakdown = [
+    { label: "Recebido", value: resumoMensal.recRecebidas, tone: "income" },
+    { label: "Pago", value: resumoMensal.despPagas, tone: "expense" },
+    { label: "Previsto", value: dashboardSummary.resultadoPrevisto, tone: "forecast" }
+  ];
+  const saldoPrevistoBreakdown = [
+    { label: "Saldo inicial", value: safeNumber(saldoInicialMes) },
+    { label: "Resultado previsto", value: dashboardSummary.resultadoPrevisto, tone: "forecast" }
+  ];
+  const resultadoMesMobileSummary = `Previsto: ${formatCurrency(dashboardSummary.resultadoPrevisto)}`;
+  const saldoPrevistoMobileSummary = `Saldo inicial + Resultado previsto`;
 
   return (
     <div className="page-grid dashboard-page">
@@ -323,75 +469,58 @@ const DashboardPage = ({
         </div>
       </section>
 
-      {/* KPI Hero Row - Saldo do Mes + Saldo Acumulado */}
-      <section className="dashboard-hero-row">
-        <div className="panel dashboard-hero dashboard-hero--left">
-          <KPICard
-            title={"Saldo do M\u00eas"}
-            value={formatCurrency(resumoMensal.saldo)}
-            subtitle={`Receitas: ${formatCurrency(resumoMensal.recRecebidas)} | Despesas: ${formatCurrency(resumoMensal.despPagas)}`}
-            trend={saldoTendencia.trend}
-            trendValue={saldoTendencia.trendValue}
-            color={resumoMensal.saldo >= 0 ? 'positive' : 'negative'}
-          >
-            <div className="kpi-card__details">
-              <div className="kpi-card__detail-row">
-                <span>Saldo anterior:</span>
-                <strong>{formatCurrency(saldoAcumuladoAnterior)}</strong>
-              </div>
-              <div className="kpi-card__detail-row">
-                <span>Previsto:</span>
-                <strong>{formatCurrency(saldoPrevistoMes)}</strong>
-              </div>
-              <div className="kpi-card__detail-row">
-                <span>Consolidado:</span>
-                <strong className={saldoConsolidadoClass}>{formatCurrency(saldoConsolidado)}</strong>
-              </div>
-            </div>
-          </KPICard>
-        </div>
-        <div className="panel dashboard-hero dashboard-hero--right">
-          <KPICard
-            title="Saldo Acumulado (EM CONTA)"
-            value={formatCurrency(Number.isNaN(saldoFinalMes) ? 0 : saldoFinalMes)}
-            subtitle={`Saldo Inicial: ${formatCurrency(Number.isNaN(saldoInicialMes) ? 0 : saldoInicialMes)}`}
-            trend={saldoFinalMes >= 0 ? 'up' : 'down'}
-            trendValue={saldoFinalMes >= 0 ? 'Positivo' : 'Negativo'}
-            color="blue"
-          >
-            <div className="kpi-card__details">
-              <div className="kpi-card__detail-row">
-                <span>Receitas Recebidas:</span>
-                <strong className="kpi-card__value--positive">{formatCurrency(Number.isNaN(receitasRecebidasMes) ? 0 : receitasRecebidasMes)}</strong>
-              </div>
-              <div className="kpi-card__detail-row">
-                <span>Despesas Pagas:</span>
-                <strong className="kpi-card__value--negative">{formatCurrency(Number.isNaN(despesasPagasMes) ? 0 : despesasPagasMes)}</strong>
-              </div>
-            </div>
-          </KPICard>
-        </div>
+      {/* Cards principais */}
+      <section className="dashboard-metrics-grid">
+        <DashboardMetricCard
+          title="Saldo atual em conta"
+          value={dashboardSummary.saldoAtualEmConta}
+          breakdown={saldoAtualBreakdown}
+          variant="primary"
+          icon={<IconSaldoAtual />}
+        />
+        <DashboardMetricCard
+          title="Resultado do mês"
+          value={dashboardSummary.resultadoDoMes}
+          breakdown={resultadoMesBreakdown}
+          mobileSummary={resultadoMesMobileSummary}
+          variant={dashboardSummary.resultadoDoMes >= 0 ? "success" : "danger"}
+          icon={<IconResultadoMes />}
+        />
+        <DashboardMetricCard
+          title="Saldo previsto"
+          value={dashboardSummary.saldoPrevisto}
+          breakdown={saldoPrevistoBreakdown}
+          mobileSummary={saldoPrevistoMobileSummary}
+          variant="forecast"
+          icon={<IconSaldoPrevisto />}
+        />
       </section>
 
-      {/* Cards de Resumo */}
-      <section className="dashboard-cards">
-        <SummaryCard
+      {/* Cards de acompanhamento */}
+      <section className="dashboard-tracking-grid">
+        <DashboardProgressCard
           title="Receitas"
-          icon={"\uD83D\uDCC8"}
-          previsto={resumoMensal.recLancadas}
-          realizado={resumoMensal.recRecebidas}
-          color="#10B981"
-          labelPrevisto="Previsto"
-          labelRealizado="Recebido"
+          percentage={dashboardSummary.percentualReceitas}
+          plannedLabel="Previsto"
+          plannedValue={resumoMensal.recLancadas}
+          realizedLabel="Recebido"
+          realizedValue={resumoMensal.recRecebidas}
+          remainingLabel="Falta receber"
+          remainingValue={dashboardSummary.faltaReceber}
+          variant="income"
+          icon="↗"
         />
-        <SummaryCard
+        <DashboardProgressCard
           title="Despesas"
-          icon={"\uD83D\uDCC9"}
-          previsto={resumoMensal.despLancadas}
-          realizado={resumoMensal.despPagas}
-          color="#EF4444"
-          labelPrevisto="Previsto"
-          labelRealizado="Pago"
+          percentage={dashboardSummary.percentualDespesas}
+          plannedLabel="Previsto"
+          plannedValue={resumoMensal.despLancadas}
+          realizedLabel="Pago"
+          realizedValue={resumoMensal.despPagas}
+          remainingLabel="Restante previsto"
+          remainingValue={dashboardSummary.restantePrevisto}
+          variant="expense"
+          icon="↘"
         />
       </section>
 

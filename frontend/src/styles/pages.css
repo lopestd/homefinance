@@ -646,6 +646,387 @@
   min-width: 140px;
 }
 
+.dashboard-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.dashboard-tracking-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.dashboard-metric-card,
+.dashboard-progress-card {
+  min-width: 0;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.dashboard-metric-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  padding: 22px;
+}
+
+.dashboard-metric-card__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.dashboard-metric-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  line-height: 1;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.dashboard-metric-card__icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dashboard-metric-card__title {
+  min-width: 0;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #0f172a;
+}
+
+.dashboard-metric-card__value {
+  display: block;
+  margin-top: 18px;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.08;
+  color: #1d4ed8;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-metric-card__description,
+.dashboard-metric-card__detail {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #475569;
+}
+
+.dashboard-metric-card__detail {
+  color: #334155;
+}
+
+.dashboard-metric-card__mobile-summary {
+  display: none;
+}
+
+.dashboard-metric-card__breakdown {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(148, 163, 184, 0.24);
+}
+
+.dashboard-metric-card__breakdown-item {
+  min-width: 0;
+  padding: 8px 9px;
+  border-radius: 10px;
+  background: rgba(248, 250, 252, 0.9);
+  box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.9);
+}
+
+.dashboard-metric-card__breakdown-item span {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.01em;
+}
+
+.dashboard-metric-card__breakdown-item strong {
+  display: block;
+  font-size: 13px;
+  line-height: 1.2;
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-metric-card .dashboard-metric-card__breakdown-item--income strong {
+  color: #15803d;
+}
+
+.dashboard-metric-card .dashboard-metric-card__breakdown-item--expense strong {
+  color: #dc2626;
+}
+
+.dashboard-metric-card .dashboard-metric-card__breakdown-item--forecast strong {
+  color: #7c3aed;
+}
+
+.dashboard-metric-card__badge {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 14px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dashboard-metric-card--primary {
+  border-color: #93c5fd;
+  background:
+    radial-gradient(circle at 92% 6%, rgba(37, 99, 235, 0.14) 0, rgba(37, 99, 235, 0) 32%),
+    linear-gradient(135deg, #eff6ff 0%, #ffffff 62%);
+  box-shadow: 0 16px 34px rgba(37, 99, 235, 0.16);
+}
+
+.dashboard-metric-card--primary::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, #2563eb 0%, #60a5fa 100%);
+}
+
+.dashboard-metric-card--primary .dashboard-metric-card__value,
+.dashboard-metric-card--primary .dashboard-metric-card__icon {
+  color: #1d4ed8;
+}
+
+.dashboard-metric-card--primary .dashboard-metric-card__icon {
+  background: #dbeafe;
+  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.14);
+}
+
+.dashboard-metric-card--primary .dashboard-metric-card__title {
+  font-size: 16px;
+}
+
+.dashboard-metric-card--primary .dashboard-metric-card__value {
+  font-size: 34px;
+  letter-spacing: -0.02em;
+}
+
+.dashboard-metric-card--primary .dashboard-metric-card__detail {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(219, 234, 254, 0.8);
+  color: #1e3a8a;
+  font-weight: 700;
+}
+
+.dashboard-metric-card--primary .dashboard-metric-card__breakdown {
+  border-top-color: rgba(37, 99, 235, 0.16);
+}
+
+.dashboard-metric-card--primary .dashboard-metric-card__breakdown-item {
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: inset 0 0 0 1px rgba(191, 219, 254, 0.62);
+}
+
+.dashboard-metric-card--success .dashboard-metric-card__icon {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.dashboard-metric-card--success .dashboard-metric-card__value {
+  color: #15803d;
+}
+
+.dashboard-metric-card--success .dashboard-metric-card__breakdown {
+  border-top-color: rgba(22, 163, 74, 0.16);
+}
+
+.dashboard-metric-card--success .dashboard-metric-card__breakdown-item {
+  background: rgba(240, 253, 244, 0.82);
+  box-shadow: inset 0 0 0 1px rgba(187, 247, 208, 0.72);
+}
+
+.dashboard-metric-card--danger .dashboard-metric-card__icon {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.dashboard-metric-card--danger .dashboard-metric-card__value {
+  color: #dc2626;
+}
+
+.dashboard-metric-card--danger .dashboard-metric-card__breakdown {
+  border-top-color: rgba(220, 38, 38, 0.16);
+}
+
+.dashboard-metric-card--danger .dashboard-metric-card__breakdown-item {
+  background: rgba(254, 242, 242, 0.82);
+  box-shadow: inset 0 0 0 1px rgba(254, 202, 202, 0.72);
+}
+
+.dashboard-metric-card--forecast .dashboard-metric-card__icon {
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.dashboard-metric-card--forecast .dashboard-metric-card__value {
+  color: #7c3aed;
+}
+
+.dashboard-metric-card--forecast .dashboard-metric-card__breakdown {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top-color: rgba(124, 58, 237, 0.16);
+}
+
+.dashboard-metric-card--forecast .dashboard-metric-card__breakdown-item {
+  background: rgba(245, 243, 255, 0.82);
+  box-shadow: inset 0 0 0 1px rgba(221, 214, 254, 0.78);
+}
+
+.dashboard-progress-card {
+  padding: 22px;
+}
+
+.dashboard-progress-card__header,
+.dashboard-progress-card__title-group {
+  display: flex;
+  align-items: center;
+}
+
+.dashboard-progress-card__header {
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dashboard-progress-card__title-group {
+  gap: 10px;
+  min-width: 0;
+}
+
+.dashboard-progress-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.dashboard-progress-card__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.dashboard-progress-card__percent {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.dashboard-progress-card__bar {
+  height: 14px;
+  margin-top: 22px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.dashboard-progress-card__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.4s ease;
+}
+
+.dashboard-progress-card__values {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.dashboard-progress-card__value-item {
+  min-width: 0;
+  padding-right: 14px;
+  border-right: 1px solid #e2e8f0;
+}
+
+.dashboard-progress-card__value-item:last-child {
+  padding-right: 0;
+  border-right: none;
+}
+
+.dashboard-progress-card__value-item span {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #334155;
+}
+
+.dashboard-progress-card__value-item strong {
+  display: block;
+  font-size: 16px;
+  line-height: 1.25;
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-progress-card--income .dashboard-progress-card__icon,
+.dashboard-progress-card--income .dashboard-progress-card__percent,
+.dashboard-progress-card--income .dashboard-progress-card__value-item:nth-child(2) strong {
+  color: #16a34a;
+}
+
+.dashboard-progress-card--income .dashboard-progress-card__bar-fill {
+  background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+}
+
+.dashboard-progress-card--expense .dashboard-progress-card__icon,
+.dashboard-progress-card--expense .dashboard-progress-card__percent,
+.dashboard-progress-card--expense .dashboard-progress-card__value-item:nth-child(2) strong {
+  color: #ef4444;
+}
+
+.dashboard-progress-card--expense .dashboard-progress-card__bar-fill {
+  background: linear-gradient(90deg, #fb7185 0%, #ef4444 100%);
+}
+
+.dashboard-progress-card--income .dashboard-progress-card__value-item:nth-child(3) strong,
+.dashboard-progress-card--expense .dashboard-progress-card__value-item:nth-child(3) strong {
+  color: #f97316;
+}
+
+.dashboard-progress-card__value-item--alert strong {
+  color: #b45309 !important;
+}
+
 .dashboard-hero-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
