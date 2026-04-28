@@ -109,7 +109,7 @@
    =========================================== */
 .horizontal-bar {
   width: 100%;
-  min-width: 200px;
+  min-width: 0;
   min-height: 150px;
 }
 

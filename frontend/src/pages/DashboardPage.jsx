@@ -118,12 +118,16 @@ const DashboardMetricCard = ({
   description,
   detail,
   breakdown,
+  breakdownStyle = "pill",
+  breakdownLabelsOnly = false,
   mobileSummary,
+  mobileSummaryOnly = false,
+  mobileSummaryTone,
   badge,
   variant = "neutral",
   icon
 }) => (
-  <article className={`dashboard-metric-card dashboard-metric-card--${variant}`}>
+  <article className={`dashboard-metric-card dashboard-metric-card--${variant}${mobileSummaryOnly ? " dashboard-metric-card--mobile-summary-only" : ""}`}>
     <div className="dashboard-metric-card__header">
       <span className="dashboard-metric-card__icon" aria-hidden="true">{icon}</span>
       <h3 className="dashboard-metric-card__title">{title}</h3>
@@ -131,20 +135,38 @@ const DashboardMetricCard = ({
     <strong className="dashboard-metric-card__value">{formatCurrency(value)}</strong>
     {description ? <p className="dashboard-metric-card__description">{description}</p> : null}
     {breakdown?.length ? (
-      <div className="dashboard-metric-card__breakdown">
-        {breakdown.map((item) => (
-          <div
-            className={`dashboard-metric-card__breakdown-item ${item.tone ? `dashboard-metric-card__breakdown-item--${item.tone}` : ""}`}
-            key={item.label}
-          >
-            <span>{item.label}</span>
-            <strong>{formatCurrency(item.value)}</strong>
-          </div>
-        ))}
-      </div>
+      breakdownStyle === "tracking" ? (
+        <div className="dashboard-metric-card__tracking-values">
+          {breakdown.map((item) => (
+            <div
+              className={`dashboard-metric-card__tracking-value-item ${item.tone ? `dashboard-metric-card__tracking-value-item--${item.tone}` : ""}`}
+              key={item.label}
+            >
+              <span>{item.label}</span>
+              <strong>{formatCurrency(item.value)}</strong>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className={`dashboard-metric-card__breakdown ${breakdownLabelsOnly ? "dashboard-metric-card__breakdown--labels-only" : ""}`}>
+          {breakdown.map((item) => (
+            <div
+              className={`dashboard-metric-card__breakdown-item ${item.tone ? `dashboard-metric-card__breakdown-item--${item.tone}` : ""}`}
+              key={item.label}
+            >
+              <span>{item.label}</span>
+              {!breakdownLabelsOnly ? <strong>{formatCurrency(item.value)}</strong> : null}
+            </div>
+          ))}
+        </div>
+      )
     ) : null}
     {detail ? <p className="dashboard-metric-card__detail">{detail}</p> : null}
-    {mobileSummary ? <p className="dashboard-metric-card__mobile-summary">{mobileSummary}</p> : null}
+    {mobileSummary ? (
+      <p className={`dashboard-metric-card__mobile-summary ${mobileSummaryTone ? `dashboard-metric-card__mobile-summary--${mobileSummaryTone}` : ""}`}>
+        {mobileSummary}
+      </p>
+    ) : null}
     {badge ? <span className="dashboard-metric-card__badge">{badge}</span> : null}
   </article>
 );
@@ -438,7 +460,9 @@ const DashboardPage = ({
     { label: "Saldo inicial", value: safeNumber(saldoInicialMes) },
     { label: "Resultado previsto", value: dashboardSummary.resultadoPrevisto, tone: "forecast" }
   ];
+  const saldoPrevistoVariant = dashboardSummary.saldoPrevisto >= 0 ? "forecast-positive" : "forecast-negative";
   const resultadoMesMobileSummary = `Previsto: ${formatCurrency(dashboardSummary.resultadoPrevisto)}`;
+  const resultadoMesMobileSummaryTone = dashboardSummary.resultadoPrevisto >= 0 ? "success" : "danger";
   const saldoPrevistoMobileSummary = `Saldo inicial + Resultado previsto`;
 
   return (
@@ -475,6 +499,7 @@ const DashboardPage = ({
           title="Saldo atual em conta"
           value={dashboardSummary.saldoAtualEmConta}
           breakdown={saldoAtualBreakdown}
+          breakdownStyle="tracking"
           variant="primary"
           icon={<IconSaldoAtual />}
         />
@@ -482,7 +507,10 @@ const DashboardPage = ({
           title="Resultado do mês"
           value={dashboardSummary.resultadoDoMes}
           breakdown={resultadoMesBreakdown}
+          breakdownStyle="tracking"
           mobileSummary={resultadoMesMobileSummary}
+          mobileSummaryOnly={true}
+          mobileSummaryTone={resultadoMesMobileSummaryTone}
           variant={dashboardSummary.resultadoDoMes >= 0 ? "success" : "danger"}
           icon={<IconResultadoMes />}
         />
@@ -490,8 +518,9 @@ const DashboardPage = ({
           title="Saldo previsto"
           value={dashboardSummary.saldoPrevisto}
           breakdown={saldoPrevistoBreakdown}
+          breakdownLabelsOnly={true}
           mobileSummary={saldoPrevistoMobileSummary}
-          variant="forecast"
+          variant={saldoPrevistoVariant}
           icon={<IconSaldoPrevisto />}
         />
       </section>
