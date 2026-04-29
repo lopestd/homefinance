@@ -1,7 +1,6 @@
-﻿import { useMemo, useState } from "react";
-import { formatCurrency, getCurrentMonthName } from "../utils/appUtils";
+import { useMemo, useState } from "react";
+import { formatCurrency, getCurrentMonthName, MONTHS_ORDER } from "../utils/appUtils";
 import { CardTopGastosCartao } from "../components/dashboard";
-import { HorizontalBar } from "../components/charts";
 import useSaldoAcumulado from "../hooks/useSaldoAcumulado";
 
 const CREDITO_TAG = "[CREDITO]";
@@ -53,8 +52,22 @@ const safePercentage = (value, total) => {
 };
 
 const clampProgress = (value) => Math.min(100, Math.max(0, value));
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
 const formatPercent = (value) => `${Math.round(value)}%`;
+
+const formatCurrencyCompact = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return "R$ 0";
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(parsed);
+};
+
+const abbreviateMonth = (mes) => String(mes || "").slice(0, 3) || "Mês";
 
 const IconSaldoAtual = () => (
   <svg viewBox="0 0 24 24" role="img" aria-label="Saldo atual">
@@ -79,6 +92,13 @@ const IconSaldoPrevisto = () => (
     <path d="M5.5 6h13A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5v-9A2.5 2.5 0 0 1 5.5 6Z" />
     <path d="M3 10h18" />
     <path d="M8 15h3.25L13 12.5l1.75 4L16 15h1" />
+  </svg>
+);
+
+const IconEye = () => (
+  <svg viewBox="0 0 24 24" role="img" aria-label="Visualizar saldo">
+    <path d="M2.75 12s3.25-5.25 9.25-5.25S21.25 12 21.25 12 18 17.25 12 17.25 2.75 12 2.75 12Z" />
+    <path d="M12 14.25A2.25 2.25 0 1 0 12 9.75a2.25 2.25 0 0 0 0 4.5Z" />
   </svg>
 );
 
@@ -115,63 +135,45 @@ const calculateDashboardSummary = ({
 const DashboardMetricCard = ({
   title,
   value,
-  description,
-  detail,
-  breakdown,
-  breakdownStyle = "pill",
-  breakdownLabelsOnly = false,
-  mobileSummary,
-  mobileSummaryOnly = false,
-  mobileSummaryTone,
-  badge,
-  variant = "neutral",
-  icon
+  variant = "primary",
+  icon,
+  summaryRows = [],
+  stats = [],
+  showEye = false
 }) => (
-  <article className={`dashboard-metric-card dashboard-metric-card--${variant}${mobileSummaryOnly ? " dashboard-metric-card--mobile-summary-only" : ""}`}>
-    <div className="dashboard-metric-card__header">
-      <span className="dashboard-metric-card__icon" aria-hidden="true">{icon}</span>
-      <h3 className="dashboard-metric-card__title">{title}</h3>
+  <article className={`hf-kpi-card hf-kpi-card--${variant}`}>
+    <span className="hf-kpi-card__icon" aria-hidden="true">{icon}</span>
+    <div className="hf-kpi-card__body">
+      <div className="hf-kpi-card__title-row">
+        <h3 className="hf-kpi-card__title">{title}</h3>
+        {showEye ? <span className="hf-kpi-card__eye" aria-hidden="true"><IconEye /></span> : null}
+      </div>
+      <strong className="hf-kpi-card__value">{formatCurrency(value)}</strong>
+      {summaryRows.length > 0 ? (
+        <div className="hf-kpi-card__summary">
+          {summaryRows.map((row) => (
+            <p className="hf-kpi-card__summary-row" key={row.label}>
+              <span>{row.label}:</span>
+              <strong className={row.tone ? `hf-tone-${row.tone}` : undefined}>{formatCurrency(row.value)}</strong>
+            </p>
+          ))}
+        </div>
+      ) : null}
+      {stats.length > 0 ? (
+        <div className="hf-kpi-card__stats">
+          {stats.map((item) => (
+            <div className="hf-kpi-card__stat" key={item.label}>
+              <span>{item.label}</span>
+              <strong className={item.tone ? `hf-tone-${item.tone}` : undefined}>{formatCurrency(item.value)}</strong>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
-    <strong className="dashboard-metric-card__value">{formatCurrency(value)}</strong>
-    {description ? <p className="dashboard-metric-card__description">{description}</p> : null}
-    {breakdown?.length ? (
-      breakdownStyle === "tracking" ? (
-        <div className="dashboard-metric-card__tracking-values">
-          {breakdown.map((item) => (
-            <div
-              className={`dashboard-metric-card__tracking-value-item ${item.tone ? `dashboard-metric-card__tracking-value-item--${item.tone}` : ""}`}
-              key={item.label}
-            >
-              <span>{item.label}</span>
-              <strong>{formatCurrency(item.value)}</strong>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className={`dashboard-metric-card__breakdown ${breakdownLabelsOnly ? "dashboard-metric-card__breakdown--labels-only" : ""}`}>
-          {breakdown.map((item) => (
-            <div
-              className={`dashboard-metric-card__breakdown-item ${item.tone ? `dashboard-metric-card__breakdown-item--${item.tone}` : ""}`}
-              key={item.label}
-            >
-              <span>{item.label}</span>
-              {!breakdownLabelsOnly ? <strong>{formatCurrency(item.value)}</strong> : null}
-            </div>
-          ))}
-        </div>
-      )
-    ) : null}
-    {detail ? <p className="dashboard-metric-card__detail">{detail}</p> : null}
-    {mobileSummary ? (
-      <p className={`dashboard-metric-card__mobile-summary ${mobileSummaryTone ? `dashboard-metric-card__mobile-summary--${mobileSummaryTone}` : ""}`}>
-        {mobileSummary}
-      </p>
-    ) : null}
-    {badge ? <span className="dashboard-metric-card__badge">{badge}</span> : null}
   </article>
 );
 
-const DashboardProgressCard = ({
+const DashboardProgressPanel = ({
   title,
   percentage,
   plannedLabel,
@@ -188,37 +190,183 @@ const DashboardProgressCard = ({
   const displayRemainingLabel = isOver ? "Acima do previsto" : remainingLabel;
 
   return (
-    <article className={`dashboard-progress-card dashboard-progress-card--${variant}`}>
-      <div className="dashboard-progress-card__header">
-        <div className="dashboard-progress-card__title-group">
-          <span className="dashboard-progress-card__icon" aria-hidden="true">{icon}</span>
-          <h3 className="dashboard-progress-card__title">{title}</h3>
+    <div className={`hf-progress-panel hf-progress-panel--${variant}`}>
+      <div className="hf-progress-panel__heading">
+        <div className="hf-progress-panel__title-wrap">
+          <span className="hf-progress-panel__icon" aria-hidden="true">{icon}</span>
+          <h4 className="hf-progress-panel__title">{title}</h4>
         </div>
-        <strong className="dashboard-progress-card__percent">{formatPercent(percentage)}</strong>
+        <strong className="hf-progress-panel__percent">{formatPercent(percentage)}</strong>
       </div>
 
-      <div className="dashboard-progress-card__bar" aria-hidden="true">
-        <span
-          className="dashboard-progress-card__bar-fill"
-          style={{ width: `${clampProgress(percentage)}%` }}
-        />
+      <div className="hf-progress-panel__bar" aria-hidden="true">
+        <span className="hf-progress-panel__bar-fill" style={{ width: `${clampProgress(percentage)}%` }} />
       </div>
 
-      <div className="dashboard-progress-card__values">
-        <div className="dashboard-progress-card__value-item">
+      <div className="hf-progress-panel__rows">
+        <div className="hf-progress-panel__row">
           <span>{plannedLabel}</span>
           <strong>{formatCurrency(plannedValue)}</strong>
         </div>
-        <div className="dashboard-progress-card__value-item">
+        <div className="hf-progress-panel__row">
           <span>{realizedLabel}</span>
-          <strong>{formatCurrency(realizedValue)}</strong>
+          <strong className={`hf-progress-panel__value-${variant}`}>{formatCurrency(realizedValue)}</strong>
         </div>
-        <div className={`dashboard-progress-card__value-item ${isOver ? "dashboard-progress-card__value-item--alert" : ""}`}>
+        <div className={`hf-progress-panel__row ${isOver ? "hf-progress-panel__row--alert" : ""}`}>
           <span>{displayRemainingLabel}</span>
           <strong>{formatCurrency(displayRemaining)}</strong>
         </div>
       </div>
-    </article>
+    </div>
+  );
+};
+
+const DashboardMonthOverview = ({ resumoMensal, dashboardSummary }) => (
+  <section className="hf-card hf-month-overview">
+    <h3 className="hf-section-title">Visão geral do mês</h3>
+    <div className="hf-month-overview__grid">
+      <DashboardProgressPanel
+        title="Receitas"
+        percentage={dashboardSummary.percentualReceitas}
+        plannedLabel="Previsto"
+        plannedValue={resumoMensal.recLancadas}
+        realizedLabel="Recebido"
+        realizedValue={resumoMensal.recRecebidas}
+        remainingLabel="Falta receber"
+        remainingValue={dashboardSummary.faltaReceber}
+        variant="income"
+        icon="↗"
+      />
+      <DashboardProgressPanel
+        title="Despesas"
+        percentage={dashboardSummary.percentualDespesas}
+        plannedLabel="Previsto"
+        plannedValue={resumoMensal.despLancadas}
+        realizedLabel="Pago"
+        realizedValue={resumoMensal.despPagas}
+        remainingLabel="Restante previsto"
+        remainingValue={dashboardSummary.restantePrevisto}
+        variant="expense"
+        icon="↘"
+      />
+    </div>
+  </section>
+);
+
+const DashboardRankingList = ({ title, data, colors, emptyMessage }) => {
+  const maxValue = data.length > 0 ? Math.max(...data.map((item) => safeNumber(item.value))) : 0;
+
+  return (
+    <div className="hf-ranking-list">
+      <h3 className="hf-section-title hf-ranking-list__title">{title}</h3>
+      {data.length > 0 ? (
+        <div className="hf-ranking-list__items">
+          {data.map((item, index) => {
+            const color = colors[index % colors.length];
+            const width = maxValue > 0 ? clamp((safeNumber(item.value) / maxValue) * 100, 3, 100) : 0;
+            return (
+              <div className="hf-ranking-list__item" key={`${title}-${item.name}`}>
+                <span className="hf-ranking-list__label" title={item.name}>{item.name}</span>
+                <span className="hf-ranking-list__track" aria-hidden="true">
+                  <span className="hf-ranking-list__fill" style={{ width: `${width}%`, backgroundColor: color }} />
+                </span>
+                <strong className="hf-ranking-list__value">{formatCurrencyCompact(item.value)}</strong>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="hf-empty-state">{emptyMessage}</div>
+      )}
+    </div>
+  );
+};
+
+const DashboardRankingsCard = ({ topDespesasPorCategoria, topReceitasPorCategoria }) => (
+  <section className="hf-card hf-rankings-card">
+    <DashboardRankingList
+      title="Top 5 Despesas"
+      data={topDespesasPorCategoria}
+      colors={["#e11d2e", "#f97316", "#f59e0b", "#eab308", "#facc15"]}
+      emptyMessage="Sem despesas no período"
+    />
+    <DashboardRankingList
+      title="Top 5 Receitas"
+      data={topReceitasPorCategoria}
+      colors={["#16a34a", "#14b8a6", "#06b6d4", "#0ea5e9", "#2563eb"]}
+      emptyMessage="Sem receitas no período"
+    />
+  </section>
+);
+
+const DashboardAnnualMetric = ({ title, rows }) => (
+  <div className="hf-annual-metric">
+    <h4>{title}</h4>
+    {rows.map((row) => (
+      <div className="hf-annual-metric__row" key={row.label}>
+        <span>{row.label}</span>
+        <strong className={row.tone ? `hf-tone-${row.tone}` : undefined}>{formatCurrency(row.value)}</strong>
+      </div>
+    ))}
+  </div>
+);
+
+const DashboardAnnualSparkline = ({ saldos, selectedMes, fallbackValue }) => {
+  const source = MONTHS_ORDER.map((mesNome) => {
+    const saldo = saldos.find((item) => item.mesNome === mesNome);
+    const value = saldo ? safeNumber(saldo.saldoFinal) : null;
+    return value === null ? null : { mesNome, value };
+  }).filter(Boolean);
+
+  const selectedFallback = safeNumber(fallbackValue);
+  const chartData = source.length >= 2
+    ? source
+    : [
+        { mesNome: MONTHS_ORDER[0], value: selectedFallback * 0.92 },
+        { mesNome: selectedMes || MONTHS_ORDER[3], value: selectedFallback },
+        { mesNome: MONTHS_ORDER[MONTHS_ORDER.length - 1], value: selectedFallback * 1.08 }
+      ];
+
+  const selectedPointIndex = chartData.findIndex((item) => item.mesNome === selectedMes);
+  const selectedIndex = selectedPointIndex === -1 ? chartData.length - 1 : selectedPointIndex;
+  const selectedValue = chartData[selectedIndex]?.value ?? selectedFallback;
+  const width = 188;
+  const height = 82;
+  const paddingX = 12;
+  const paddingY = 12;
+  const values = chartData.map((item) => item.value);
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+  const range = maxValue - minValue || 1;
+  const points = chartData.map((item, index) => {
+    const x = paddingX + (index / Math.max(1, chartData.length - 1)) * (width - paddingX * 2);
+    const y = height - paddingY - ((item.value - minValue) / range) * (height - paddingY * 2);
+    return { ...item, x, y };
+  });
+  const selectedPoint = points[selectedIndex] || points[points.length - 1];
+  const linePoints = points.map((point) => `${point.x},${point.y}`).join(" ");
+  const areaPoints = `${paddingX},${height - paddingY} ${linePoints} ${width - paddingX},${height - paddingY}`;
+  const tooltipLeft = clamp((selectedPoint.x / width) * 100, 22, 78);
+  const tooltipTop = clamp((selectedPoint.y / height) * 100 - 30, 3, 42);
+
+  return (
+    <div className="hf-annual-sparkline" aria-label="Evolução do saldo anual">
+      <div className="hf-annual-sparkline__tooltip" style={{ left: `${tooltipLeft}%`, top: `${tooltipTop}%` }}>
+        <span>{abbreviateMonth(selectedMes)}</span>
+        <strong>{formatCurrency(selectedValue)}</strong>
+      </div>
+      <svg viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
+        <defs>
+          <linearGradient id="hfSparklineArea" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#16a34a" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="#16a34a" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <polygon points={areaPoints} fill="url(#hfSparklineArea)" />
+        <polyline points={linePoints} fill="none" stroke="#16a34a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx={selectedPoint.x} cy={selectedPoint.y} r="4" fill="#16a34a" stroke="#ffffff" strokeWidth="2" />
+      </svg>
+    </div>
   );
 };
 
@@ -233,11 +381,11 @@ const DashboardPage = ({
   lancamentosCartao
 }) => {
   const [selectedMes, setSelectedMes] = useState("");
-  
+
   const effectiveOrcamentoId = resolveEffectiveOrcamentoId(orcamentos, selectedOrcamentoId);
   const currentOrcamento = orcamentos.find((o) => o.id === effectiveOrcamentoId);
   const anoOrcamento = Number.parseInt(currentOrcamento?.label, 10) || new Date().getFullYear();
-  
+
   const mesesDisponiveis = useMemo(
     () => currentOrcamento?.meses || [],
     [currentOrcamento]
@@ -248,18 +396,16 @@ const DashboardPage = ({
     const currentMonth = getCurrentMonthName();
     return mesesDisponiveis.includes(currentMonth) ? currentMonth : mesesDisponiveis[0];
   }, [mesesDisponiveis]);
-  
+
   const effectiveMes = selectedMes && mesesDisponiveis.includes(selectedMes) ? selectedMes : defaultMes;
-  const { getSaldoDoMes } = useSaldoAcumulado(effectiveOrcamentoId, anoOrcamento);
+  const { saldos, getSaldoDoMes } = useSaldoAcumulado(effectiveOrcamentoId, anoOrcamento);
   const saldoMesAtual = useMemo(() => getSaldoDoMes(effectiveMes), [getSaldoDoMes, effectiveMes]);
 
-  // Map de categorias
   const categoriasMap = useMemo(
     () => new Map(categorias?.map((categoria) => [categoria.id, categoria.nome]) || []),
     [categorias]
   );
 
-  // Resumo Mensal
   const resumoMensal = useMemo(() => {
     if (!effectiveOrcamentoId || !effectiveMes) {
       return { recLancadas: 0, recRecebidas: 0, despLancadas: 0, despPagas: 0, saldo: 0 };
@@ -299,7 +445,6 @@ const DashboardPage = ({
     };
   }, [receitas, despesas, effectiveOrcamentoId, effectiveMes]);
 
-  // Resumo Anual
   const resumoAnual = useMemo(() => {
     if (!effectiveOrcamentoId) {
       return {
@@ -347,49 +492,46 @@ const DashboardPage = ({
     };
   }, [receitas, despesas, effectiveOrcamentoId]);
 
-  // Top 5 despesas por categoria
   const topDespesasPorCategoria = useMemo(() => {
     if (!effectiveOrcamentoId || !effectiveMes) return [];
 
-    const categoriasMap_local = {};
+    const categoriasMapLocal = {};
     despesas.forEach((d) => {
       if (d.orcamentoId !== effectiveOrcamentoId) return;
       const isActive = d.mes === effectiveMes || (d.meses && d.meses.includes(effectiveMes));
       if (isActive) {
         const nome = d.categoria || categoriasMap.get(d.categoriaId) || "Sem categoria";
         const val = parseFloat(d.valor) || 0;
-        categoriasMap_local[nome] = (categoriasMap_local[nome] || 0) + val;
+        categoriasMapLocal[nome] = (categoriasMapLocal[nome] || 0) + val;
       }
     });
 
-    return Object.entries(categoriasMap_local)
+    return Object.entries(categoriasMapLocal)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 5);
   }, [despesas, effectiveOrcamentoId, effectiveMes, categoriasMap]);
 
-  // Top 5 receitas por categoria
   const topReceitasPorCategoria = useMemo(() => {
     if (!effectiveOrcamentoId || !effectiveMes) return [];
 
-    const categoriasMap_local = {};
+    const categoriasMapLocal = {};
     receitas.forEach((r) => {
       if (r.orcamentoId !== effectiveOrcamentoId) return;
       const isActive = r.mes === effectiveMes || (r.meses && r.meses.includes(effectiveMes));
       if (isActive) {
         const nome = r.categoria || categoriasMap.get(r.categoriaId) || "Sem categoria";
         const val = parseFloat(r.valor) || 0;
-        categoriasMap_local[nome] = (categoriasMap_local[nome] || 0) + val;
+        categoriasMapLocal[nome] = (categoriasMapLocal[nome] || 0) + val;
       }
     });
 
-    return Object.entries(categoriasMap_local)
+    return Object.entries(categoriasMapLocal)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 5);
   }, [receitas, effectiveOrcamentoId, effectiveMes, categoriasMap]);
 
-  // Dados para cards de cartao
   const cartoesData = useMemo(() => {
     if (!effectiveOrcamentoId || !effectiveMes || !cartoes || cartoes.length === 0) {
       return [];
@@ -446,152 +588,79 @@ const DashboardPage = ({
     despesasPrevistas: resumoMensal.despLancadas,
     despesasPagas: resumoMensal.despPagas
   });
-  const saldoAtualBreakdown = [
-    { label: "Saldo inicial", value: safeNumber(saldoInicialMes) },
-    { label: "Entradas", value: resumoMensal.recRecebidas, tone: "income" },
-    { label: "Saídas", value: resumoMensal.despPagas, tone: "expense" }
-  ];
-  const resultadoMesBreakdown = [
+
+  const resultadoMesStats = [
     { label: "Recebido", value: resumoMensal.recRecebidas, tone: "income" },
     { label: "Pago", value: resumoMensal.despPagas, tone: "expense" },
-    { label: "Previsto", value: dashboardSummary.resultadoPrevisto, tone: "forecast" }
+    { label: "Previsto", value: dashboardSummary.resultadoPrevisto }
   ];
-  const saldoPrevistoBreakdown = [
-    { label: "Saldo inicial", value: safeNumber(saldoInicialMes) },
-    { label: "Resultado previsto", value: dashboardSummary.resultadoPrevisto, tone: "forecast" }
-  ];
-  const saldoPrevistoVariant = dashboardSummary.saldoPrevisto >= 0 ? "forecast-positive" : "forecast-negative";
-  const resultadoMesMobileSummary = `Previsto: ${formatCurrency(dashboardSummary.resultadoPrevisto)}`;
-  const resultadoMesMobileSummaryTone = dashboardSummary.resultadoPrevisto >= 0 ? "success" : "danger";
-  const saldoPrevistoMobileSummary = `Saldo inicial + Resultado previsto`;
+  const saldoPrevistoVariant = dashboardSummary.saldoPrevisto >= 0 ? "forecast" : "danger";
 
   return (
-    <div className="page-grid dashboard-page">
-      {/* Header com filtros */}
-      <section className="panel dashboard-header">
-        <div className="dashboard-header__content">
-          <form className="form-inline dashboard-filters" onSubmit={(e) => e.preventDefault()}>
-            <label className="field">
-              {"Or\u00e7amento"}
-              <select
-                value={effectiveOrcamentoId}
-                onChange={(event) => {
-                  const nextId = orcamentos.find((orcamento) => String(orcamento.id) === event.target.value)?.id ?? "";
-                  setSelectedOrcamentoId(nextId);
-                }}
-              >
-                {orcamentos.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-              </select>
-            </label>
-            <label className="field">
-              {"M\u00eas"}
-              <select value={effectiveMes} onChange={(e) => setSelectedMes(e.target.value)}>
-                {mesesDisponiveis.map((m) => <option key={m} value={m}>{m}</option>)}
-              </select>
-            </label>
-          </form>
-        </div>
+    <div className="page-grid hf-dashboard-page">
+      <section className="hf-card hf-dashboard-filters-card" aria-label="Filtros do dashboard">
+        <form className="hf-dashboard-filters" onSubmit={(event) => event.preventDefault()}>
+          <label className="hf-dashboard-filter-field">
+            <span>Orçamento</span>
+            <select
+              value={effectiveOrcamentoId}
+              onChange={(event) => {
+                const nextId = orcamentos.find((orcamento) => String(orcamento.id) === event.target.value)?.id ?? "";
+                setSelectedOrcamentoId(nextId);
+              }}
+            >
+              {orcamentos.map((orcamento) => <option key={orcamento.id} value={orcamento.id}>{orcamento.label}</option>)}
+            </select>
+          </label>
+          <label className="hf-dashboard-filter-field">
+            <span>Mês</span>
+            <select value={effectiveMes} onChange={(event) => setSelectedMes(event.target.value)}>
+              {mesesDisponiveis.map((mes) => <option key={mes} value={mes}>{mes}</option>)}
+            </select>
+          </label>
+        </form>
       </section>
 
-      {/* Cards principais */}
-      <section className="dashboard-metrics-grid">
+      <section className="hf-dashboard-kpis">
         <DashboardMetricCard
           title="Saldo atual em conta"
           value={dashboardSummary.saldoAtualEmConta}
-          breakdown={saldoAtualBreakdown}
-          breakdownStyle="tracking"
+          summaryRows={[{ label: "Saldo inicial", value: safeNumber(saldoInicialMes) }]}
           variant="primary"
           icon={<IconSaldoAtual />}
+          showEye={true}
         />
         <DashboardMetricCard
           title="Resultado do mês"
           value={dashboardSummary.resultadoDoMes}
-          breakdown={resultadoMesBreakdown}
-          breakdownStyle="tracking"
-          mobileSummary={resultadoMesMobileSummary}
-          mobileSummaryOnly={true}
-          mobileSummaryTone={resultadoMesMobileSummaryTone}
+          stats={resultadoMesStats}
           variant={dashboardSummary.resultadoDoMes >= 0 ? "success" : "danger"}
           icon={<IconResultadoMes />}
         />
         <DashboardMetricCard
           title="Saldo previsto"
           value={dashboardSummary.saldoPrevisto}
-          breakdown={saldoPrevistoBreakdown}
-          breakdownLabelsOnly={true}
-          mobileSummary={saldoPrevistoMobileSummary}
+          summaryRows={[
+            { label: "Saldo inicial", value: safeNumber(saldoInicialMes) },
+            { label: "Resultado previsto", value: dashboardSummary.resultadoPrevisto }
+          ]}
           variant={saldoPrevistoVariant}
           icon={<IconSaldoPrevisto />}
         />
       </section>
 
-      {/* Cards de acompanhamento */}
-      <section className="dashboard-tracking-grid">
-        <DashboardProgressCard
-          title="Receitas"
-          percentage={dashboardSummary.percentualReceitas}
-          plannedLabel="Previsto"
-          plannedValue={resumoMensal.recLancadas}
-          realizedLabel="Recebido"
-          realizedValue={resumoMensal.recRecebidas}
-          remainingLabel="Falta receber"
-          remainingValue={dashboardSummary.faltaReceber}
-          variant="income"
-          icon="↗"
-        />
-        <DashboardProgressCard
-          title="Despesas"
-          percentage={dashboardSummary.percentualDespesas}
-          plannedLabel="Previsto"
-          plannedValue={resumoMensal.despLancadas}
-          realizedLabel="Pago"
-          realizedValue={resumoMensal.despPagas}
-          remainingLabel="Restante previsto"
-          remainingValue={dashboardSummary.restantePrevisto}
-          variant="expense"
-          icon="↘"
+      <section className="hf-dashboard-middle-grid">
+        <DashboardMonthOverview resumoMensal={resumoMensal} dashboardSummary={dashboardSummary} />
+        <DashboardRankingsCard
+          topDespesasPorCategoria={topDespesasPorCategoria}
+          topReceitasPorCategoria={topReceitasPorCategoria}
         />
       </section>
 
-      {/* Top Categorias */}
-      <section className="dashboard-categories">
-        <div className="panel dashboard-category">
-          <h3 className="panel-title">Top 5 Despesas</h3>
-          {topDespesasPorCategoria.length > 0 ? (
-            <HorizontalBar
-              data={topDespesasPorCategoria}
-              height={180}
-              colors={['#EF4444', '#F97316', '#F59E0B', '#EAB308', '#CA8A04']}
-              showValues={true}
-            />
-          ) : (
-            <div className="chart-empty" style={{ height: 180 }}>
-              <p>{"Sem despesas no per\u00edodo"}</p>
-            </div>
-          )}
-        </div>
-        <div className="panel dashboard-category">
-          <h3 className="panel-title">Top 5 Receitas</h3>
-          {topReceitasPorCategoria.length > 0 ? (
-            <HorizontalBar
-              data={topReceitasPorCategoria}
-              height={180}
-              colors={['#10B981', '#14B8A6', '#06B6D4', '#0EA5E9', '#3B82F6']}
-              showValues={true}
-            />
-          ) : (
-            <div className="chart-empty" style={{ height: 180 }}>
-              <p>{"Sem receitas no per\u00edodo"}</p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Top 5 Gastos por Cartao */}
-      <section className="dashboard-cartoes">
+      <section className="hf-dashboard-cards-grid">
         {cartoesData.length === 0 ? (
-          <div className="panel dashboard-cartoes-empty">
-            <p>{"Nenhum cart\u00e3o cadastrado"}</p>
+          <div className="hf-card dashboard-cartoes-empty">
+            <p>Nenhum cartão cadastrado</p>
           </div>
         ) : (
           cartoesData.map((cartaoData) => (
@@ -607,49 +676,40 @@ const DashboardPage = ({
         )}
       </section>
 
-      {/* Resumo Anual */}
-      <section className="panel dashboard-annual">
-        <h3 className="panel-title">
-          Resumo Anual <span className="badge-year">{currentOrcamento?.label}</span>
-        </h3>
-        <div className="dashboard-grid">
-          <div className="summary-card">
-            <h4 className="summary-card-title">Receitas do Ano</h4>
-            <div className="summary-card-row">
-              <span className="summary-card-label">Previsto:</span>
-              <strong className="summary-card-value">{formatCurrency(resumoAnual.recPrevisto)}</strong>
-            </div>
-            <div className="summary-card-row">
-              <span className="summary-card-label">Recebido:</span>
-              <strong className="summary-card-value summary-card-value--positive">{formatCurrency(resumoAnual.recRecebido)}</strong>
-            </div>
+      <section className="hf-card hf-annual-card">
+        <header className="hf-annual-card__header">
+          <h3 className="hf-section-title">Resumo anual</h3>
+          <span className="hf-annual-card__badge">{currentOrcamento?.label}</span>
+        </header>
+        <div className="hf-annual-card__body">
+          <div className="hf-annual-card__metrics">
+            <DashboardAnnualMetric
+              title="Receitas do ano"
+              rows={[
+                { label: "Previsto", value: resumoAnual.recPrevisto },
+                { label: "Recebido", value: resumoAnual.recRecebido, tone: "income" }
+              ]}
+            />
+            <DashboardAnnualMetric
+              title="Despesas do ano"
+              rows={[
+                { label: "Previsto", value: resumoAnual.despPrevisto },
+                { label: "Pago", value: resumoAnual.despPago, tone: "expense" }
+              ]}
+            />
+            <DashboardAnnualMetric
+              title="Saldo anual"
+              rows={[
+                { label: "Previsto", value: resumoAnual.saldoPrevisto },
+                { label: "Realizado", value: dashboardSummary.saldoAtualEmConta, tone: dashboardSummary.saldoAtualEmConta >= 0 ? "income" : "expense" }
+              ]}
+            />
           </div>
-
-          <div className="summary-card">
-            <h4 className="summary-card-title">Despesas do Ano</h4>
-            <div className="summary-card-row">
-              <span className="summary-card-label">Previsto:</span>
-              <strong className="summary-card-value">{formatCurrency(resumoAnual.despPrevisto)}</strong>
-            </div>
-            <div className="summary-card-row">
-              <span className="summary-card-label">Pago:</span>
-              <strong className="summary-card-value summary-card-value--negative">{formatCurrency(resumoAnual.despPago)}</strong>
-            </div>
-          </div>
-
-          <div className="summary-card">
-            <h4 className="summary-card-title">Saldo Anual</h4>
-            <div className="summary-card-row">
-              <span className="summary-card-label">Previsto:</span>
-              <strong className="summary-card-value">{formatCurrency(resumoAnual.saldoPrevisto)}</strong>
-            </div>
-            <div className="summary-card-row">
-              <span className="summary-card-label">Realizado:</span>
-              <strong className={`summary-card-value ${resumoAnual.saldoRealizado >= 0 ? "summary-card-value--positive" : "summary-card-value--negative"}`}>
-                {formatCurrency(resumoAnual.saldoRealizado)}
-              </strong>
-            </div>
-          </div>
+          <DashboardAnnualSparkline
+            saldos={saldos}
+            selectedMes={effectiveMes}
+            fallbackValue={dashboardSummary.saldoAtualEmConta}
+          />
         </div>
       </section>
     </div>
