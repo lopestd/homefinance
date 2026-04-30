@@ -3,6 +3,8 @@
   --hf-page-bg: #f7f9fc;
   --hf-border: #e6ebf2;
   --hf-border-soft: #edf1f6;
+  --hf-divider: #cbd5e1;
+  --hf-divider-soft: #d7e0ec;
   --hf-text: #0f172a;
   --hf-muted: #657287;
   --hf-blue: #2f6fdf;
@@ -63,7 +65,7 @@
 }
 
 .hf-dashboard-filter-field select {
-  width: 120px;
+  width: 136px;
   height: 34px;
   padding: 0 32px 0 12px;
   border: 1px solid var(--hf-border);
@@ -76,12 +78,16 @@
 }
 
 .hf-dashboard-filter-field:first-child select {
-  width: 112px;
+  width: 124px;
+}
+
+.hf-dashboard-filter-field:last-child select {
+  width: 156px;
 }
 
 .hf-dashboard-kpis {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.28fr) repeat(2, minmax(0, 1fr));
   gap: 20px;
 }
 
@@ -263,30 +269,58 @@
 }
 
 .hf-kpi-card--account-positive {
-  border-color: #b8d2ff;
-  background: linear-gradient(135deg, #f3f8ff 0%, #ffffff 72%);
+  grid-template-columns: 68px minmax(0, 1fr);
+  padding: 26px 28px;
+  border-color: #2f6fdf;
+  background: #dbeafe;
+  box-shadow: none;
+}
+
+.hf-kpi-card--account-positive::before,
+.hf-kpi-card--account-negative::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+}
+
+.hf-kpi-card--account-positive::before {
+  background: var(--hf-blue);
 }
 
 .hf-kpi-card--account-positive .hf-kpi-card__icon {
   color: var(--hf-blue);
-  background: #e7f1ff;
+  width: 68px;
+  height: 68px;
+  background: #bfdbfe;
 }
 
 .hf-kpi-card--account-positive .hf-kpi-card__value {
+  font-size: clamp(30px, 2.45vw, 38px);
   color: var(--hf-blue);
 }
 
 .hf-kpi-card--account-negative {
-  border-color: #d69a9a;
-  background: linear-gradient(135deg, #fff5f5 0%, #ffffff 72%);
+  grid-template-columns: 68px minmax(0, 1fr);
+  padding: 26px 28px;
+  border-color: #b45353;
+  background: #fee2e2;
+  box-shadow: none;
+}
+
+.hf-kpi-card--account-negative::before {
+  background: var(--hf-red);
 }
 
 .hf-kpi-card--account-negative .hf-kpi-card__icon {
   color: #991b1b;
+  width: 68px;
+  height: 68px;
   background: #fee2e2;
 }
 
 .hf-kpi-card--account-negative .hf-kpi-card__value {
+  font-size: clamp(30px, 2.45vw, 38px);
   color: #991b1b;
 }
 
@@ -344,7 +378,7 @@
 
 .hf-progress-panel + .hf-progress-panel {
   padding-left: 24px;
-  border-left: 1px solid var(--hf-border-soft);
+  border-left: 1px solid var(--hf-divider);
 }
 
 .hf-progress-panel__heading {
@@ -454,7 +488,7 @@
 
 .hf-ranking-list + .hf-ranking-list {
   padding-left: 22px;
-  border-left: 1px solid var(--hf-border-soft);
+  border-left: 1px solid var(--hf-divider);
 }
 
 .hf-ranking-list__title {
@@ -650,7 +684,7 @@
   gap: 0;
   margin-bottom: 15px;
   padding-bottom: 15px;
-  border-bottom: 1px solid var(--hf-border-soft, #edf1f6);
+  border-bottom: 1px solid var(--hf-divider-soft, #d7e0ec);
 }
 
 .card-top-gastos-cartao__summary-item {
@@ -663,7 +697,7 @@
 }
 
 .card-top-gastos-cartao__summary-item + .card-top-gastos-cartao__summary-item {
-  border-left: 1px solid var(--hf-border-soft, #edf1f6);
+  border-left: 1px solid var(--hf-divider-soft, #d7e0ec);
 }
 
 .card-top-gastos-cartao__summary-item span {
@@ -773,16 +807,20 @@
   margin-bottom: 16px;
 }
 
+.hf-annual-card__header .hf-section-title {
+  font-size: 18px;
+}
+
 .hf-annual-card__badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 22px;
-  padding: 3px 9px;
-  border-radius: 7px;
+  min-height: 26px;
+  padding: 4px 11px;
+  border-radius: 8px;
   background: #12b76a;
   color: #ffffff;
-  font-size: 13px;
+  font-size: 19px;
   font-weight: 850;
   line-height: 1;
 }
@@ -798,7 +836,7 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   min-width: 0;
-  border-top: 1px solid var(--hf-border-soft);
+  border-top: 1px solid var(--hf-divider-soft);
 }
 
 .hf-annual-metric {
@@ -807,13 +845,13 @@
 }
 
 .hf-annual-metric + .hf-annual-metric {
-  border-left: 1px solid var(--hf-border-soft);
+  border-left: 1px solid var(--hf-divider-soft);
 }
 
 .hf-annual-metric h4 {
   margin: 0 0 16px;
   color: #344054;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 750;
   line-height: 1.2;
 }
@@ -825,12 +863,12 @@
   gap: 12px;
   margin-top: 12px;
   color: #667085;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .hf-annual-metric__row strong {
   color: #0f172a;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 750;
   white-space: nowrap;
 }
@@ -906,6 +944,18 @@
     height: 54px;
   }
 
+  .hf-kpi-card--account-positive,
+  .hf-kpi-card--account-negative {
+    grid-template-columns: 60px minmax(0, 1fr);
+    padding: 22px 24px;
+  }
+
+  .hf-kpi-card--account-positive .hf-kpi-card__icon,
+  .hf-kpi-card--account-negative .hf-kpi-card__icon {
+    width: 60px;
+    height: 60px;
+  }
+
   .hf-kpi-card__stats {
     gap: 8px;
   }
@@ -929,6 +979,11 @@
     min-height: 0;
   }
 
+  .hf-kpi-card--account-positive,
+  .hf-kpi-card--account-negative {
+    min-height: 168px;
+  }
+
   .hf-month-overview__grid,
   .hf-rankings-card,
   .hf-annual-card__body,
@@ -947,11 +1002,11 @@
   .hf-ranking-list + .hf-ranking-list,
   .hf-annual-metric + .hf-annual-metric {
     padding-top: 22px;
-    border-top: 1px solid var(--hf-border-soft);
+    border-top: 1px solid var(--hf-divider);
   }
 
   .hf-annual-card__metrics {
-    border-top: 1px solid var(--hf-border-soft);
+    border-top: 1px solid var(--hf-divider-soft);
   }
 
   .hf-annual-metric {
@@ -965,19 +1020,56 @@
 }
 
 @media (max-width: 640px) {
+  .hf-dashboard-filters-card {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
   .hf-dashboard-filters {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
+    display: grid;
+    grid-template-columns: max-content 74px max-content minmax(108px, 1fr);
+    align-items: center;
+    justify-content: stretch;
+    column-gap: 6px;
+    row-gap: 0;
+    width: 100%;
   }
 
   .hf-dashboard-filter-field {
-    justify-content: space-between;
+    display: contents;
+  }
+
+  .hf-dashboard-filter-field span {
+    font-size: 13px;
+    line-height: 1;
   }
 
   .hf-dashboard-filter-field select,
   .hf-dashboard-filter-field:first-child select {
-    width: min(190px, 58vw);
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 24px 0 10px !important;
+    font-size: 14px !important;
+    line-height: 40px;
+    background-image: url("data:image/svg+xml,%3Csvg width='14' height='14' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 10l5 5 5-5' fill='none' stroke='%230f172a' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 7px center;
+    background-size: 14px 14px;
+  }
+
+  .hf-dashboard-filter-field:first-child select {
+    min-width: 0;
+  }
+
+  .hf-dashboard-filter-field:last-child select {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 
   .hf-kpi-card {
@@ -986,13 +1078,52 @@
     padding: 18px;
   }
 
+  .hf-kpi-card--account-positive,
+  .hf-kpi-card--account-negative {
+    grid-template-columns: 54px minmax(0, 1fr);
+    min-height: 166px;
+    padding: 20px;
+  }
+
   .hf-kpi-card__icon {
     width: 48px;
     height: 48px;
   }
 
+  .hf-kpi-card--account-positive .hf-kpi-card__icon,
+  .hf-kpi-card--account-negative .hf-kpi-card__icon {
+    width: 54px;
+    height: 54px;
+  }
+
   .hf-kpi-card__value {
     font-size: 25px;
+  }
+
+  .hf-kpi-card--account-positive .hf-kpi-card__value,
+  .hf-kpi-card--account-negative .hf-kpi-card__value {
+    margin-top: 16px;
+    font-size: 28px;
+  }
+
+  .hf-kpi-card--account-positive .hf-kpi-card__summary,
+  .hf-kpi-card--account-negative .hf-kpi-card__summary {
+    margin-top: 20px;
+  }
+
+  .hf-kpi-card__stats {
+    gap: 8px;
+  }
+
+  .hf-kpi-card__stat {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  .hf-kpi-card__stat span {
+    margin-bottom: 0;
   }
 
   .hf-kpi-card__stats,
@@ -1007,7 +1138,7 @@
 
   .card-top-gastos-cartao__summary-item + .card-top-gastos-cartao__summary-item {
     border-left: 0;
-    border-top: 1px solid var(--hf-border-soft, #edf1f6);
+    border-top: 1px solid var(--hf-divider-soft, #d7e0ec);
   }
 
   .hf-ranking-list__items {
@@ -1042,5 +1173,32 @@
     min-width: max-content;
     margin-top: 0;
     font-size: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .hf-dashboard-filters-card {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .hf-dashboard-filters {
+    grid-template-columns: max-content 68px max-content minmax(96px, 1fr);
+    column-gap: 4px;
+  }
+
+  .hf-dashboard-filter-field span {
+    font-size: 13px;
+  }
+
+  .hf-dashboard-filter-field select,
+  .hf-dashboard-filter-field:first-child select {
+    height: 38px !important;
+    min-height: 38px !important;
+    padding: 0 22px 0 9px !important;
+    font-size: 13px !important;
+    line-height: 38px;
+    background-position: right 6px center;
+    background-size: 13px 13px;
   }
 }
