@@ -25,7 +25,7 @@
 .hf-section-title {
   margin: 0;
   color: var(--hf-text);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 750;
   line-height: 1.2;
   letter-spacing: -0.01em;
@@ -57,7 +57,7 @@
   gap: 10px;
   margin: 0;
   color: #475569;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -70,7 +70,7 @@
   border-radius: 7px;
   background-color: #ffffff;
   color: var(--hf-text);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 }
@@ -141,7 +141,7 @@
 .hf-kpi-card__title {
   margin: 2px 0 0;
   color: #1d2939;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 650;
   line-height: 1.2;
 }
@@ -151,9 +151,24 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
   color: #475569;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.hf-kpi-card__eye:hover {
+  background: #eef4ff;
+  color: var(--hf-blue);
+}
+
+.hf-kpi-card__eye--hidden {
+  color: #94a3b8;
 }
 
 .hf-kpi-card__eye svg {
@@ -167,7 +182,7 @@
   grid-column: 2;
   grid-row: 2;
   margin-top: 14px;
-  font-size: clamp(24px, 2.1vw, 31px);
+  font-size: clamp(25px, 2.15vw, 32px);
   font-weight: 780;
   line-height: 1.04;
   letter-spacing: 0.01em;
@@ -191,7 +206,7 @@
   gap: 5px;
   margin: 0;
   color: var(--hf-muted);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.25;
   min-width: 0;
   white-space: nowrap;
@@ -223,14 +238,14 @@
   display: block;
   margin-bottom: 7px;
   color: var(--hf-muted);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.15;
 }
 
 .hf-kpi-card__stat strong {
   display: block;
   color: var(--hf-text);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.2;
   overflow: hidden;
@@ -245,6 +260,34 @@
 
 .hf-kpi-card--primary .hf-kpi-card__value {
   color: var(--hf-blue);
+}
+
+.hf-kpi-card--account-positive {
+  border-color: #b8d2ff;
+  background: linear-gradient(135deg, #f3f8ff 0%, #ffffff 72%);
+}
+
+.hf-kpi-card--account-positive .hf-kpi-card__icon {
+  color: var(--hf-blue);
+  background: #e7f1ff;
+}
+
+.hf-kpi-card--account-positive .hf-kpi-card__value {
+  color: var(--hf-blue);
+}
+
+.hf-kpi-card--account-negative {
+  border-color: #d69a9a;
+  background: linear-gradient(135deg, #fff5f5 0%, #ffffff 72%);
+}
+
+.hf-kpi-card--account-negative .hf-kpi-card__icon {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.hf-kpi-card--account-negative .hf-kpi-card__value {
+  color: #991b1b;
 }
 
 .hf-kpi-card--success .hf-kpi-card__icon {
@@ -331,7 +374,7 @@
 .hf-progress-panel__title {
   margin: 0;
   color: #344054;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 650;
 }
 
@@ -371,12 +414,12 @@
   gap: 12px;
   min-width: 0;
   color: var(--hf-muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .hf-progress-panel__row strong {
   color: var(--hf-text);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 750;
   white-space: nowrap;
 }
@@ -436,7 +479,7 @@
 .hf-ranking-list__label {
   min-width: 0;
   color: var(--hf-muted);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.2;
   text-align: right;
   overflow: hidden;
@@ -465,7 +508,7 @@
   justify-self: end;
   min-width: max-content;
   color: #475569;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 650;
   line-height: 1.1;
   white-space: nowrap;
@@ -477,7 +520,7 @@
   justify-content: center;
   min-height: 144px;
   color: var(--hf-muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .hf-dashboard-cards-grid .dashboard-cartoes-empty {
@@ -571,7 +614,7 @@
   min-width: 0;
   margin: 0;
   color: #102033;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 750;
   line-height: 1.2;
   overflow: hidden;
@@ -627,14 +670,14 @@
   display: block;
   margin-bottom: 8px;
   color: #667085;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.1;
 }
 
 .card-top-gastos-cartao__summary-item strong {
   display: block;
   color: #0f172a;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 750;
   line-height: 1.2;
   overflow-wrap: anywhere;
@@ -651,7 +694,7 @@
 .card-top-gastos-cartao__gastos-title {
   margin: 0 0 12px;
   color: #344054;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 750;
   line-height: 1.2;
   text-transform: none;
@@ -675,7 +718,7 @@
 .card-top-gastos-cartao__gasto-name {
   min-width: 0;
   color: #334155;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -699,7 +742,7 @@
 
 .card-top-gastos-cartao__gasto-value {
   color: #334155;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 650;
   line-height: 1.2;
   text-align: right;
@@ -712,7 +755,7 @@
   justify-content: center;
   min-height: 106px;
   color: #667085;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .card-top-gastos-cartao__empty p {
@@ -739,7 +782,7 @@
   border-radius: 7px;
   background: #12b76a;
   color: #ffffff;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 850;
   line-height: 1;
 }
@@ -770,7 +813,7 @@
 .hf-annual-metric h4 {
   margin: 0 0 16px;
   color: #344054;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 750;
   line-height: 1.2;
 }
@@ -782,12 +825,12 @@
   gap: 12px;
   margin-top: 12px;
   color: #667085;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .hf-annual-metric__row strong {
   color: #0f172a;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 750;
   white-space: nowrap;
 }
@@ -838,13 +881,13 @@
 .hf-annual-sparkline__tooltip span,
 .hf-annual-sparkline__tooltip strong {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.2;
 }
 
 .hf-annual-sparkline__tooltip strong {
   margin-top: 2px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
 }
 
@@ -949,7 +992,7 @@
   }
 
   .hf-kpi-card__value {
-    font-size: 24px;
+    font-size: 25px;
   }
 
   .hf-kpi-card__stats,
@@ -972,12 +1015,12 @@
   }
 
   .hf-ranking-list__item {
-    grid-template-columns: minmax(0, 88px) minmax(14px, 1fr) max-content;
+    grid-template-columns: minmax(0, 92px) minmax(10px, 1fr) max-content;
     gap: 6px;
   }
 
   .hf-ranking-list__label {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .hf-ranking-list__value {
@@ -985,11 +1028,11 @@
     justify-self: end;
     min-width: max-content;
     margin-top: 0;
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .card-top-gastos-cartao__gasto-item {
-    grid-template-columns: minmax(0, 92px) minmax(18px, 1fr) max-content;
+    grid-template-columns: minmax(0, 96px) minmax(10px, 1fr) max-content;
     gap: 8px;
   }
 
@@ -998,6 +1041,6 @@
     justify-self: end;
     min-width: max-content;
     margin-top: 0;
-    font-size: 11px;
+    font-size: 12px;
   }
 }

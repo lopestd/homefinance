@@ -1,5 +1,10 @@
 import { formatCurrency } from '../../utils/appUtils';
 
+const MASKED_CURRENCY = 'R$ •••••';
+const displayCurrency = (value, valuesVisible) => (
+  valuesVisible ? formatCurrency(value) : MASKED_CURRENCY
+);
+
 const getCardBrand = (cartaoNome = '') => {
   const name = String(cartaoNome).toLowerCase();
   if (name.includes('visa')) return 'visa';
@@ -32,7 +37,8 @@ const CardTopGastosCartao = ({
   top5Gastos = [],
   totalGasto = 0,
   limite = 0,
-  saldo = 0
+  saldo = 0,
+  valuesVisible = true
 }) => {
   const maxValue = top5Gastos.length > 0 ? top5Gastos[0].value : 0;
   const brand = getCardBrand(cartao?.nome);
@@ -52,16 +58,16 @@ const CardTopGastosCartao = ({
       <div className="card-top-gastos-cartao__summary" aria-label="Resumo do cartão">
         <div className="card-top-gastos-cartao__summary-item">
           <span>Total</span>
-          <strong>{formatCurrency(totalGasto)}</strong>
+          <strong>{displayCurrency(totalGasto, valuesVisible)}</strong>
         </div>
         <div className="card-top-gastos-cartao__summary-item">
           <span>Limite</span>
-          <strong>{formatCurrency(limite)}</strong>
+          <strong>{displayCurrency(limite, valuesVisible)}</strong>
         </div>
         <div className="card-top-gastos-cartao__summary-item">
           <span>Disponível</span>
           <strong className={saldo >= 0 ? 'card-top-gastos-cartao__value--positive' : 'card-top-gastos-cartao__value--negative'}>
-            {formatCurrency(saldo)}
+            {displayCurrency(saldo, valuesVisible)}
           </strong>
         </div>
       </div>
@@ -78,11 +84,11 @@ const CardTopGastosCartao = ({
                 <span className="card-top-gastos-cartao__gasto-bar" aria-hidden="true">
                   <span
                     className="card-top-gastos-cartao__gasto-bar-fill"
-                    style={{ width: `${maxValue > 0 ? (gasto.value / maxValue) * 100 : 0}%` }}
+                    style={{ width: `${valuesVisible && maxValue > 0 ? (gasto.value / maxValue) * 100 : 54}%` }}
                   />
                 </span>
                 <strong className="card-top-gastos-cartao__gasto-value">
-                  {formatCurrency(gasto.value)}
+                  {displayCurrency(gasto.value, valuesVisible)}
                 </strong>
               </div>
             ))}

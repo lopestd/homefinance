@@ -55,6 +55,21 @@ const clampProgress = (value) => Math.min(100, Math.max(0, value));
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
 const formatPercent = (value) => `${Math.round(value)}%`;
+const MASKED_CURRENCY = "R$ •••••";
+const MASKED_CURRENCY_COMPACT = "R$ •••";
+const MASKED_PERCENT = "••%";
+
+const displayCurrency = (value, valuesVisible) => (
+  valuesVisible ? formatCurrency(value) : MASKED_CURRENCY
+);
+
+const displayCurrencyCompact = (value, valuesVisible) => (
+  valuesVisible ? formatCurrencyCompact(value) : MASKED_CURRENCY_COMPACT
+);
+
+const displayPercent = (value, valuesVisible) => (
+  valuesVisible ? formatPercent(value) : MASKED_PERCENT
+);
 
 const formatCurrencyCompact = (value) => {
   const parsed = Number(value);
@@ -102,6 +117,15 @@ const IconEye = () => (
   </svg>
 );
 
+const IconEyeOff = () => (
+  <svg viewBox="0 0 24 24" role="img" aria-label="Ocultar saldo">
+    <path d="M3.5 4.25 20.5 20.75" />
+    <path d="M9.55 6.95A9.73 9.73 0 0 1 12 6.75c6 0 9.25 5.25 9.25 5.25a14.98 14.98 0 0 1-2.45 2.92" />
+    <path d="M14.2 14.08A2.25 2.25 0 0 1 9.9 10.4" />
+    <path d="M6.65 8.28C4.1 9.82 2.75 12 2.75 12S6 17.25 12 17.25c1.18 0 2.26-.2 3.23-.52" />
+  </svg>
+);
+
 const calculateDashboardSummary = ({
   saldoInicial = 0,
   receitasPrevistas = 0,
@@ -139,22 +163,34 @@ const DashboardMetricCard = ({
   icon,
   summaryRows = [],
   stats = [],
-  showEye = false
+  showEye = false,
+  valuesVisible = true,
+  onToggleValues
 }) => (
   <article className={`hf-kpi-card hf-kpi-card--${variant}`}>
     <span className="hf-kpi-card__icon" aria-hidden="true">{icon}</span>
     <div className="hf-kpi-card__body">
       <div className="hf-kpi-card__title-row">
         <h3 className="hf-kpi-card__title">{title}</h3>
-        {showEye ? <span className="hf-kpi-card__eye" aria-hidden="true"><IconEye /></span> : null}
+        {showEye ? (
+          <button
+            type="button"
+            className={`hf-kpi-card__eye ${valuesVisible ? "" : "hf-kpi-card__eye--hidden"}`}
+            onClick={onToggleValues}
+            aria-label={valuesVisible ? "Ocultar valores do dashboard" : "Mostrar valores do dashboard"}
+            aria-pressed={!valuesVisible}
+          >
+            {valuesVisible ? <IconEye /> : <IconEyeOff />}
+          </button>
+        ) : null}
       </div>
-      <strong className="hf-kpi-card__value">{formatCurrency(value)}</strong>
+      <strong className="hf-kpi-card__value">{displayCurrency(value, valuesVisible)}</strong>
       {summaryRows.length > 0 ? (
         <div className="hf-kpi-card__summary">
           {summaryRows.map((row) => (
             <p className="hf-kpi-card__summary-row" key={row.label}>
               <span>{row.label}:</span>
-              <strong className={row.tone ? `hf-tone-${row.tone}` : undefined}>{formatCurrency(row.value)}</strong>
+              <strong className={row.tone ? `hf-tone-${row.tone}` : undefined}>{displayCurrency(row.value, valuesVisible)}</strong>
             </p>
           ))}
         </div>
@@ -164,7 +200,7 @@ const DashboardMetricCard = ({
           {stats.map((item) => (
             <div className="hf-kpi-card__stat" key={item.label}>
               <span>{item.label}</span>
-              <strong className={item.tone ? `hf-tone-${item.tone}` : undefined}>{formatCurrency(item.value)}</strong>
+              <strong className={item.tone ? `hf-tone-${item.tone}` : undefined}>{displayCurrency(item.value, valuesVisible)}</strong>
             </div>
           ))}
         </div>
@@ -183,7 +219,8 @@ const DashboardProgressPanel = ({
   remainingLabel,
   remainingValue,
   variant,
-  icon
+  icon,
+  valuesVisible = true
 }) => {
   const isOver = remainingValue < 0;
   const displayRemaining = Math.abs(remainingValue);
@@ -196,32 +233,32 @@ const DashboardProgressPanel = ({
           <span className="hf-progress-panel__icon" aria-hidden="true">{icon}</span>
           <h4 className="hf-progress-panel__title">{title}</h4>
         </div>
-        <strong className="hf-progress-panel__percent">{formatPercent(percentage)}</strong>
+        <strong className="hf-progress-panel__percent">{displayPercent(percentage, valuesVisible)}</strong>
       </div>
 
       <div className="hf-progress-panel__bar" aria-hidden="true">
-        <span className="hf-progress-panel__bar-fill" style={{ width: `${clampProgress(percentage)}%` }} />
+        <span className="hf-progress-panel__bar-fill" style={{ width: `${valuesVisible ? clampProgress(percentage) : 48}%` }} />
       </div>
 
       <div className="hf-progress-panel__rows">
         <div className="hf-progress-panel__row">
           <span>{plannedLabel}</span>
-          <strong>{formatCurrency(plannedValue)}</strong>
+          <strong>{displayCurrency(plannedValue, valuesVisible)}</strong>
         </div>
         <div className="hf-progress-panel__row">
           <span>{realizedLabel}</span>
-          <strong className={`hf-progress-panel__value-${variant}`}>{formatCurrency(realizedValue)}</strong>
+          <strong className={`hf-progress-panel__value-${variant}`}>{displayCurrency(realizedValue, valuesVisible)}</strong>
         </div>
         <div className={`hf-progress-panel__row ${isOver ? "hf-progress-panel__row--alert" : ""}`}>
           <span>{displayRemainingLabel}</span>
-          <strong>{formatCurrency(displayRemaining)}</strong>
+          <strong>{displayCurrency(displayRemaining, valuesVisible)}</strong>
         </div>
       </div>
     </div>
   );
 };
 
-const DashboardMonthOverview = ({ resumoMensal, dashboardSummary }) => (
+const DashboardMonthOverview = ({ resumoMensal, dashboardSummary, valuesVisible }) => (
   <section className="hf-card hf-month-overview">
     <h3 className="hf-section-title">Visão geral do mês</h3>
     <div className="hf-month-overview__grid">
@@ -236,6 +273,7 @@ const DashboardMonthOverview = ({ resumoMensal, dashboardSummary }) => (
         remainingValue={dashboardSummary.faltaReceber}
         variant="income"
         icon="↗"
+        valuesVisible={valuesVisible}
       />
       <DashboardProgressPanel
         title="Despesas"
@@ -248,12 +286,13 @@ const DashboardMonthOverview = ({ resumoMensal, dashboardSummary }) => (
         remainingValue={dashboardSummary.restantePrevisto}
         variant="expense"
         icon="↘"
+        valuesVisible={valuesVisible}
       />
     </div>
   </section>
 );
 
-const DashboardRankingList = ({ title, data, colors, emptyMessage }) => {
+const DashboardRankingList = ({ title, data, colors, emptyMessage, valuesVisible }) => {
   const maxValue = data.length > 0 ? Math.max(...data.map((item) => safeNumber(item.value))) : 0;
 
   return (
@@ -263,14 +302,14 @@ const DashboardRankingList = ({ title, data, colors, emptyMessage }) => {
         <div className="hf-ranking-list__items">
           {data.map((item, index) => {
             const color = colors[index % colors.length];
-            const width = maxValue > 0 ? clamp((safeNumber(item.value) / maxValue) * 100, 3, 100) : 0;
+            const width = valuesVisible && maxValue > 0 ? clamp((safeNumber(item.value) / maxValue) * 100, 3, 100) : 54;
             return (
               <div className="hf-ranking-list__item" key={`${title}-${item.name}`}>
                 <span className="hf-ranking-list__label" title={item.name}>{item.name}</span>
                 <span className="hf-ranking-list__track" aria-hidden="true">
                   <span className="hf-ranking-list__fill" style={{ width: `${width}%`, backgroundColor: color }} />
                 </span>
-                <strong className="hf-ranking-list__value">{formatCurrencyCompact(item.value)}</strong>
+                <strong className="hf-ranking-list__value">{displayCurrencyCompact(item.value, valuesVisible)}</strong>
               </div>
             );
           })}
@@ -282,36 +321,38 @@ const DashboardRankingList = ({ title, data, colors, emptyMessage }) => {
   );
 };
 
-const DashboardRankingsCard = ({ topDespesasPorCategoria, topReceitasPorCategoria }) => (
+const DashboardRankingsCard = ({ topDespesasPorCategoria, topReceitasPorCategoria, valuesVisible }) => (
   <section className="hf-card hf-rankings-card">
     <DashboardRankingList
       title="Top 5 Despesas"
       data={topDespesasPorCategoria}
       colors={["#e11d2e", "#f97316", "#f59e0b", "#eab308", "#facc15"]}
       emptyMessage="Sem despesas no período"
+      valuesVisible={valuesVisible}
     />
     <DashboardRankingList
       title="Top 5 Receitas"
       data={topReceitasPorCategoria}
       colors={["#16a34a", "#14b8a6", "#06b6d4", "#0ea5e9", "#2563eb"]}
       emptyMessage="Sem receitas no período"
+      valuesVisible={valuesVisible}
     />
   </section>
 );
 
-const DashboardAnnualMetric = ({ title, rows }) => (
+const DashboardAnnualMetric = ({ title, rows, valuesVisible }) => (
   <div className="hf-annual-metric">
     <h4>{title}</h4>
     {rows.map((row) => (
       <div className="hf-annual-metric__row" key={row.label}>
         <span>{row.label}</span>
-        <strong className={row.tone ? `hf-tone-${row.tone}` : undefined}>{formatCurrency(row.value)}</strong>
+        <strong className={row.tone ? `hf-tone-${row.tone}` : undefined}>{displayCurrency(row.value, valuesVisible)}</strong>
       </div>
     ))}
   </div>
 );
 
-const DashboardAnnualSparkline = ({ saldos, selectedMes, fallbackValue }) => {
+const DashboardAnnualSparkline = ({ saldos, selectedMes, fallbackValue, valuesVisible }) => {
   const source = MONTHS_ORDER.map((mesNome) => {
     const saldo = saldos.find((item) => item.mesNome === mesNome);
     const value = saldo ? safeNumber(saldo.saldoFinal) : null;
@@ -334,11 +375,14 @@ const DashboardAnnualSparkline = ({ saldos, selectedMes, fallbackValue }) => {
   const height = 82;
   const paddingX = 12;
   const paddingY = 12;
-  const values = chartData.map((item) => item.value);
+  const displayChartData = valuesVisible
+    ? chartData
+    : chartData.map((item, index) => ({ ...item, value: index % 2 === 0 ? 0.64 : 0.9 }));
+  const values = displayChartData.map((item) => item.value);
   const minValue = Math.min(...values);
   const maxValue = Math.max(...values);
   const range = maxValue - minValue || 1;
-  const points = chartData.map((item, index) => {
+  const points = displayChartData.map((item, index) => {
     const x = paddingX + (index / Math.max(1, chartData.length - 1)) * (width - paddingX * 2);
     const y = height - paddingY - ((item.value - minValue) / range) * (height - paddingY * 2);
     return { ...item, x, y };
@@ -353,7 +397,7 @@ const DashboardAnnualSparkline = ({ saldos, selectedMes, fallbackValue }) => {
     <div className="hf-annual-sparkline" aria-label="Evolução do saldo anual">
       <div className="hf-annual-sparkline__tooltip" style={{ left: `${tooltipLeft}%`, top: `${tooltipTop}%` }}>
         <span>{abbreviateMonth(selectedMes)}</span>
-        <strong>{formatCurrency(selectedValue)}</strong>
+        <strong>{displayCurrency(selectedValue, valuesVisible)}</strong>
       </div>
       <svg viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
         <defs>
@@ -381,6 +425,7 @@ const DashboardPage = ({
   lancamentosCartao
 }) => {
   const [selectedMes, setSelectedMes] = useState("");
+  const [valuesVisible, setValuesVisible] = useState(true);
 
   const effectiveOrcamentoId = resolveEffectiveOrcamentoId(orcamentos, selectedOrcamentoId);
   const currentOrcamento = orcamentos.find((o) => o.id === effectiveOrcamentoId);
@@ -623,12 +668,14 @@ const DashboardPage = ({
 
       <section className="hf-dashboard-kpis">
         <DashboardMetricCard
-          title="Saldo atual em conta"
+          title={`Saldo em conta | ${effectiveMes || "Mês"}`}
           value={dashboardSummary.saldoAtualEmConta}
           summaryRows={[{ label: "Saldo inicial", value: safeNumber(saldoInicialMes) }]}
-          variant="primary"
+          variant={dashboardSummary.saldoAtualEmConta >= 0 ? "account-positive" : "account-negative"}
           icon={<IconSaldoAtual />}
           showEye={true}
+          valuesVisible={valuesVisible}
+          onToggleValues={() => setValuesVisible((current) => !current)}
         />
         <DashboardMetricCard
           title="Resultado do mês"
@@ -636,6 +683,7 @@ const DashboardPage = ({
           stats={resultadoMesStats}
           variant={dashboardSummary.resultadoDoMes >= 0 ? "success" : "danger"}
           icon={<IconResultadoMes />}
+          valuesVisible={valuesVisible}
         />
         <DashboardMetricCard
           title="Saldo previsto"
@@ -646,14 +694,20 @@ const DashboardPage = ({
           ]}
           variant={saldoPrevistoVariant}
           icon={<IconSaldoPrevisto />}
+          valuesVisible={valuesVisible}
         />
       </section>
 
       <section className="hf-dashboard-middle-grid">
-        <DashboardMonthOverview resumoMensal={resumoMensal} dashboardSummary={dashboardSummary} />
+        <DashboardMonthOverview
+          resumoMensal={resumoMensal}
+          dashboardSummary={dashboardSummary}
+          valuesVisible={valuesVisible}
+        />
         <DashboardRankingsCard
           topDespesasPorCategoria={topDespesasPorCategoria}
           topReceitasPorCategoria={topReceitasPorCategoria}
+          valuesVisible={valuesVisible}
         />
       </section>
 
@@ -671,6 +725,7 @@ const DashboardPage = ({
               totalGasto={cartaoData.totalGasto}
               limite={cartaoData.limite}
               saldo={cartaoData.saldo}
+              valuesVisible={valuesVisible}
             />
           ))
         )}
@@ -689,6 +744,7 @@ const DashboardPage = ({
                 { label: "Previsto", value: resumoAnual.recPrevisto },
                 { label: "Recebido", value: resumoAnual.recRecebido, tone: "income" }
               ]}
+              valuesVisible={valuesVisible}
             />
             <DashboardAnnualMetric
               title="Despesas do ano"
@@ -696,6 +752,7 @@ const DashboardPage = ({
                 { label: "Previsto", value: resumoAnual.despPrevisto },
                 { label: "Pago", value: resumoAnual.despPago, tone: "expense" }
               ]}
+              valuesVisible={valuesVisible}
             />
             <DashboardAnnualMetric
               title="Saldo anual"
@@ -703,12 +760,14 @@ const DashboardPage = ({
                 { label: "Previsto", value: resumoAnual.saldoPrevisto },
                 { label: "Realizado", value: dashboardSummary.saldoAtualEmConta, tone: dashboardSummary.saldoAtualEmConta >= 0 ? "income" : "expense" }
               ]}
+              valuesVisible={valuesVisible}
             />
           </div>
           <DashboardAnnualSparkline
             saldos={saldos}
             selectedMes={effectiveMes}
             fallbackValue={dashboardSummary.saldoAtualEmConta}
+            valuesVisible={valuesVisible}
           />
         </div>
       </section>
