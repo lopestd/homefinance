@@ -11,7 +11,7 @@ import useTableFilters from "../hooks/useTableFilters";
 import { persistPartialConfigToApi } from "../services/configApi";
 import { createDespesa, deleteDespesa, loadDespesasFromApi, updateDespesa } from "../services/despesasApi";
 import { createLancamentoCartao, createLancamentosCartaoBatch, deleteLancamentoCartao, loadLancamentosCartaoFromApi, updateLancamentoCartao } from "../services/lancamentosCartaoApi";
-import { createId, formatCurrency, getCurrentMonthName, calculateDateForMonth } from "../utils/appUtils";
+import { createId, formatCurrency, getCurrentMonthName } from "../utils/appUtils";
 
 registerLocale("pt-BR", ptBR);
 
@@ -489,23 +489,6 @@ const CartaoPage = ({
     meses: []
   });
 
-  const anoOrcamentoSelecionado = useMemo(() => {
-    const ano = Number.parseInt(String(effectiveOrcamento?.label || ""), 10);
-    return Number.isInteger(ano) ? ano : new Date().getFullYear();
-  }, [effectiveOrcamento]);
-
-  const normalizeDateForSelectedOrcamento = useCallback((mesReferencia, baseDate) => {
-    const monthIndex = months.indexOf(mesReferencia);
-    if (monthIndex === -1) return baseDate;
-    const dateText = String(baseDate || "");
-    const match = dateText.match(/^\d{4}-\d{2}-(\d{2})$/);
-    const desiredDay = match ? Number(match[1]) : new Date().getDate();
-    const safeDay = Number.isInteger(desiredDay) && desiredDay > 0 ? desiredDay : 1;
-    const lastDay = new Date(anoOrcamentoSelecionado, monthIndex + 1, 0).getDate();
-    const adjustedDay = Math.min(safeDay, lastDay);
-    return `${anoOrcamentoSelecionado}-${String(monthIndex + 1).padStart(2, "0")}-${String(adjustedDay).padStart(2, "0")}`;
-  }, [months, anoOrcamentoSelecionado]);
-
   const toApiPayload = useCallback((lancamento) => ({
     orcamentoId: effectiveOrcamentoId,
     cartaoId: lancamento.cartaoId,
@@ -513,14 +496,14 @@ const CartaoPage = ({
     descricao: lancamento.descricao,
     complemento: lancamento.complemento || "",
     valor: lancamento.valor,
-    data: normalizeDateForSelectedOrcamento(lancamento.mesReferencia, lancamento.data),
+    data: lancamento.data,
     mesReferencia: lancamento.mesReferencia,
     tipoRecorrencia: lancamento.tipoRecorrencia,
     qtdParcelas: lancamento.qtdParcelas,
     totalParcelas: lancamento.totalParcelas,
     parcela: lancamento.parcela,
     meses: Array.isArray(lancamento.meses) ? lancamento.meses : []
-  }), [effectiveOrcamentoId, normalizeDateForSelectedOrcamento]);
+  }), [effectiveOrcamentoId]);
 
   const toggleMesLancamento = (mes) => {
     setForm((prev) => {
@@ -575,7 +558,7 @@ const CartaoPage = ({
         complemento: "",
         valor: "",
         tipoMovimento: "DEBITO",
-        data: normalizeDateForSelectedOrcamento(selectedMes, new Date().toLocaleDateString("en-CA")),
+        data: new Date().toLocaleDateString("en-CA"),
         mesReferencia: selectedMes,
         categoriaId: "",
         tipoRecorrencia: "EVENTUAL",
@@ -853,7 +836,7 @@ const CartaoPage = ({
             descricao: `${form.descricao} (${i + 1}/${qtd})`,
             complemento: form.complemento || "",
             valor: parcValue,
-            data: calculateDateForMonth(parcelaMes, form.data),
+            data: form.data,
             mesReferencia: parcelaMes,
             categoriaId: form.categoriaId,
             tipoRecorrencia: "PARCELADO",
@@ -872,7 +855,7 @@ const CartaoPage = ({
             descricao: descricaoPersistida,
             complemento: form.complemento || "",
             valor: valorPersistido,
-            data: calculateDateForMonth(mes, form.data),
+            data: form.data,
             mesReferencia: mes,
             categoriaId: form.categoriaId,
             tipoRecorrencia: "FIXO",
