@@ -287,7 +287,7 @@ function App() {
   }, [isMobile, activeKey, isDataLoaded]);
 
   const pendingOpenData = useMemo(() => {
-    const previousMonths = getPreviousMonthsWindow(2, new Date());
+    const previousMonths = getPreviousMonthsWindow(6, new Date());
     const targetMonthKeys = new Set(previousMonths.map((item) => `${item.year}-${item.monthIndex}`));
 
     const orcamentoYearById = new Map();
@@ -570,7 +570,7 @@ function App() {
 
         <Modal
           open={isPendingModalOpen}
-          title="Pendências dos 2 meses anteriores"
+          title="Pendências dos 6 meses anteriores"
           onClose={() => setIsPendingModalOpen(false)}
           className="pending-open-modal"
           footerClassName="pending-open-modal__footer"
@@ -618,7 +618,7 @@ function App() {
                   {pendingOpenData.items.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="pending-open-modal__empty">
-                        Não há pendências nos 2 meses anteriores.
+                        Não há pendências nos 6 meses anteriores.
                       </td>
                     </tr>
                   ) : (

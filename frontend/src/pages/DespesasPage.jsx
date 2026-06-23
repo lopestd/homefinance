@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { NumericFormat } from "react-number-format";
@@ -10,7 +10,7 @@ import TableFilter from "../components/TableFilter";
 import useTableFilters from "../hooks/useTableFilters";
 import { createCategoria } from "../services/configApi";
 import { createDespesa, createDespesasBatch, deleteDespesa, loadDespesasFromApi, updateDespesa, updateDespesaStatus } from "../services/despesasApi";
-import { MONTHS_ORDER, createId, formatCurrency, getCurrentMonthName, calculateDateForMonth } from "../utils/appUtils";
+import { MONTHS_ORDER, createId, formatCurrency, getCurrentMonthName } from "../utils/appUtils";
 
 registerLocale("pt-BR", ptBR);
 
@@ -175,6 +175,7 @@ const DespesasPage = ({
   const confirmPrimaryLabel = isConfirmProcessing ? "Excluindo..." : "Excluir";
   const confirmSecondaryLabel = "Cancelar";
   const [operationState, setOperationState] = useState({ inProgress: false, label: "" });
+  const dataPickerRef = useRef(null);
 
   const showAlert = useCallback((message, options = {}) => {
     setAlertMessage(message);
@@ -428,7 +429,7 @@ const DespesasPage = ({
           id: createId("desp-fixo"),
           orcamentoId: effectiveOrcamentoId,
           mes: mes,
-          data: calculateDateForMonth(mes, manualForm.data),
+          data: manualForm.data,
           categoriaId,
           descricao: manualForm.descricao,
           complemento: manualForm.complemento || "",
@@ -806,11 +807,17 @@ const DespesasPage = ({
             <label className="field">
               Data
               <DatePicker
+                ref={dataPickerRef}
                 selected={manualForm.data ? new Date(manualForm.data + "T00:00:00") : null}
                 onChange={(date) => {
                   const formattedDate = date ? date.toISOString().split("T")[0] : "";
                   setManualForm((prev) => ({ ...prev, data: formattedDate }));
+                  setTimeout(() => dataPickerRef.current?.setOpen?.(false), 0);
                 }}
+                onSelect={() => {
+                  setTimeout(() => dataPickerRef.current?.setOpen?.(false), 0);
+                }}
+                shouldCloseOnSelect
                 dateFormat="dd/MM/yyyy"
                 locale="pt-BR"
                 placeholderText="DD/MM/AAAA"

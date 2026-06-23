@@ -479,15 +479,19 @@ select:focus {
 }
 
 .list-table--cartao .list-table__col--desc {
-  width: 34%;
+  width: 28%;
+}
+
+.list-table--cartao .list-table__col--categoria {
+  width: 18%;
 }
 
 .list-table--cartao .list-table__col--tipo {
-  width: 22%;
+  width: 16%;
 }
 
 .list-table--cartao .list-table__col--valor {
-  width: 12%;
+  width: 14%;
 }
 
 .list-table--cartao .list-table__col--acoes {
