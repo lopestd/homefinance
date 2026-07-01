@@ -34,7 +34,6 @@ build
 # Docs dev
 plans
 test
-build_docker
 database/*
 !database/README.md
 !database/schema/

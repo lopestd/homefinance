@@ -3,7 +3,7 @@ setlocal enabledelayedexpansion
 set SCRIPT_DIR=%~dp0
 set ROOT_DIR=%SCRIPT_DIR%..
 set IMAGE_NAME=brdocker2020/homefinance
-set DOCKER_USER=lopestd@gmail.com
+if not defined DOCKER_USER set "DOCKER_USER="
 
 REM Gerar versao automatica no formato yymmdd.hhmm
 REM Formato de data no Windows pt-BR: dd/mm/yyyy
@@ -45,13 +45,18 @@ goto afterbuild
 REM Verificar se está logado no Docker Hub antes do buildx
 docker info 2>nul | findstr /i "Username" >nul
 if errorlevel 1 (
+    if "!DOCKER_USER!"=="" set /p DOCKER_USER=Usuario Docker Hub:
+    if "!DOCKER_USER!"=="" (
+        echo Usuario Docker Hub obrigatorio.
+        exit /b 1
+    )
     echo.
     echo ============================================
     echo  Login no Docker Hub
-    echo  Usuario: %DOCKER_USER%
+    echo  Usuario: !DOCKER_USER!
     echo ============================================
     echo.
-    docker login -u %DOCKER_USER%
+    docker login -u !DOCKER_USER!
     if errorlevel 1 (
         echo Falha no login. Abortando.
         exit /b 1
@@ -75,13 +80,18 @@ goto end
 REM Verificar login antes do push
 docker info 2>nul | findstr /i "Username" >nul
 if errorlevel 1 (
+    if "!DOCKER_USER!"=="" set /p DOCKER_USER=Usuario Docker Hub:
+    if "!DOCKER_USER!"=="" (
+        echo Usuario Docker Hub obrigatorio.
+        exit /b 1
+    )
     echo.
     echo ============================================
     echo  Login no Docker Hub
-    echo  Usuario: %DOCKER_USER%
+    echo  Usuario: !DOCKER_USER!
     echo ============================================
     echo.
-    docker login -u %DOCKER_USER%
+    docker login -u !DOCKER_USER!
     if errorlevel 1 (
         echo Falha no login. Abortando.
         exit /b 1
