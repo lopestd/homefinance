@@ -27,6 +27,19 @@ const parseYearFromDate = (value) => {
   return Number.isInteger(year) ? year : null;
 };
 
+const normalizeText = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+
+const parseMoneyToCents = (value) => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return null;
+  return Math.round(amount * 100);
+};
+
 const assertOrcamentoByAnoMes = async (client, userId, payload) => {
   const ano = parseYearFromDate(payload?.data);
   if (!ano) {
@@ -153,6 +166,265 @@ const assertExistingIds = async (client, tableName, idField, userId, ids, label)
   for (const id of wanted) {
     if (!found.has(id)) {
       throwBadRequest(`${label} inválido(a): ${id}.`);
+    }
+  }
+};
+
+const parseParcelamentoCartao = (payload) => {
+  const orcamentoInicialId = toPositiveInt(payload?.orcamentoInicialId);
+  const cartaoId = toPositiveInt(payload?.cartaoId);
+  const categoriaId = toPositiveInt(payload?.categoriaId);
+  const descricao = String(payload?.descricao || "").trim();
+  const complemento = payload?.complemento ? String(payload.complemento).trim() : null;
+  const valorTotalCents = parseMoneyToCents(payload?.valorTotal);
+  const data = payload?.data ? String(payload.data).trim() : "";
+  const mesReferenciaInicial = resolveMonth(payload?.mesReferenciaInicial);
+  const qtdParcelas = toPositiveInt(payload?.qtdParcelas);
+
+  if (!orcamentoInicialId || !cartaoId || !categoriaId || !descricao) {
+    throwBadRequest("Dados de parcelamento inválidos.");
+  }
+  if (!valorTotalCents || valorTotalCents <= 0) {
+    throwBadRequest("Valor total do parcelamento inválido.");
+  }
+  if (!data.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    throwBadRequest("Data do lançamento de cartão inválida. Use o formato YYYY-MM-DD.");
+  }
+  if (!mesReferenciaInicial) {
+    throwBadRequest("Mês inicial do parcelamento inválido.");
+  }
+  if (!qtdParcelas || qtdParcelas <= 1) {
+    throwBadRequest("Informe uma quantidade de parcelas maior que 1.");
+  }
+
+  return {
+    orcamentoInicialId,
+    cartaoId,
+    categoriaId,
+    descricao,
+    complemento,
+    valorTotalCents,
+    data,
+    mesReferenciaInicial,
+    qtdParcelas
+  };
+};
+
+const distributeInstallments = (valorTotalCents, qtdParcelas) => {
+  const base = Math.floor(valorTotalCents / qtdParcelas);
+  const valores = [];
+  for (let index = 0; index < qtdParcelas; index += 1) {
+    const value = index === qtdParcelas - 1
+      ? valorTotalCents - base * (qtdParcelas - 1)
+      : base;
+    if (value <= 0) {
+      throwBadRequest("Valor de parcela inválido.");
+    }
+    valores.push(value);
+  }
+  return valores;
+};
+
+const resolveParcelasEntreOrcamentos = async (client, userId, parsed) => {
+  const orcamentosRes = await client.query(
+    "SELECT id, ano FROM admhomefinance.orcamentos WHERE id_usuario = $1 ORDER BY ano",
+    [userId]
+  );
+  const orcamentos = orcamentosRes.rows;
+  const initial = orcamentos.find((orcamento) => Number(orcamento.id) === parsed.orcamentoInicialId);
+  if (!initial) {
+    throwBadRequest("Orçamento inicial inválido.");
+  }
+
+  const mesesRes = await client.query(
+    "SELECT orcamento_id, mes FROM admhomefinance.orcamento_meses WHERE id_usuario = $1",
+    [userId]
+  );
+  const mesesPorOrcamento = new Map();
+  mesesRes.rows.forEach((row) => {
+    const orcamentoId = Number(row.orcamento_id);
+    const set = mesesPorOrcamento.get(orcamentoId) || new Set();
+    set.add(Number(row.mes));
+    mesesPorOrcamento.set(orcamentoId, set);
+  });
+
+  const orcamentoPorAno = new Map(orcamentos.map((orcamento) => [Number(orcamento.ano), orcamento]));
+  const initialYear = Number(initial.ano);
+  const initialMonthIndex = parsed.mesReferenciaInicial - 1;
+  const valores = distributeInstallments(parsed.valorTotalCents, parsed.qtdParcelas);
+
+  return valores.map((valorCents, index) => {
+    const absoluteMonth = initialMonthIndex + index;
+    const ano = initialYear + Math.floor(absoluteMonth / 12);
+    const mes = (absoluteMonth % 12) + 1;
+    const orcamento = orcamentoPorAno.get(ano);
+    if (!orcamento) {
+      throwBadRequest(`Orçamento do ano ${ano} não encontrado para criar o parcelamento.`);
+    }
+
+    const meses = mesesPorOrcamento.get(Number(orcamento.id)) || new Set();
+    if (!meses.has(mes)) {
+      throwBadRequest(`${monthNumberToName(mes)} não existe no orçamento ${ano}.`);
+    }
+
+    return {
+      orcamentoId: Number(orcamento.id),
+      ano,
+      mes,
+      valor: valorCents / 100,
+      parcelaAtual: index + 1
+    };
+  });
+};
+
+const assertFaturasAbertas = async (client, userId, cartaoId, parcelas) => {
+  for (const parcela of parcelas) {
+    const result = await client.query(
+      `SELECT 1
+         FROM admhomefinance.cartao_faturas_fechadas
+        WHERE id_usuario = $1
+          AND cartao_id = $2
+          AND orcamento_id = $3
+          AND mes = $4
+        LIMIT 1`,
+      [userId, cartaoId, parcela.orcamentoId, parcela.mes]
+    );
+    if (result.rowCount > 0) {
+      throwBadRequest(`Fatura fechada para o cartão no mês ${monthNumberToName(parcela.mes)}/${parcela.ano}.`);
+    }
+  }
+};
+
+const resolveCategoriaDespesaTecnica = async (client, userId) => {
+  const result = await client.query(
+    `SELECT id, nome
+       FROM admhomefinance.categorias
+      WHERE id_usuario = $1
+        AND tipo = 'DESPESA'
+        AND ativa = true
+      ORDER BY id`,
+    [userId]
+  );
+  const categorias = result.rows;
+  const target = categorias.find((categoria) => normalizeText(categoria.nome) === normalizeText("Bancos/Cartões"));
+  const fallback = target || categorias[0];
+  if (!fallback) {
+    throwBadRequest("Categoria de despesa necessária para sincronizar a fatura não encontrada.");
+  }
+  return Number(fallback.id);
+};
+
+const isTechnicalCardInvoiceDescription = (cartaoNome) => `Fatura do cartão ${cartaoNome}`;
+
+const syncDespesaTecnicaFaturas = async (client, { userId, cartaoId, pares }) => {
+  if (!pares.length) return;
+
+  const cartaoRes = await client.query(
+    "SELECT id, nome FROM admhomefinance.cartoes WHERE id = $1 AND id_usuario = $2",
+    [cartaoId, userId]
+  );
+  if (cartaoRes.rowCount === 0) {
+    throwBadRequest("Cartão inválido.");
+  }
+
+  const cartaoNome = cartaoRes.rows[0].nome;
+  const descricao = isTechnicalCardInvoiceDescription(cartaoNome);
+  const categoriaId = await resolveCategoriaDespesaTecnica(client, userId);
+  const today = new Date().toISOString().slice(0, 10);
+
+  for (const pair of pares) {
+    const totalRes = await client.query(
+      `SELECT COALESCE(SUM(
+          CASE
+            WHEN valor < 0 OR descricao LIKE '[CREDITO]%' THEN -ABS(valor)
+            ELSE ABS(valor)
+          END
+        ), 0) AS total
+         FROM admhomefinance.lancamentos_cartao
+        WHERE id_usuario = $1
+          AND cartao_id = $2
+          AND orcamento_id = $3
+          AND mes_referencia = $4`,
+      [userId, cartaoId, pair.orcamentoId, pair.mes]
+    );
+    const totalLiquido = Math.max(Number(totalRes.rows[0]?.total || 0), 0);
+
+    const fechadaRes = await client.query(
+      `SELECT 1
+         FROM admhomefinance.cartao_faturas_fechadas
+        WHERE id_usuario = $1
+          AND cartao_id = $2
+          AND orcamento_id = $3
+          AND mes = $4
+        LIMIT 1`,
+      [userId, cartaoId, pair.orcamentoId, pair.mes]
+    );
+    const isFechada = fechadaRes.rowCount > 0;
+
+    const limiteRes = await client.query(
+      `SELECT limite
+         FROM admhomefinance.cartao_limites_mensais
+        WHERE id_usuario = $1
+          AND cartao_id = $2
+          AND orcamento_id = $3
+          AND mes = $4`,
+      [userId, cartaoId, pair.orcamentoId, pair.mes]
+    );
+    const limite = Number(limiteRes.rows[0]?.limite || 0);
+    const valorFinal = isFechada ? totalLiquido : Math.max(totalLiquido, limite);
+
+    const existingRes = await client.query(
+      `SELECT id, data, status
+         FROM admhomefinance.despesas
+        WHERE id_usuario = $1
+          AND orcamento_id = $2
+          AND mes_referencia = $3
+          AND descricao = $4
+        ORDER BY id
+        LIMIT 1`,
+      [userId, pair.orcamentoId, pair.mes, descricao]
+    );
+    const existing = existingRes.rows[0];
+
+    if (valorFinal > 0) {
+      if (existing) {
+        await client.query(
+          `UPDATE admhomefinance.despesas
+              SET categoria_id = $1,
+                  valor = $2,
+                  data = COALESCE(data, $3)
+            WHERE id = $4
+              AND id_usuario = $5`,
+          [categoriaId, valorFinal, today, existing.id, userId]
+        );
+      } else {
+        await configRepository.insertDespesa(client, {
+          orcamentoId: pair.orcamentoId,
+          categoriaId,
+          descricao,
+          complemento: null,
+          valor: valorFinal,
+          mesReferencia: pair.mes,
+          data: today,
+          status: "Pendente",
+          tipoRecorrencia: "EVENTUAL",
+          parcelaAtual: null,
+          totalParcelas: null,
+          userId
+        });
+      }
+      continue;
+    }
+
+    if (existing) {
+      await client.query(
+        "DELETE FROM admhomefinance.despesas_meses WHERE despesa_id = $1 AND id_usuario = $2",
+        [existing.id, userId]
+      );
+      await client.query(
+        "DELETE FROM admhomefinance.despesas WHERE id = $1 AND id_usuario = $2",
+        [existing.id, userId]
+      );
     }
   }
 };
@@ -414,6 +686,69 @@ const createLancamentoCartao = async (payload, userId) => {
   }
 };
 
+const createParcelamentoCartao = async (payload, userId) => {
+  const parsed = parseParcelamentoCartao(payload);
+
+  const client = await configRepository.beginTransaction();
+  try {
+    await configRepository.acquireUserLock(client, userId);
+    await assertExistingIds(client, "cartoes", "id", userId, new Set([parsed.cartaoId]), "Cartão");
+    await assertExistingIds(client, "orcamentos", "id", userId, new Set([parsed.orcamentoInicialId]), "Orçamento");
+
+    const categoriaRes = await client.query(
+      `SELECT id
+         FROM admhomefinance.categorias
+        WHERE id_usuario = $1
+          AND id = $2
+          AND tipo = 'DESPESA'
+          AND ativa = true`,
+      [userId, parsed.categoriaId]
+    );
+    if (categoriaRes.rowCount === 0) {
+      throwBadRequest(`Categoria inválida: ${parsed.categoriaId}.`);
+    }
+
+    const parcelas = await resolveParcelasEntreOrcamentos(client, userId, parsed);
+    await assertFaturasAbertas(client, userId, parsed.cartaoId, parcelas);
+
+    const affectedPairs = new Map();
+    for (const parcela of parcelas) {
+      await configRepository.insertLancamentoCartao(client, {
+        orcamentoId: parcela.orcamentoId,
+        cartaoId: parsed.cartaoId,
+        categoriaId: parsed.categoriaId,
+        descricao: `${parsed.descricao} (${parcela.parcelaAtual}/${parsed.qtdParcelas})`,
+        complemento: parsed.complemento,
+        valor: parcela.valor,
+        data: parsed.data,
+        mesReferencia: parcela.mes,
+        tipoRecorrencia: "PARCELADO",
+        parcelaAtual: parcela.parcelaAtual,
+        totalParcelas: parsed.qtdParcelas,
+        userId
+      });
+      affectedPairs.set(`${parcela.orcamentoId}:${parcela.mes}`, {
+        orcamentoId: parcela.orcamentoId,
+        mes: parcela.mes
+      });
+    }
+
+    await syncDespesaTecnicaFaturas(client, {
+      userId,
+      cartaoId: parsed.cartaoId,
+      pares: Array.from(affectedPairs.values())
+    });
+
+    await configRepository.commitTransaction(client);
+    return { created: parcelas.length };
+  } catch (error) {
+    await configRepository.rollbackTransaction(client);
+    throw error;
+  } finally {
+    configRepository.releaseClient(client);
+  }
+};
+
 const updateLancamentoCartao = async (lancamentoId, payload, userId) => {
   const id = toPositiveInt(lancamentoId);
   if (!id) throwBadRequest("ID de lançamento inválido.");
@@ -596,6 +931,7 @@ module.exports = {
   createDespesasBatch,
   createReceitasBatch,
   createLancamentoCartao,
+  createParcelamentoCartao,
   updateLancamentoCartao,
   deleteLancamentoCartao,
   createLancamentosCartaoBatch,

@@ -35,7 +35,25 @@ build
 plans
 test
 build_docker
-docs
+database/*
+!database/README.md
+!database/schema/
+!database/schema/**
+docs/*
+!docs/README.md
+!docs/REGRAS_DE_NEGOCIO.md
+!docs/GUIA_DO_USUARIO.md
+!docs/modelagem/
+!docs/modelagem/**
+!docs/backend/
+!docs/backend/**
+!docs/frontend/
+!docs/frontend/**
+!docs/database/
+!docs/database/**
+!docs/sql/
+!docs/sql/**
+AppHomeFinance/docs/
 
 # OS files
 Thumbs.db

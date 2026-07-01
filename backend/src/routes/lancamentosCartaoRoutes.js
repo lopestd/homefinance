@@ -7,6 +7,7 @@ const router = express.Router();
 router.get("/lancamentos-cartao", authenticate, lancamentosCartaoController.listLancamentosCartao);
 router.post("/lancamentos-cartao", authenticate, lancamentosCartaoController.createLancamentoCartao);
 router.post("/lancamentos-cartao/lote", authenticate, lancamentosCartaoController.createLancamentosCartaoBatch);
+router.post("/lancamentos-cartao/parcelamento", authenticate, lancamentosCartaoController.createParcelamentoCartao);
 router.put("/lancamentos-cartao/:id", authenticate, lancamentosCartaoController.updateLancamentoCartao);
 router.delete("/lancamentos-cartao/:id", authenticate, lancamentosCartaoController.deleteLancamentoCartao);
 

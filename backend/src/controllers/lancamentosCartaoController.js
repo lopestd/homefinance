@@ -33,6 +33,18 @@ const createLancamentoCartao = async (req, res) => {
   }
 };
 
+const createParcelamentoCartao = async (req, res) => {
+  try {
+    const result = await batchCreateService.createParcelamentoCartao(req.body, req.user.id);
+    return res.status(201).json(result);
+  } catch (error) {
+    if (error?.status) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    return res.status(500).json({ error: "Falha ao criar parcelamento do cartão." });
+  }
+};
+
 const updateLancamentoCartao = async (req, res) => {
   try {
     await batchCreateService.updateLancamentoCartao(req.params.id, req.body, req.user.id);
@@ -60,6 +72,7 @@ const deleteLancamentoCartao = async (req, res) => {
 module.exports = {
   listLancamentosCartao,
   createLancamentoCartao,
+  createParcelamentoCartao,
   updateLancamentoCartao,
   deleteLancamentoCartao,
   createLancamentosCartaoBatch

@@ -24,7 +24,7 @@ const fetchConfigData = async (userId) => {
     pool.query("SELECT id, descricao, recorrente, ativo FROM admhomefinance.tipos_receita WHERE id_usuario = $1 ORDER BY id", [userId]),
     pool.query("SELECT id, nome, limite, ativo FROM admhomefinance.cartoes WHERE id_usuario = $1 ORDER BY id", [userId]),
     pool.query("SELECT cartao_id, orcamento_id, mes, limite FROM admhomefinance.cartao_limites_mensais WHERE id_usuario = $1", [userId]),
-    pool.query("SELECT cartao_id, mes FROM admhomefinance.cartao_faturas_fechadas WHERE id_usuario = $1", [userId]),
+    pool.query("SELECT cartao_id, orcamento_id, mes FROM admhomefinance.cartao_faturas_fechadas WHERE id_usuario = $1", [userId]),
     pool.query("SELECT id, orcamento_id, categoria_id, descricao, complemento, valor, mes_referencia, data, status, tipo_recorrencia, parcela_atual, total_parcelas FROM admhomefinance.receitas WHERE id_usuario = $1 ORDER BY id", [userId]),
     pool.query("SELECT receita_id, mes FROM admhomefinance.receitas_meses WHERE id_usuario = $1", [userId]),
     pool.query("SELECT id, orcamento_id, categoria_id, descricao, complemento, valor, mes_referencia, data, status, tipo_recorrencia, parcela_atual, total_parcelas FROM admhomefinance.despesas WHERE id_usuario = $1 ORDER BY id", [userId]),
@@ -512,10 +512,10 @@ const insertCartaoLimite = async (client, { cartaoId, orcamentoId, mes, limite, 
   );
 };
 
-const insertCartaoFatura = async (client, { cartaoId, mes, userId }) => {
+const insertCartaoFatura = async (client, { cartaoId, orcamentoId, mes, userId }) => {
   return client.query(
-    "INSERT INTO admhomefinance.cartao_faturas_fechadas (cartao_id, mes, id_usuario) VALUES ($1, $2, $3)",
-    [cartaoId, mes, userId]
+    "INSERT INTO admhomefinance.cartao_faturas_fechadas (cartao_id, orcamento_id, mes, id_usuario) VALUES ($1, $2, $3, $4)",
+    [cartaoId, orcamentoId, mes, userId]
   );
 };
 
@@ -666,14 +666,16 @@ const bulkUpsertCartaoLimites = async (client, { cartaoId, limites, userId }) =>
   );
 };
 
-const bulkUpsertCartaoFaturas = async (client, { cartaoId, meses, userId }) => {
-  if (!meses || meses.length === 0) return;
+const bulkUpsertCartaoFaturas = async (client, { cartaoId, faturas, userId }) => {
+  if (!faturas || faturas.length === 0) return;
+  const orcamentoIds = faturas.map((f) => f.orcamentoId);
+  const meses = faturas.map((f) => f.mes);
   
   return client.query(
-    `INSERT INTO admhomefinance.cartao_faturas_fechadas (cartao_id, mes, id_usuario)
-     SELECT $1, unnest($2::int[]), $3
-     ON CONFLICT (cartao_id, mes) DO NOTHING`,
-    [cartaoId, meses, userId]
+    `INSERT INTO admhomefinance.cartao_faturas_fechadas (cartao_id, orcamento_id, mes, id_usuario)
+     SELECT $1, unnest($2::bigint[]), unnest($3::int[]), $4
+     ON CONFLICT (cartao_id, orcamento_id, mes) DO NOTHING`,
+    [cartaoId, orcamentoIds, meses, userId]
   );
 };
 
@@ -697,25 +699,25 @@ const clearCartaoLimites = async (client, { cartaoId, userId }) => {
   );
 };
 
-const upsertCartaoFatura = async (client, { cartaoId, mes, userId }) => {
+const upsertCartaoFatura = async (client, { cartaoId, orcamentoId, mes, userId }) => {
   return client.query(
-    `INSERT INTO admhomefinance.cartao_faturas_fechadas (cartao_id, mes, id_usuario)
-     VALUES ($1, $2, $3)
-     ON CONFLICT (cartao_id, mes) DO NOTHING`,
-    [cartaoId, mes, userId]
+    `INSERT INTO admhomefinance.cartao_faturas_fechadas (cartao_id, orcamento_id, mes, id_usuario)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (cartao_id, orcamento_id, mes) DO NOTHING`,
+    [cartaoId, orcamentoId, mes, userId]
   );
 };
 
-const deleteCartaoFaturasNotIn = async (client, { cartaoId, mesesMantidos, userId }) => {
+const deleteCartaoFaturasByOrcamentoNotIn = async (client, { cartaoId, orcamentoId, mesesMantidos, userId }) => {
   if (!mesesMantidos || mesesMantidos.length === 0) {
      return client.query(
-       "DELETE FROM admhomefinance.cartao_faturas_fechadas WHERE cartao_id = $1 AND id_usuario = $2",
-       [cartaoId, userId]
+       "DELETE FROM admhomefinance.cartao_faturas_fechadas WHERE cartao_id = $1 AND orcamento_id = $2 AND id_usuario = $3",
+       [cartaoId, orcamentoId, userId]
      );
   }
   return client.query(
-    "DELETE FROM admhomefinance.cartao_faturas_fechadas WHERE cartao_id = $1 AND id_usuario = $2 AND mes <> ALL($3)",
-    [cartaoId, userId, mesesMantidos]
+    "DELETE FROM admhomefinance.cartao_faturas_fechadas WHERE cartao_id = $1 AND orcamento_id = $2 AND id_usuario = $3 AND mes <> ALL($4)",
+    [cartaoId, orcamentoId, userId, mesesMantidos]
   );
 };
 
@@ -807,7 +809,7 @@ module.exports = {
   clearCartaoLimites,
   upsertCartaoFatura,
   bulkUpsertCartaoFaturas,
-  deleteCartaoFaturasNotIn,
+  deleteCartaoFaturasByOrcamentoNotIn,
   updateReceita,
   clearReceitaMeses,
   deleteReceitasByIds,

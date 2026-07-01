@@ -9,7 +9,7 @@ import Modal from "../components/Modal";
 import TableFilter from "../components/TableFilter";
 import useTableFilters from "../hooks/useTableFilters";
 import { createReceita, createReceitasBatch, deleteReceita, loadReceitasFromApi, updateReceita, updateReceitaStatus } from "../services/receitasApi";
-import { MONTHS_ORDER, createId, formatCurrency, getCurrentMonthName } from "../utils/appUtils";
+import { MONTHS_ORDER, createId, dateForOrcamentoMonth, formatCurrency, getCurrentMonthName } from "../utils/appUtils";
 
 registerLocale("pt-BR", ptBR);
 
@@ -261,6 +261,7 @@ const ReceitasPage = ({
     setReceitaEditId(receita.id);
     const matchPredef = tiposReceita.some((t) => t.descricao === receita.descricao);
     setIsManualDescricao(!matchPredef);
+    const isReceitaFixa = receita.tipoRecorrencia === "FIXO";
     setManualForm({
       categoriaId: receita.categoriaId || receitasCategorias[0]?.id || "",
       descricao: receita.descricao,
@@ -270,7 +271,7 @@ const ReceitasPage = ({
       qtdParcelas: receita.qtdParcelas || "",
       data: receita.data,
       mesInicial: receita.mes || effectiveMes || "",
-      meses: [],
+      meses: isReceitaFixa && Array.isArray(receita.meses) ? receita.meses : [],
       status: receita.status || "Pendente"
     });
     setManualOpen(true);
@@ -344,7 +345,7 @@ const ReceitasPage = ({
           id: createId("rec-fixo"),
           orcamentoId: effectiveOrcamentoId,
           mes: mes,
-          data: manualForm.data,
+          data: dateForOrcamentoMonth(manualForm.data, currentOrcamento, mes),
           categoriaId: manualForm.categoriaId,
           descricao: manualForm.descricao,
           complemento: manualForm.complemento || "",
@@ -374,7 +375,7 @@ const ReceitasPage = ({
       valor: manualForm.valor,
       tipoRecorrencia: manualForm.tipoRecorrencia,
       qtdParcelas: manualForm.qtdParcelas,
-      meses: manualForm.meses,
+      meses: manualForm.tipoRecorrencia === "FIXO" && Array.isArray(manualForm.meses) ? manualForm.meses : [],
       status: manualForm.status,
       categoria: receitasCategorias.find((c) => c.id === manualForm.categoriaId)?.nome || "—"
     };
@@ -384,6 +385,9 @@ const ReceitasPage = ({
     } else if (novaReceita.meses && novaReceita.meses.length > 0 && !novaReceita.meses.includes(novaReceita.mes)) {
       novaReceita.mes = novaReceita.meses[0];
     }
+    if (novaReceita.tipoRecorrencia === "FIXO") {
+      novaReceita.data = dateForOrcamentoMonth(manualForm.data, currentOrcamento, novaReceita.mes);
+    }
 
     if (receitaEditId) {
       const original = receitas.find((r) => r.id === receitaEditId);
@@ -391,7 +395,12 @@ const ReceitasPage = ({
         label: "Atualizando...",
         execute: async () => {
           await updateReceita(receitaEditId, toApiPayload(novaReceita));
-          if (original && original.meses && original.meses.length > 0) {
+          const shouldPreserveRemovedMonths =
+            original?.tipoRecorrencia === "FIXO" &&
+            novaReceita.tipoRecorrencia === "FIXO" &&
+            Array.isArray(original.meses) &&
+            original.meses.length > 0;
+          if (shouldPreserveRemovedMonths) {
             const removedMonths = original.meses.filter((m) => !novaReceita.meses.includes(m));
             if (removedMonths.length > 0) {
               const preservedEntry = {
@@ -713,8 +722,7 @@ const ReceitasPage = ({
                   const mes = event.target.value;
                   setManualForm((prev) => ({
                     ...prev,
-                    mesInicial: mes,
-                    meses: mes ? [mes] : []
+                    mesInicial: mes
                   }));
                 }}
               >

@@ -10,7 +10,7 @@ import TableFilter from "../components/TableFilter";
 import useTableFilters from "../hooks/useTableFilters";
 import { createCategoria } from "../services/configApi";
 import { createDespesa, createDespesasBatch, deleteDespesa, loadDespesasFromApi, updateDespesa, updateDespesaStatus } from "../services/despesasApi";
-import { MONTHS_ORDER, createId, formatCurrency, getCurrentMonthName } from "../utils/appUtils";
+import { MONTHS_ORDER, createId, dateForOrcamentoMonth, formatCurrency, getCurrentMonthName } from "../utils/appUtils";
 
 registerLocale("pt-BR", ptBR);
 
@@ -429,7 +429,7 @@ const DespesasPage = ({
           id: createId("desp-fixo"),
           orcamentoId: effectiveOrcamentoId,
           mes: mes,
-          data: manualForm.data,
+          data: dateForOrcamentoMonth(manualForm.data, currentOrcamento, mes),
           categoriaId,
           descricao: manualForm.descricao,
           complemento: manualForm.complemento || "",
@@ -468,6 +468,9 @@ const DespesasPage = ({
       novaDespesa.mes = effectiveMes;
     } else if (novaDespesa.meses && novaDespesa.meses.length > 0 && !novaDespesa.meses.includes(novaDespesa.mes)) {
       novaDespesa.mes = novaDespesa.meses[0];
+    }
+    if (novaDespesa.tipoRecorrencia === "FIXO") {
+      novaDespesa.data = dateForOrcamentoMonth(manualForm.data, currentOrcamento, novaDespesa.mes);
     }
 
     if (despesaEditId) {

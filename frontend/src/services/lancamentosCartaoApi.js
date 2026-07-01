@@ -13,6 +13,10 @@ const createLancamentosCartaoBatch = async (payload) => {
   await api.post("/lancamentos-cartao/lote", payload);
 };
 
+const createParcelamentoCartao = async (payload) => {
+  await api.post("/lancamentos-cartao/parcelamento", payload);
+};
+
 const updateLancamentoCartao = async (id, payload) => {
   await api.put(`/lancamentos-cartao/${id}`, payload);
 };
@@ -25,6 +29,7 @@ export {
   loadLancamentosCartaoFromApi,
   createLancamentoCartao,
   createLancamentosCartaoBatch,
+  createParcelamentoCartao,
   updateLancamentoCartao,
   deleteLancamentoCartao
 };

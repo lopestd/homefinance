@@ -69,10 +69,19 @@ const loadConfig = async (userId) => {
   });
 
   const faturasByCartao = new Map();
+  const faturasPorOrcamentoByCartao = new Map();
   faturasRes.rows.forEach((row) => {
-    const list = faturasByCartao.get(row.cartao_id) || [];
-    list.push(monthNumberToName(row.mes));
-    faturasByCartao.set(row.cartao_id, list);
+    const mesNome = monthNumberToName(row.mes);
+    const flatList = faturasByCartao.get(row.cartao_id) || [];
+    if (!flatList.includes(mesNome)) flatList.push(mesNome);
+    faturasByCartao.set(row.cartao_id, flatList);
+
+    const entry = faturasPorOrcamentoByCartao.get(row.cartao_id) || {};
+    const orcamentoKey = String(toId(row.orcamento_id));
+    const list = entry[orcamentoKey] || [];
+    if (!list.includes(mesNome)) list.push(mesNome);
+    entry[orcamentoKey] = list;
+    faturasPorOrcamentoByCartao.set(row.cartao_id, entry);
   });
 
   return {
@@ -107,6 +116,7 @@ const loadConfig = async (userId) => {
       nome: row.nome,
       limite: Number(row.limite),
       limitesMensais: limitesByCartao.get(row.id) || {},
+      faturasFechadasPorOrcamento: faturasPorOrcamentoByCartao.get(row.id) || {},
       faturasFechadas: faturasByCartao.get(row.id) || []
     })),
     receitas: receitasRes.rows.map((row) => ({
@@ -226,6 +236,43 @@ const extractCartaoLimitesPayload = (limitesMensais, orcamentoMesesRows = []) =>
   return Array.from(map.values());
 };
 
+const extractCartaoFaturasPayload = (cartao, orcamentoMesesRows = []) => {
+  const validMesesPorOrcamento = new Map();
+  for (const row of orcamentoMesesRows) {
+    const orcamentoId = normalizeId(row.orcamento_id);
+    const mes = Number(row.mes);
+    if (!orcamentoId || !mes) continue;
+    const set = validMesesPorOrcamento.get(orcamentoId) || new Set();
+    set.add(mes);
+    validMesesPorOrcamento.set(orcamentoId, set);
+  }
+
+  const faturas = [];
+  const orcamentoIds = new Set();
+  const source = cartao?.faturasFechadasPorOrcamento;
+  const hasCanonicalSource = source && typeof source === "object" && !Array.isArray(source);
+
+  if (!hasCanonicalSource) {
+    return { faturas, orcamentoIds: [] };
+  }
+
+  for (const [orcamentoKey, mesesNomes] of Object.entries(source)) {
+    const orcamentoId = normalizeId(orcamentoKey);
+    if (!orcamentoId || !validMesesPorOrcamento.has(orcamentoId)) continue;
+    orcamentoIds.add(orcamentoId);
+
+    const mesesValidos = validMesesPorOrcamento.get(orcamentoId);
+    const nomes = Array.isArray(mesesNomes) ? mesesNomes : [];
+    for (const mesNome of nomes) {
+      const mes = monthNameToNumber(mesNome);
+      if (!mes || !mesesValidos.has(mes)) continue;
+      faturas.push({ orcamentoId, mes });
+    }
+  }
+
+  return { faturas, orcamentoIds: Array.from(orcamentoIds) };
+};
+
 const saveConfig = async (payload, userId) => {
   const client = await configRepository.beginTransaction();
   try {
@@ -280,28 +327,25 @@ const saveConfig = async (payload, userId) => {
               userId
             });
 
-            // Sincronização granular de Faturas Fechadas
-            const faturasFechadas = Array.isArray(cartao.faturasFechadas) ? cartao.faturasFechadas : [];
-            const mesesFaturasPayload = [];
-            
-            for (const mesNome of faturasFechadas) {
-              const mes = monthNameToNumber(mesNome);
-              if (!mes) continue;
-              mesesFaturasPayload.push(mes);
-            }
+            const faturasPayload = extractCartaoFaturasPayload(cartao, orcamentoMesesRes.rows);
 
             await configRepository.bulkUpsertCartaoFaturas(client, {
               cartaoId: id,
-              meses: mesesFaturasPayload,
+              faturas: faturasPayload.faturas,
               userId
             });
 
-            // Remove faturas que não estão mais fechadas no payload
-            await configRepository.deleteCartaoFaturasNotIn(client, {
-              cartaoId: id,
-              mesesMantidos: mesesFaturasPayload,
-              userId
-            });
+            for (const orcamentoId of faturasPayload.orcamentoIds) {
+              const mesesMantidos = faturasPayload.faturas
+                .filter((fatura) => fatura.orcamentoId === orcamentoId)
+                .map((fatura) => fatura.mes);
+              await configRepository.deleteCartaoFaturasByOrcamentoNotIn(client, {
+                cartaoId: id,
+                orcamentoId,
+                mesesMantidos,
+                userId
+              });
+            }
 
             payloadIds.add(id);
           } else {
@@ -320,14 +364,12 @@ const saveConfig = async (payload, userId) => {
             );
             await configRepository.bulkUpsertCartaoLimites(client, { cartaoId: newId, limites: limitesData, userId });
 
-            const faturasFechadas = Array.isArray(cartao.faturasFechadas) ? cartao.faturasFechadas : [];
-            const faturasData = [];
-            for (const mesNome of faturasFechadas) {
-              const mes = monthNameToNumber(mesNome);
-              if (!mes) continue;
-              faturasData.push(mes);
-            }
-            await configRepository.bulkUpsertCartaoFaturas(client, { cartaoId: newId, meses: faturasData, userId });
+            const faturasPayload = extractCartaoFaturasPayload(cartao, orcamentoMesesRes.rows);
+            await configRepository.bulkUpsertCartaoFaturas(client, {
+              cartaoId: newId,
+              faturas: faturasPayload.faturas,
+              userId
+            });
           }
         }
         

@@ -34,6 +34,28 @@ const calculateDateForMonth = (monthName, baseDate) => {
   return targetDate.toISOString().slice(0, 10);
 };
 
+const parseOrcamentoYear = (orcamento) => {
+  const source = typeof orcamento === "object" && orcamento !== null
+    ? (orcamento.label ?? orcamento.ano ?? "")
+    : orcamento;
+  const match = String(source || "").match(/\d{4}/);
+  return match ? Number(match[0]) : NaN;
+};
+
+const dateForOrcamentoMonth = (baseDate, orcamento, monthName) => {
+  const year = parseOrcamentoYear(orcamento);
+  const monthIndex = MONTHS_ORDER.indexOf(monthName);
+  const match = String(baseDate || "").match(/^\d{4}-(\d{2})-(\d{2})$/);
+  if (!Number.isInteger(year) || monthIndex < 0 || !match) return baseDate;
+
+  const day = Number(match[2]);
+  const lastDay = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+  const safeDay = Math.min(day, lastDay);
+  const month = String(monthIndex + 1).padStart(2, "0");
+  const dayText = String(safeDay).padStart(2, "0");
+  return `${year}-${month}-${dayText}`;
+};
+
 const formatCurrency = (value) => {
   if (value === null || value === undefined || value === "") return "—";
   const num = typeof value === "string" ? parseFloat(value) : value;
@@ -58,6 +80,8 @@ export {
   MONTHS_ORDER,
   getCurrentMonthName,
   calculateDateForMonth,
+  parseOrcamentoYear,
+  dateForOrcamentoMonth,
   formatCurrency,
   createId,
   EMAIL_REGEX,

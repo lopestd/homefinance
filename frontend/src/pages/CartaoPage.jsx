@@ -10,7 +10,7 @@ import TableFilter from "../components/TableFilter";
 import useTableFilters from "../hooks/useTableFilters";
 import { persistPartialConfigToApi } from "../services/configApi";
 import { createDespesa, deleteDespesa, loadDespesasFromApi, updateDespesa } from "../services/despesasApi";
-import { createLancamentoCartao, createLancamentosCartaoBatch, deleteLancamentoCartao, loadLancamentosCartaoFromApi, updateLancamentoCartao } from "../services/lancamentosCartaoApi";
+import { createLancamentoCartao, createLancamentosCartaoBatch, createParcelamentoCartao, deleteLancamentoCartao, loadLancamentosCartaoFromApi, updateLancamentoCartao } from "../services/lancamentosCartaoApi";
 import { createId, formatCurrency, getCurrentMonthName } from "../utils/appUtils";
 
 registerLocale("pt-BR", ptBR);
@@ -49,6 +49,109 @@ const resolveEffectiveOrcamentoId = (orcamentos, selectedOrcamentoId) => {
   const currentYear = String(new Date().getFullYear());
   const currentYearMatch = orcamentos.find((orcamento) => String(orcamento.label) === currentYear);
   return currentYearMatch?.id ?? orcamentos[0]?.id ?? "";
+};
+
+const parseOrcamentoYear = (orcamento) => {
+  const match = String(orcamento?.label ?? orcamento?.ano ?? "").match(/\d{4}/);
+  return match ? Number(match[0]) : NaN;
+};
+
+const dateForFaturaMonth = (baseDate, orcamento, mes) => {
+  const year = parseOrcamentoYear(orcamento);
+  const monthIndex = MONTHS.indexOf(mes);
+  const match = String(baseDate || "").match(/^\d{4}-(\d{2})-(\d{2})$/);
+  if (!Number.isInteger(year) || monthIndex < 0 || !match) return baseDate;
+
+  const day = Number(match[2]);
+  const lastDay = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+  const safeDay = Math.min(day, lastDay);
+  const month = String(monthIndex + 1).padStart(2, "0");
+  const dayText = String(safeDay).padStart(2, "0");
+  return `${year}-${month}-${dayText}`;
+};
+
+const getFaturasFechadasPorOrcamento = (cartao) => {
+  const value = cartao?.faturasFechadasPorOrcamento;
+  if (value && typeof value === "object" && !Array.isArray(value)) return value;
+  return {};
+};
+
+const getFaturasFechadasDoOrcamento = (cartao, orcamentoId) => {
+  const byOrcamento = getFaturasFechadasPorOrcamento(cartao);
+  const list = byOrcamento[String(orcamentoId)];
+  return Array.isArray(list) ? list : [];
+};
+
+const isCartaoFaturaFechada = (cartao, orcamentoId, mes) =>
+  getFaturasFechadasDoOrcamento(cartao, orcamentoId).includes(mes);
+
+const getLegacyFaturasFechadas = (faturasFechadasPorOrcamento) => {
+  const unique = new Set();
+  Object.values(faturasFechadasPorOrcamento || {}).forEach((meses) => {
+    if (!Array.isArray(meses)) return;
+    meses.forEach((mes) => unique.add(mes));
+  });
+  return Array.from(unique).sort((a, b) => MONTHS.indexOf(a) - MONTHS.indexOf(b));
+};
+
+const setCartaoFaturaFechada = (cartao, orcamentoId, mes, fechada) => {
+  const byOrcamento = { ...getFaturasFechadasPorOrcamento(cartao) };
+  const key = String(orcamentoId);
+  const current = Array.isArray(byOrcamento[key]) ? byOrcamento[key] : [];
+  const next = fechada
+    ? Array.from(new Set([...current, mes])).sort((a, b) => MONTHS.indexOf(a) - MONTHS.indexOf(b))
+    : current.filter((item) => item !== mes);
+
+  byOrcamento[key] = next;
+  return {
+    ...cartao,
+    faturasFechadasPorOrcamento: byOrcamento,
+    faturasFechadas: getLegacyFaturasFechadas(byOrcamento)
+  };
+};
+
+const resolveParcelasFrontend = ({ orcamentos, orcamentoInicialId, mesInicial, qtdParcelas, cartao }) => {
+  const qtd = Number(qtdParcelas);
+  if (!Number.isInteger(qtd) || qtd <= 1) {
+    return { valid: false, message: "Informe uma quantidade de parcelas maior que 1." };
+  }
+
+  const initialOrcamento = orcamentos.find((orcamento) => String(orcamento.id) === String(orcamentoInicialId));
+  if (!initialOrcamento) {
+    return { valid: false, message: "Não foi possível identificar o orçamento inicial do parcelamento." };
+  }
+
+  const initialYear = parseOrcamentoYear(initialOrcamento);
+  if (!Number.isInteger(initialYear)) {
+    return { valid: false, message: "O orçamento inicial não possui ano válido para calcular as parcelas." };
+  }
+
+  const initialMonthIndex = MONTHS.indexOf(mesInicial);
+  if (initialMonthIndex < 0) {
+    return { valid: false, message: "Mês inicial do parcelamento inválido." };
+  }
+
+  const parcelas = [];
+  for (let index = 0; index < qtd; index += 1) {
+    const absoluteMonth = initialMonthIndex + index;
+    const ano = initialYear + Math.floor(absoluteMonth / 12);
+    const mes = MONTHS[absoluteMonth % 12];
+    const orcamento = orcamentos.find((item) => parseOrcamentoYear(item) === ano);
+
+    if (!orcamento) {
+      return { valid: false, message: `Orçamento do ano ${ano} não encontrado para criar o parcelamento.` };
+    }
+    if (!Array.isArray(orcamento.meses) || !orcamento.meses.includes(mes)) {
+      return { valid: false, message: `${mes} não existe no orçamento ${ano}.` };
+    }
+    if (isCartaoFaturaFechada(cartao, orcamento.id, mes)) {
+      return { valid: false, message: `Fatura fechada para o cartão no mês ${mes}/${ano}.` };
+    }
+
+    parcelas.push({ orcamentoId: orcamento.id, ano, mes, parcela: index + 1 });
+  }
+
+  return { valid: true, parcelas };
 };
 
 const MonthlySummaryCard = ({ summary, isCurrentMonth }) => {
@@ -227,7 +330,7 @@ const CartaoPage = ({
    * Determina qual mês deve ser carregado inicialmente na tela Cartões.
    * Se a fatura do mês atual está fechada, busca a próxima fatura aberta.
    */
-  const determineInitialMonth = useCallback((cartoesList, cartaoId, mesesDisponiveisList) => {
+  const determineInitialMonth = useCallback((cartoesList, cartaoId, orcamentoId, mesesDisponiveisList) => {
     if (!Array.isArray(mesesDisponiveisList) || mesesDisponiveisList.length === 0) return "";
     const currentMonth = getCurrentMonthName();
     const defaultMonth = mesesDisponiveisList.includes(currentMonth)
@@ -245,7 +348,7 @@ const CartaoPage = ({
     }
     
     // Verifica se a fatura do mês padrão está fechada.
-    const isCurrentMonthFechada = cartao.faturasFechadas?.includes(defaultMonth) || false;
+    const isCurrentMonthFechada = isCartaoFaturaFechada(cartao, orcamentoId, defaultMonth);
     
     // Se a fatura do mês padrão está aberta, retorna mês padrão.
     if (!isCurrentMonthFechada) {
@@ -257,7 +360,7 @@ const CartaoPage = ({
     const mesesSeguintes = mesesDisponiveisList.slice(currentMonthIndex);
     
     for (const mes of mesesSeguintes) {
-      const isFechada = cartao.faturasFechadas?.includes(mes) || false;
+      const isFechada = isCartaoFaturaFechada(cartao, orcamentoId, mes);
       if (!isFechada) {
         return mes;
       }
@@ -269,7 +372,7 @@ const CartaoPage = ({
 
   // Efeito para determinar o mês inicial baseado no status da fatura
   useEffect(() => {
-    const initialMonth = determineInitialMonth(cartoes, effectiveCartaoId, mesesDisponiveis);
+    const initialMonth = determineInitialMonth(cartoes, effectiveCartaoId, effectiveOrcamentoId, mesesDisponiveis);
     const cardChanged = previousCartaoIdRef.current !== effectiveCartaoId;
 
     setSelectedMes((prevSelectedMes) => {
@@ -281,7 +384,7 @@ const CartaoPage = ({
     });
 
     previousCartaoIdRef.current = effectiveCartaoId;
-  }, [cartoes, determineInitialMonth, effectiveCartaoId, mesesDisponiveis]);
+  }, [cartoes, determineInitialMonth, effectiveCartaoId, effectiveOrcamentoId, mesesDisponiveis]);
 
   const selectedCartao = useMemo(() => cartoes.find((c) => String(c.id) === String(effectiveCartaoId)) || {}, [cartoes, effectiveCartaoId]);
 
@@ -409,7 +512,7 @@ const CartaoPage = ({
 
     const totalFatura = Math.max((fixoMes + parceladoMes + eventualMes) - creditoMes, 0);
     const saldo = limite - totalFatura;
-    const isFechada = cartao.faturasFechadas?.includes(mes) || false;
+    const isFechada = isCartaoFaturaFechada(cartao, orcamentoId, mes);
 
     return {
       mes,
@@ -439,8 +542,8 @@ const CartaoPage = ({
   const [limiteEditValue, setLimiteEditValue] = useState("");
 
   const isFaturaFechada = useMemo(() => {
-    return selectedCartao.faturasFechadas?.includes(selectedMes) || false;
-  }, [selectedCartao, selectedMes]);
+    return isCartaoFaturaFechada(selectedCartao, effectiveOrcamentoId, selectedMes);
+  }, [selectedCartao, effectiveOrcamentoId, selectedMes]);
 
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -490,7 +593,7 @@ const CartaoPage = ({
   });
 
   const toApiPayload = useCallback((lancamento) => ({
-    orcamentoId: effectiveOrcamentoId,
+    orcamentoId: lancamento.orcamentoId || effectiveOrcamentoId,
     cartaoId: lancamento.cartaoId,
     categoriaId: lancamento.categoriaId,
     descricao: lancamento.descricao,
@@ -573,9 +676,7 @@ const CartaoPage = ({
 
   const toggleFaturaStatus = async () => {
     if (!effectiveCartaoId || !selectedMes) return;
-    const currentFechadas = selectedCartao.faturasFechadas || [];
-    let newFechadas;
-    const isClosing = !currentFechadas.includes(selectedMes);
+    const isClosing = !isCartaoFaturaFechada(selectedCartao, effectiveOrcamentoId, selectedMes);
 
     // Regra de negócio: não permitir reabrir fatura se a despesa vinculada já foi paga.
     if (!isClosing) {
@@ -601,17 +702,13 @@ const CartaoPage = ({
       }
     }
 
-    if (!isClosing) {
-      newFechadas = currentFechadas.filter((m) => m !== selectedMes);
-    } else {
-      newFechadas = [...currentFechadas, selectedMes];
-    }
-
     const updatedCartoes = cartoes.map((c) =>
-      String(c.id) === String(effectiveCartaoId) ? { ...c, faturasFechadas: newFechadas } : c
+      String(c.id) === String(effectiveCartaoId)
+        ? setCartaoFaturaFechada(c, effectiveOrcamentoId, selectedMes, isClosing)
+        : c
     );
     setCartoes(updatedCartoes);
-    persistPartialConfigToApi({ cartoes: updatedCartoes });
+    await persistPartialConfigToApi({ cartoes: updatedCartoes }, { immediate: true });
 
     await syncDespesa(selectedMes, effectiveCartaoId, lancamentosCartao, updatedCartoes, { updateDate: isClosing });
   };
@@ -634,7 +731,7 @@ const CartaoPage = ({
       }, 0);
     const totalLiquido = Math.max(totalGastos, 0);
 
-    const isFechada = cartao.faturasFechadas?.includes(mes);
+    const isFechada = isCartaoFaturaFechada(cartao, effectiveOrcamentoId, mes);
 
     let valorFinal = totalLiquido;
     if (!isFechada) {
@@ -813,6 +910,42 @@ const CartaoPage = ({
     
     setIsSaving(true);
     try {
+      if (!editId && tipoRecorrenciaFinal === "PARCELADO" && parseInt(form.qtdParcelas) > 1) {
+        const parcelasPreview = resolveParcelasFrontend({
+          orcamentos,
+          orcamentoInicialId: effectiveOrcamentoId,
+          mesInicial: form.mesReferencia,
+          qtdParcelas: form.qtdParcelas,
+          cartao: selectedCartao
+        });
+
+        if (!parcelasPreview.valid) {
+          showAlert(parcelasPreview.message);
+          return;
+        }
+
+        await createParcelamentoCartao({
+          orcamentoInicialId: effectiveOrcamentoId,
+          cartaoId: effectiveCartaoId,
+          categoriaId: form.categoriaId,
+          descricao: descricaoPersistida,
+          complemento: form.complemento || "",
+          valorTotal: val,
+          data: form.data,
+          mesReferenciaInicial: form.mesReferencia,
+          qtdParcelas: Number(form.qtdParcelas)
+        });
+
+        const [refreshedLancamentos, refreshedDespesas] = await Promise.all([
+          loadLancamentosCartaoFromApi(),
+          loadDespesasFromApi()
+        ]);
+        setLancamentosCartao(refreshedLancamentos);
+        setDespesas(refreshedDespesas);
+        setModalOpen(false);
+        return;
+      }
+
       const monthsForOrcamento = mesesDisponiveis.length > 0 ? mesesDisponiveis : months;
       const getNextMonth = (current, offset) => {
         if (monthsForOrcamento.length === 0) return current;
@@ -855,7 +988,7 @@ const CartaoPage = ({
             descricao: descricaoPersistida,
             complemento: form.complemento || "",
             valor: valorPersistido,
-            data: form.data,
+            data: dateForFaturaMonth(form.data, effectiveOrcamento, mes),
             mesReferencia: mes,
             categoriaId: form.categoriaId,
             tipoRecorrencia: "FIXO",
@@ -888,6 +1021,7 @@ const CartaoPage = ({
           } else if (form.meses && form.meses.length > 0 && !form.meses.includes(form.mesReferencia)) {
             lancamento.mesReferencia = form.meses[0];
           }
+          lancamento.data = dateForFaturaMonth(form.data, effectiveOrcamento, lancamento.mesReferencia);
         }
         if (tipoRecorrenciaFinal !== "PARCELADO") {
           lancamento.parcela = null;
@@ -947,7 +1081,7 @@ const CartaoPage = ({
       await syncDespesasBatched(Array.from(affectedMonths), effectiveCartaoId, refreshedLancamentos);
     } catch (err) {
       console.error(err);
-      showAlert("Ocorreu um erro ao salvar. Tente novamente.");
+      showAlert(err?.response?.data?.error || err?.message || "Ocorreu um erro ao salvar. Tente novamente.");
     } finally {
       setIsSaving(false);
     }
