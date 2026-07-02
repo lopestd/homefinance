@@ -1,6 +1,7 @@
 package com.homefinance.app.feature.auth
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,13 +13,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -34,7 +32,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.homefinance.app.R
 import com.homefinance.app.core.ui.theme.HfBlue
 import com.homefinance.app.core.ui.theme.HfMuted
 import com.homefinance.app.core.ui.theme.HfNavy
@@ -78,7 +78,7 @@ fun CreateAccountScreen(
                 value = email,
                 onValueChange = { email = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Email") },
+                label = { Text("E-mail") },
                 singleLine = true
             )
             OutlinedTextField(
@@ -159,15 +159,12 @@ private fun AuthBrand() {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Surface(
             shape = RoundedCornerShape(14.dp),
-            color = HfBlue.copy(alpha = 0.12f),
-            contentColor = HfBlue
+            color = HfBlue.copy(alpha = 0.12f)
         ) {
-            Icon(
-                imageVector = Icons.Filled.AccountCircle,
-                contentDescription = null,
-                modifier = Modifier
-                    .padding(10.dp)
-                    .size(28.dp)
+            Image(
+                painter = painterResource(id = R.drawable.ic_homefinance_logo),
+                contentDescription = "HomeFinance",
+                modifier = Modifier.size(52.dp)
             )
         }
         Text(

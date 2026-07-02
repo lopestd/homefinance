@@ -42,11 +42,17 @@ O bootstrap Android ja foi iniciado com Gradle Kotlin DSL e modulo `app` em `App
 - Fluxo de autenticacao local persistente: criar conta, login, logout e restauracao de sessao.
 - Persistencia local com Room no arquivo `homefinance_local.db` para:
   - `usuarios` e `sessoes`;
-  - `orcamentos`, `categorias`, `receitas`, `despesas`.
+  - `orcamentos`, `orcamento_meses`, `saldo_inicial_orcamento`;
+  - `categorias`, `gastos_predefinidos`, `tipos_receita`;
+  - `receitas`, `receitas_meses`, `despesas`, `despesas_meses`;
+  - `cartoes`, `cartao_limites_mensais`, `cartao_faturas_fechadas`;
+  - `lancamentos_cartao`, `lancamentos_cartao_meses`;
+  - tabelas auxiliares/compatibilidade `audit_log`, `cartao_meses` e `cartao_lancamentos`.
 - Fluxo financeiro funcional em app nativo:
-  - Dashboard com totais de receitas, despesas e saldo.
-  - Cadastro e listagem de receitas com alteracao de status e exclusao.
-  - Cadastro e listagem de despesas com alteracao de status e exclusao.
-  - Configuracoes iniciais para criar orcamentos e categorias locais.
-  - Relatorio local por categoria para receitas e despesas.
+  - Dashboard com saldo inicial, totais de receitas, despesas e saldo.
+  - Cadastro e listagem de receitas com status, mes, data, recorrencia fixa e parcelamento.
+  - Cadastro e listagem de despesas com status, mes, data, recorrencia fixa e parcelamento.
+  - Configuracoes locais para orcamentos, categorias, saldo inicial, modelos pre-definidos e cartoes.
+  - Controle local de cartoes com limite mensal, debito, credito, fatura aberta/fechada e despesa tecnica sincronizada.
+  - Relatorio local por categoria e resumo de cartoes/faturas.
 - Camadas ativas: `core`, `data`, `domain`, `feature`, `navigation`.

@@ -20,6 +20,7 @@ class RoomAuthRepository(
     private val categoryDao = database.categoriaDao()
 
     override suspend fun bootstrapState(): AuthBootstrapState {
+        ensureDefaultTestAccount()
         val hasLocalAccount = userDao.countUsers() > 0
         val activeSession = sessionDao.getActiveSession()
             ?: return AuthBootstrapState(
@@ -60,7 +61,7 @@ class RoomAuthRepository(
         return try {
             val existing = userDao.findByEmail(normalizedEmail)
             if (existing != null) {
-                return Result.failure(IllegalStateException("Ja existe uma conta com este email."))
+                return Result.failure(IllegalStateException("Já existe uma conta com este e-mail."))
             }
 
             val salt = PasswordHasher.generateSaltHex()
@@ -86,7 +87,7 @@ class RoomAuthRepository(
                 categoryDao.insert(
                     CategoriaEntity(
                         userId = userId,
-                        name = "Salario",
+                        name = "Salário",
                         type = "RECEITA"
                     )
                 )
@@ -115,14 +116,25 @@ class RoomAuthRepository(
         }
     }
 
+    private suspend fun ensureDefaultTestAccount() {
+        if (userDao.findByEmail(DEFAULT_TEST_EMAIL) != null) {
+            return
+        }
+        createAccount(
+            name = DEFAULT_TEST_NAME,
+            email = DEFAULT_TEST_EMAIL,
+            password = DEFAULT_TEST_PASSWORD
+        )
+    }
+
     override suspend fun login(email: String, password: String): Result<LocalAccount> {
         val normalizedEmail = email.trim().lowercase()
         val account = userDao.findByEmail(normalizedEmail)
-            ?: return Result.failure(IllegalArgumentException("Email ou senha invalidos."))
+            ?: return Result.failure(IllegalArgumentException("E-mail ou senha inválidos."))
 
         val providedHash = PasswordHasher.hashPassword(password, account.salt)
         if (providedHash != account.passwordHash) {
-            return Result.failure(IllegalArgumentException("Email ou senha invalidos."))
+            return Result.failure(IllegalArgumentException("E-mail ou senha inválidos."))
         }
 
         val now = System.currentTimeMillis().toString()
@@ -161,5 +173,11 @@ class RoomAuthRepository(
             passwordHash = passwordHash,
             salt = salt
         )
+    }
+
+    private companion object {
+        const val DEFAULT_TEST_NAME = "Teste"
+        const val DEFAULT_TEST_EMAIL = "teste@email.com"
+        const val DEFAULT_TEST_PASSWORD = "Teste123"
     }
 }

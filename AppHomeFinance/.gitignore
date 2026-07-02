@@ -3,7 +3,6 @@
 .gradle-home/
 build/
 local.properties
-app/schemas/
 .android-sdk/
 .jdk/
 

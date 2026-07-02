@@ -14,8 +14,8 @@ fun validateDisplayName(value: String): String? {
 fun validateEmail(value: String): String? {
     val normalized = value.trim()
     return when {
-        normalized.isEmpty() -> "Informe seu email."
-        !emailRegex.matches(normalized) -> "Email invalido."
+        normalized.isEmpty() -> "Informe seu e-mail."
+        !emailRegex.matches(normalized) -> "E-mail inválido."
         else -> null
     }
 }
@@ -27,4 +27,3 @@ fun validatePassword(value: String): String? {
         else -> null
     }
 }
-

@@ -1,0 +1,1350 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 3,
+    "identityHash": "e73585e260e41e9d7740bd3399fbd3ee",
+    "entities": [
+      {
+        "tableName": "usuarios",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id_usuario` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `nome` TEXT NOT NULL, `email` TEXT NOT NULL, `senha_hash` TEXT NOT NULL, `salt` TEXT NOT NULL, `ativo` INTEGER NOT NULL, `data_criacao` TEXT NOT NULL, `data_atualizacao` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id_usuario",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "displayName",
+            "columnName": "nome",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "email",
+            "columnName": "email",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "passwordHash",
+            "columnName": "senha_hash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "salt",
+            "columnName": "salt",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isActive",
+            "columnName": "ativo",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "data_criacao",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "data_atualizacao",
+            "affinity": "TEXT",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id_usuario"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_usuarios_email",
+            "unique": true,
+            "columnNames": [
+              "email"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_usuarios_email` ON `${TABLE_NAME}` (`email`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "sessoes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id_sessao` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_usuario` INTEGER NOT NULL, `token_hash` TEXT NOT NULL, `data_criacao` TEXT NOT NULL, `ativa` INTEGER NOT NULL, FOREIGN KEY(`id_usuario`) REFERENCES `usuarios`(`id_usuario`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id_sessao",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "id_usuario",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tokenHash",
+            "columnName": "token_hash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "data_criacao",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isActive",
+            "columnName": "ativa",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id_sessao"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_sessoes_id_usuario",
+            "unique": false,
+            "columnNames": [
+              "id_usuario"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_sessoes_id_usuario` ON `${TABLE_NAME}` (`id_usuario`)"
+          },
+          {
+            "name": "index_sessoes_ativa",
+            "unique": false,
+            "columnNames": [
+              "ativa"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_sessoes_ativa` ON `${TABLE_NAME}` (`ativa`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "usuarios",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "id_usuario"
+            ],
+            "referencedColumns": [
+              "id_usuario"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "orcamentos",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_usuario` INTEGER NOT NULL, `ano` INTEGER NOT NULL, `ativo` INTEGER NOT NULL, `criado_em` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "id_usuario",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "year",
+            "columnName": "ano",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isActive",
+            "columnName": "ativo",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "criado_em",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_orcamentos_id_usuario_ano",
+            "unique": true,
+            "columnNames": [
+              "id_usuario",
+              "ano"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_orcamentos_id_usuario_ano` ON `${TABLE_NAME}` (`id_usuario`, `ano`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "categorias",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_usuario` INTEGER NOT NULL, `nome` TEXT NOT NULL, `tipo` TEXT NOT NULL, `ativa` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "id_usuario",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "nome",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "tipo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isActive",
+            "columnName": "ativa",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_categorias_id_usuario_tipo_nome",
+            "unique": true,
+            "columnNames": [
+              "id_usuario",
+              "tipo",
+              "nome"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_categorias_id_usuario_tipo_nome` ON `${TABLE_NAME}` (`id_usuario`, `tipo`, `nome`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "receitas",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_usuario` INTEGER NOT NULL, `orcamento_id` INTEGER NOT NULL, `categoria_id` INTEGER, `descricao` TEXT NOT NULL, `complemento` TEXT, `valor_centavos` INTEGER NOT NULL, `mes_referencia` INTEGER NOT NULL DEFAULT 1, `data` TEXT, `status` TEXT NOT NULL, `tipo_recorrencia` TEXT NOT NULL DEFAULT 'EVENTUAL', `parcela_atual` INTEGER, `total_parcelas` INTEGER, `criado_em` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "id_usuario",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "budgetId",
+            "columnName": "orcamento_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoryId",
+            "columnName": "categoria_id",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "descricao",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "complement",
+            "columnName": "complemento",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "amountCents",
+            "columnName": "valor_centavos",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "month",
+            "columnName": "mes_referencia",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "dateIso",
+            "columnName": "data",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recurrenceType",
+            "columnName": "tipo_recorrencia",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'EVENTUAL'"
+          },
+          {
+            "fieldPath": "installment",
+            "columnName": "parcela_atual",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "totalInstallments",
+            "columnName": "total_parcelas",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "criado_em",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_receitas_id_usuario_orcamento_id",
+            "unique": false,
+            "columnNames": [
+              "id_usuario",
+              "orcamento_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_receitas_id_usuario_orcamento_id` ON `${TABLE_NAME}` (`id_usuario`, `orcamento_id`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "despesas",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_usuario` INTEGER NOT NULL, `orcamento_id` INTEGER NOT NULL, `categoria_id` INTEGER, `descricao` TEXT NOT NULL, `complemento` TEXT, `valor_centavos` INTEGER NOT NULL, `mes_referencia` INTEGER NOT NULL DEFAULT 1, `data` TEXT, `status` TEXT NOT NULL, `tipo_recorrencia` TEXT NOT NULL DEFAULT 'EVENTUAL', `parcela_atual` INTEGER, `total_parcelas` INTEGER, `fatura_cartao_id` INTEGER, `fatura_orcamento_id` INTEGER, `fatura_mes` INTEGER, `criado_em` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "id_usuario",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "budgetId",
+            "columnName": "orcamento_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoryId",
+            "columnName": "categoria_id",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "descricao",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "complement",
+            "columnName": "complemento",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "amountCents",
+            "columnName": "valor_centavos",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "month",
+            "columnName": "mes_referencia",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "dateIso",
+            "columnName": "data",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recurrenceType",
+            "columnName": "tipo_recorrencia",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'EVENTUAL'"
+          },
+          {
+            "fieldPath": "installment",
+            "columnName": "parcela_atual",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "totalInstallments",
+            "columnName": "total_parcelas",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "invoiceCardId",
+            "columnName": "fatura_cartao_id",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "invoiceBudgetId",
+            "columnName": "fatura_orcamento_id",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "invoiceMonth",
+            "columnName": "fatura_mes",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "criado_em",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_despesas_id_usuario_orcamento_id",
+            "unique": false,
+            "columnNames": [
+              "id_usuario",
+              "orcamento_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_despesas_id_usuario_orcamento_id` ON `${TABLE_NAME}` (`id_usuario`, `orcamento_id`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "orcamento_meses",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `orcamento_id` INTEGER NOT NULL, `mes` INTEGER NOT NULL, `id_usuario` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "budgetId",
+            "columnName": "orcamento_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "month",
+            "columnName": "mes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "id_usuario",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_orcamento_meses_orcamento_id_mes",
+            "unique": true,
+            "columnNames": [
+              "orcamento_id",
+              "mes"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_orcamento_meses_orcamento_id_mes` ON `${TABLE_NAME}` (`orcamento_id`, `mes`)"
+          },
+          {
+            "name": "index_orcamento_meses_id_usuario",
+            "unique": false,
+            "columnNames": [
+              "id_usuario"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_orcamento_meses_id_usuario` ON `${TABLE_NAME}` (`id_usuario`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "receitas_meses",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`receita_id` INTEGER NOT NULL, `mes` INTEGER NOT NULL, `id_usuario` INTEGER NOT NULL, PRIMARY KEY(`receita_id`, `mes`))",
+        "fields": [
+          {
+            "fieldPath": "receitaId",
+            "columnName": "receita_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "month",
+            "columnName": "mes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "id_usuario",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "receita_id",
+            "mes"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_receitas_meses_id_usuario",
+            "unique": false,
+            "columnNames": [
+              "id_usuario"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_receitas_meses_id_usuario` ON `${TABLE_NAME}` (`id_usuario`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "despesas_meses",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`despesa_id` INTEGER NOT NULL, `mes` INTEGER NOT NULL, `id_usuario` INTEGER NOT NULL, PRIMARY KEY(`despesa_id`, `mes`))",
+        "fields": [
+          {
+            "fieldPath": "despesaId",
+            "columnName": "despesa_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "month",
+            "columnName": "mes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "id_usuario",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "despesa_id",
+            "mes"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_despesas_meses_id_usuario",
+            "unique": false,
+            "columnNames": [
+              "id_usuario"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_despesas_meses_id_usuario` ON `${TABLE_NAME}` (`id_usuario`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "gastos_predefinidos",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `categoria_id` INTEGER NOT NULL, `descricao` TEXT NOT NULL, `ativo` INTEGER NOT NULL DEFAULT 1, `id_usuario` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoryId",
+            "columnName": "categoria_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "descricao",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isActive",
+            "columnName": "ativo",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "id_usuario",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_gastos_predefinidos_id_usuario_categoria_id_descricao",
+            "unique": true,
+            "columnNames": [
+              "id_usuario",
+              "categoria_id",
+              "descricao"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_gastos_predefinidos_id_usuario_categoria_id_descricao` ON `${TABLE_NAME}` (`id_usuario`, `categoria_id`, `descricao`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "tipos_receita",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `descricao` TEXT NOT NULL, `recorrente` INTEGER NOT NULL DEFAULT 0, `ativo` INTEGER NOT NULL DEFAULT 1, `id_usuario` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "descricao",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isRecurring",
+            "columnName": "recorrente",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "isActive",
+            "columnName": "ativo",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "id_usuario",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_tipos_receita_id_usuario_descricao",
+            "unique": true,
+            "columnNames": [
+              "id_usuario",
+              "descricao"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_tipos_receita_id_usuario_descricao` ON `${TABLE_NAME}` (`id_usuario`, `descricao`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "saldo_inicial_orcamento",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_usuario` INTEGER NOT NULL, `orcamento_id` INTEGER NOT NULL, `ano` INTEGER NOT NULL, `saldo_inicial_centavos` INTEGER NOT NULL DEFAULT 0, `criado_em` TEXT NOT NULL, `atualizado_em` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "id_usuario",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "budgetId",
+            "columnName": "orcamento_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "year",
+            "columnName": "ano",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "initialBalanceCents",
+            "columnName": "saldo_inicial_centavos",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "criado_em",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "atualizado_em",
+            "affinity": "TEXT",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_saldo_inicial_orcamento_id_usuario_orcamento_id_ano",
+            "unique": true,
+            "columnNames": [
+              "id_usuario",
+              "orcamento_id",
+              "ano"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_saldo_inicial_orcamento_id_usuario_orcamento_id_ano` ON `${TABLE_NAME}` (`id_usuario`, `orcamento_id`, `ano`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "cartoes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `nome` TEXT NOT NULL, `limite_centavos` INTEGER NOT NULL DEFAULT 0, `ativo` INTEGER NOT NULL DEFAULT 1, `id_usuario` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "nome",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "defaultLimitCents",
+            "columnName": "limite_centavos",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "isActive",
+            "columnName": "ativo",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "id_usuario",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_cartoes_id_usuario_nome",
+            "unique": true,
+            "columnNames": [
+              "id_usuario",
+              "nome"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_cartoes_id_usuario_nome` ON `${TABLE_NAME}` (`id_usuario`, `nome`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "cartao_limites_mensais",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`cartao_id` INTEGER NOT NULL, `orcamento_id` INTEGER NOT NULL, `mes` INTEGER NOT NULL, `limite_centavos` INTEGER NOT NULL, `id_usuario` INTEGER NOT NULL, PRIMARY KEY(`cartao_id`, `orcamento_id`, `mes`))",
+        "fields": [
+          {
+            "fieldPath": "cardId",
+            "columnName": "cartao_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "budgetId",
+            "columnName": "orcamento_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "month",
+            "columnName": "mes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "limitCents",
+            "columnName": "limite_centavos",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "id_usuario",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "cartao_id",
+            "orcamento_id",
+            "mes"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_cartao_limites_mensais_id_usuario",
+            "unique": false,
+            "columnNames": [
+              "id_usuario"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_cartao_limites_mensais_id_usuario` ON `${TABLE_NAME}` (`id_usuario`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "cartao_faturas_fechadas",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`cartao_id` INTEGER NOT NULL, `orcamento_id` INTEGER NOT NULL, `mes` INTEGER NOT NULL, `id_usuario` INTEGER NOT NULL, PRIMARY KEY(`cartao_id`, `orcamento_id`, `mes`))",
+        "fields": [
+          {
+            "fieldPath": "cardId",
+            "columnName": "cartao_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "budgetId",
+            "columnName": "orcamento_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "month",
+            "columnName": "mes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "id_usuario",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "cartao_id",
+            "orcamento_id",
+            "mes"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_cartao_faturas_fechadas_id_usuario",
+            "unique": false,
+            "columnNames": [
+              "id_usuario"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_cartao_faturas_fechadas_id_usuario` ON `${TABLE_NAME}` (`id_usuario`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "lancamentos_cartao",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `orcamento_id` INTEGER NOT NULL, `cartao_id` INTEGER NOT NULL, `categoria_id` INTEGER, `descricao` TEXT NOT NULL, `complemento` TEXT, `valor_centavos` INTEGER NOT NULL, `data` TEXT NOT NULL, `mes_referencia` INTEGER NOT NULL, `tipo_recorrencia` TEXT NOT NULL, `parcela_atual` INTEGER, `total_parcelas` INTEGER, `id_usuario` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "budgetId",
+            "columnName": "orcamento_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cardId",
+            "columnName": "cartao_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoryId",
+            "columnName": "categoria_id",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "descricao",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "complement",
+            "columnName": "complemento",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "amountCents",
+            "columnName": "valor_centavos",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dateIso",
+            "columnName": "data",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "month",
+            "columnName": "mes_referencia",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recurrenceType",
+            "columnName": "tipo_recorrencia",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "installment",
+            "columnName": "parcela_atual",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "totalInstallments",
+            "columnName": "total_parcelas",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "id_usuario",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_lancamentos_cartao_id_usuario_orcamento_id_mes_referencia_cartao_id",
+            "unique": false,
+            "columnNames": [
+              "id_usuario",
+              "orcamento_id",
+              "mes_referencia",
+              "cartao_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_lancamentos_cartao_id_usuario_orcamento_id_mes_referencia_cartao_id` ON `${TABLE_NAME}` (`id_usuario`, `orcamento_id`, `mes_referencia`, `cartao_id`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "lancamentos_cartao_meses",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`lancamento_id` INTEGER NOT NULL, `mes` INTEGER NOT NULL, `id_usuario` INTEGER NOT NULL, PRIMARY KEY(`lancamento_id`, `mes`))",
+        "fields": [
+          {
+            "fieldPath": "chargeId",
+            "columnName": "lancamento_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "month",
+            "columnName": "mes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "id_usuario",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "lancamento_id",
+            "mes"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_lancamentos_cartao_meses_id_usuario",
+            "unique": false,
+            "columnNames": [
+              "id_usuario"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_lancamentos_cartao_meses_id_usuario` ON `${TABLE_NAME}` (`id_usuario`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "audit_log",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id_log` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_usuario` INTEGER, `acao` TEXT NOT NULL, `detalhes` TEXT, `ip_origem` TEXT, `user_agent` TEXT, `data_evento` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id_log",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "id_usuario",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "action",
+            "columnName": "acao",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "detailsJson",
+            "columnName": "detalhes",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "sourceIp",
+            "columnName": "ip_origem",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "userAgent",
+            "columnName": "user_agent",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "data_evento",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id_log"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_audit_log_id_usuario",
+            "unique": false,
+            "columnNames": [
+              "id_usuario"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_audit_log_id_usuario` ON `${TABLE_NAME}` (`id_usuario`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "cartao_meses",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `cartao_id` INTEGER NOT NULL, `orcamento_mes_id` INTEGER NOT NULL, `id_usuario` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cardId",
+            "columnName": "cartao_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "budgetMonthId",
+            "columnName": "orcamento_mes_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "id_usuario",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_cartao_meses_cartao_id_orcamento_mes_id",
+            "unique": true,
+            "columnNames": [
+              "cartao_id",
+              "orcamento_mes_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_cartao_meses_cartao_id_orcamento_mes_id` ON `${TABLE_NAME}` (`cartao_id`, `orcamento_mes_id`)"
+          },
+          {
+            "name": "index_cartao_meses_id_usuario",
+            "unique": false,
+            "columnNames": [
+              "id_usuario"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_cartao_meses_id_usuario` ON `${TABLE_NAME}` (`id_usuario`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "cartao_lancamentos",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `cartao_mes_id` INTEGER NOT NULL, `descricao` TEXT NOT NULL, `valor_centavos` INTEGER NOT NULL, `tipo_recorrencia` TEXT NOT NULL, `paga` INTEGER NOT NULL DEFAULT 0, `id_usuario` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cardMonthId",
+            "columnName": "cartao_mes_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "descricao",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "amountCents",
+            "columnName": "valor_centavos",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recurrenceType",
+            "columnName": "tipo_recorrencia",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isPaid",
+            "columnName": "paga",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "id_usuario",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_cartao_lancamentos_cartao_mes_id",
+            "unique": false,
+            "columnNames": [
+              "cartao_mes_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_cartao_lancamentos_cartao_mes_id` ON `${TABLE_NAME}` (`cartao_mes_id`)"
+          },
+          {
+            "name": "index_cartao_lancamentos_id_usuario",
+            "unique": false,
+            "columnNames": [
+              "id_usuario"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_cartao_lancamentos_id_usuario` ON `${TABLE_NAME}` (`id_usuario`)"
+          }
+        ],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e73585e260e41e9d7740bd3399fbd3ee')"
+    ]
+  }
+}

@@ -128,7 +128,7 @@ class AuthViewModel(
                     isAuthenticated = false,
                     userId = null,
                     accountName = "",
-                    message = "Sessao local encerrada."
+                    message = "Sessão local encerrada."
                 )
             }
         }
