@@ -5,7 +5,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
@@ -77,11 +80,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -128,6 +134,8 @@ import java.util.Calendar
 import java.util.Locale
 import java.util.TimeZone
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private enum class MainTab(val label: String, val bottomLabel: String = label) {
     Dashboard("Painel"),
@@ -1920,13 +1928,21 @@ private fun FilterRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         EntryFilter.entries.forEach { filter ->
+            val selected = filter == current
             FilterChip(
-                selected = filter == current,
+                selected = selected,
                 onClick = { onSelect(filter) },
-                label = { Text(filter.label) },
+                label = {
+                    Text(
+                        text = filter.label,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                    )
+                },
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = HfBlueSoft,
-                    selectedLabelColor = HfBlue
+                    containerColor = Color.White,
+                    labelColor = HfText,
+                    selectedContainerColor = HfBlue,
+                    selectedLabelColor = Color.White
                 )
             )
         }
@@ -2479,6 +2495,24 @@ private fun EmptyInline(message: String) {
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun Modifier.keepVisibleOnFocus(): Modifier {
+    val requester = remember { BringIntoViewRequester() }
+    val scope = rememberCoroutineScope()
+    return this
+        .bringIntoViewRequester(requester)
+        .onFocusChanged { focusState ->
+            if (focusState.isFocused) {
+                scope.launch {
+                    requester.bringIntoView()
+                    delay(250)
+                    requester.bringIntoView()
+                }
+            }
+        }
+}
+
 @Composable
 private fun CurrencyTextField(
     value: String,
@@ -2522,7 +2556,7 @@ private fun CurrencyTextField(
         placeholder = { Text("0,00") },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        modifier = modifier
+        modifier = modifier.keepVisibleOnFocus()
     )
 }
 
@@ -2534,6 +2568,7 @@ private fun BrazilianDateField(
     modifier: Modifier = Modifier
 ) {
     var calendarOpen by rememberSaveable { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
     Box(modifier = modifier) {
         OutlinedTextField(
             value = formatDateBr(dateIso),
@@ -2542,12 +2577,17 @@ private fun BrazilianDateField(
             placeholder = { Text("DD/MM/AAAA") },
             readOnly = true,
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .keepVisibleOnFocus()
         )
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .clickable { calendarOpen = true }
+                .clickable {
+                    focusManager.clearFocus(force = true)
+                    calendarOpen = true
+                }
         )
     }
 
@@ -2569,8 +2609,10 @@ private fun BrazilianDateField(
         }
         LaunchedEffect(datePickerState.selectedDateMillis) {
             datePickerState.selectedDateMillis?.let { selectedMillis ->
+                focusManager.clearFocus(force = true)
                 onDateSelected(isoDateFromUtcMillis(selectedMillis))
                 calendarOpen = false
+                focusManager.clearFocus(force = true)
             }
         }
     }
@@ -2628,6 +2670,12 @@ private fun EntrySheet(
         containerColor = HfSurface
     ) {
         SheetContent(title = title) {
+            CategoryDropdown(
+                categories = categories,
+                selectedId = selectedCategoryId,
+                fallbackLabel = "Selecione categoria",
+                onSelect = { selectedCategoryId = it }
+            )
             DescriptionDropdownField(
                 value = description,
                 onValueChange = { description = it },
@@ -2643,18 +2691,14 @@ private fun EntrySheet(
                 onValueChange = { complement = it },
                 label = { Text("Complemento") },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .keepVisibleOnFocus()
             )
             CurrencyTextField(
                 value = amount,
                 onValueChange = { amount = it },
                 modifier = Modifier.fillMaxWidth()
-            )
-            CategoryDropdown(
-                categories = categories,
-                selectedId = selectedCategoryId,
-                fallbackLabel = "Selecione categoria",
-                onSelect = { selectedCategoryId = it }
             )
             BrazilianDateField(
                 dateIso = dateIso,
@@ -2704,7 +2748,9 @@ private fun EntrySheet(
                     label = { Text("Parcelas") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .keepVisibleOnFocus()
                 )
             }
             Button(
@@ -2753,7 +2799,9 @@ private fun BudgetSheet(
                 onValueChange = { year = it.filter(Char::isDigit).take(4) },
                 label = { Text("Ano") },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .keepVisibleOnFocus()
             )
             Button(
                 onClick = { onSave(year) },
@@ -2790,7 +2838,9 @@ private fun CategorySheet(
                 onValueChange = { name = it },
                 label = { Text("Nome") },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .keepVisibleOnFocus()
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
@@ -2870,7 +2920,9 @@ private fun PredefinedExpenseSheet(
                 onValueChange = { description = it },
                 label = { Text("Descrição") },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .keepVisibleOnFocus()
             )
             CategoryDropdown(
                 categories = categories,
@@ -2911,7 +2963,9 @@ private fun PredefinedRevenueSheet(
                 onValueChange = { description = it },
                 label = { Text("Descrição") },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .keepVisibleOnFocus()
             )
             FilterChip(
                 selected = recurring,
@@ -2951,7 +3005,9 @@ private fun CardSheet(
                 onValueChange = { name = it },
                 label = { Text("Nome do cartão") },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .keepVisibleOnFocus()
             )
             CurrencyTextField(
                 value = limit,
@@ -3014,7 +3070,7 @@ private fun CardChargeSheet(
     months: List<Int>,
     initialMonth: Int,
     initialCardId: Long? = cards.firstOrNull()?.id,
-    initialCategoryId: Long? = categories.firstOrNull()?.id,
+    initialCategoryId: Long? = null,
     initialDescription: String = "",
     initialComplement: String = "",
     initialAmount: String = "",
@@ -3081,7 +3137,9 @@ private fun CardChargeSheet(
                 onValueChange = { complement = it },
                 label = { Text("Complemento") },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .keepVisibleOnFocus()
             )
             CurrencyTextField(
                 value = amount,
@@ -3136,7 +3194,9 @@ private fun CardChargeSheet(
                     label = { Text("Parcelas") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .keepVisibleOnFocus()
                 )
             }
             Button(
@@ -3227,7 +3287,9 @@ private fun DescriptionDropdownField(
                     }
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .keepVisibleOnFocus()
         )
         DropdownMenu(
             expanded = expanded,
