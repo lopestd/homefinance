@@ -1,5 +1,8 @@
 package com.homefinance.app.feature.home
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
@@ -118,6 +121,7 @@ import com.homefinance.app.core.ui.theme.HfSurface
 import com.homefinance.app.core.ui.theme.HfSurfaceMuted
 import com.homefinance.app.core.ui.theme.HfTeal
 import com.homefinance.app.core.ui.theme.HfText
+import com.homefinance.app.feature.backup.BackupUiState
 import com.homefinance.app.feature.finance.FinanceUiState
 import java.text.NumberFormat
 import java.util.Calendar
@@ -136,7 +140,8 @@ private enum class MainTab(val label: String, val bottomLabel: String = label) {
 private enum class MoreSection {
     Menu,
     Relatorios,
-    Configuracoes
+    Configuracoes,
+    Backup
 }
 
 private enum class EntryFilter(val label: String) {
@@ -188,7 +193,11 @@ private data class PredefinedDescriptionOption(
 fun HomeScreen(
     accountName: String,
     uiState: FinanceUiState,
+    backupUiState: BackupUiState,
     onLogout: () -> Unit,
+    onExportBackup: (Uri) -> Unit,
+    onRestoreBackup: (Uri) -> Unit,
+    onClearBackupMessage: () -> Unit,
     onSelectBudget: (Long?) -> Unit,
     onCreateBudget: (String) -> Unit,
     onUpdateBudget: (Long, String) -> Unit,
@@ -287,7 +296,6 @@ fun HomeScreen(
     val budgetMonths = selectedBudgetMonths(uiState)
     var selectedMonth by rememberSaveable { mutableStateOf(currentMonth(budgetMonths)) }
     var cardsSelectedMonth by rememberSaveable { mutableStateOf(selectedMonth) }
-    var cardsOpenVersion by rememberSaveable { mutableStateOf(0) }
 
     var revenueSheetOpen by rememberSaveable { mutableStateOf(false) }
     var expenseSheetOpen by rememberSaveable { mutableStateOf(false) }
@@ -308,6 +316,17 @@ fun HomeScreen(
     var editingPredefinedRevenue by remember { mutableStateOf<PredefinedRevenueItem?>(null) }
     var editingCard by remember { mutableStateOf<CardItem?>(null) }
     var pendingDelete by remember { mutableStateOf<DeleteTarget?>(null) }
+    var pendingRestoreUri by rememberSaveable { mutableStateOf<String?>(null) }
+    val createBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        uri?.let(onExportBackup)
+    }
+    val openBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        pendingRestoreUri = uri?.toString()
+    }
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(uiState.selectedBudgetId, budgetMonths) {
@@ -344,6 +363,14 @@ fun HomeScreen(
         }
     }
 
+    LaunchedEffect(backupUiState.message) {
+        val message = backupUiState.message
+        if (!message.isNullOrBlank()) {
+            snackbarHostState.showSnackbar(message)
+            onClearBackupMessage()
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -371,7 +398,6 @@ fun HomeScreen(
                     selectedTab = selectedTab,
                     onSelectTab = {
                         if (it == MainTab.Cartoes && selectedTabName != it.name) {
-                            cardsOpenVersion += 1
                             cardsSelectedMonth = selectedMonth
                         }
                         selectedTabName = it.name
@@ -421,7 +447,6 @@ fun HomeScreen(
                     uiState = uiState,
                     months = budgetMonths,
                     selectedMonth = cardsSelectedMonth,
-                    openVersion = cardsOpenVersion,
                     onSelectMonth = { cardsSelectedMonth = it },
                     onOpenLimitSheet = { cardLimitSheetOpen = true },
                     onCloseInvoice = onCloseCardInvoice,
@@ -436,6 +461,10 @@ fun HomeScreen(
                     totals = totals,
                     onOpenRelatorios = { moreSectionName = MoreSection.Relatorios.name },
                     onOpenConfiguracoes = { moreSectionName = MoreSection.Configuracoes.name },
+                    onOpenBackup = { moreSectionName = MoreSection.Backup.name },
+                    backupUiState = backupUiState,
+                    onGenerateBackup = { createBackupLauncher.launch(defaultBackupFileName()) },
+                    onPickRestoreBackup = { openBackupLauncher.launch(arrayOf("application/json", "text/*", "*/*")) },
                     onOpenBudgetSheet = { budgetSheetOpen = true },
                     onEditBudget = { editingBudget = it },
                     onOpenCategorySheet = { categorySheetOpen = true },
@@ -756,6 +785,29 @@ fun HomeScreen(
             }
         )
     }
+
+    pendingRestoreUri?.let { restoreUri ->
+        AlertDialog(
+            onDismissRequest = { pendingRestoreUri = null },
+            title = { Text("Restaurar backup?") },
+            text = { Text("A restauração substituirá os dados locais atuais.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onRestoreBackup(Uri.parse(restoreUri))
+                        pendingRestoreUri = null
+                    }
+                ) {
+                    Text("Restaurar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingRestoreUri = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -1058,7 +1110,6 @@ private fun CardsScreen(
     uiState: FinanceUiState,
     months: List<Int>,
     selectedMonth: Int,
-    openVersion: Int,
     onSelectMonth: (Int) -> Unit,
     onOpenLimitSheet: () -> Unit,
     onCloseInvoice: (Long, Long, Int) -> Unit,
@@ -1079,9 +1130,6 @@ private fun CardsScreen(
             }?.cardId
             selectedCardId = openCardId ?: uiState.cards.firstOrNull()?.id
         }
-    }
-    LaunchedEffect(openVersion, uiState.selectedBudgetId) {
-        selectedCardId = null
     }
 
     val selectedCard = uiState.cards.firstOrNull { it.id == selectedCardId }
@@ -1166,6 +1214,10 @@ private fun MoreScreen(
     totals: FinanceTotals,
     onOpenRelatorios: () -> Unit,
     onOpenConfiguracoes: () -> Unit,
+    onOpenBackup: () -> Unit,
+    backupUiState: BackupUiState,
+    onGenerateBackup: () -> Unit,
+    onPickRestoreBackup: () -> Unit,
     onOpenBudgetSheet: () -> Unit,
     onEditBudget: (BudgetItem) -> Unit,
     onOpenCategorySheet: () -> Unit,
@@ -1183,7 +1235,8 @@ private fun MoreScreen(
         MoreSection.Menu -> MoreMenu(
             padding = padding,
             onOpenRelatorios = onOpenRelatorios,
-            onOpenConfiguracoes = onOpenConfiguracoes
+            onOpenConfiguracoes = onOpenConfiguracoes,
+            onOpenBackup = onOpenBackup
         )
         MoreSection.Relatorios -> ReportsScreen(
             padding = padding,
@@ -1206,6 +1259,12 @@ private fun MoreScreen(
             onEditCard = onEditCard,
             onOpenCardLimitSheet = onOpenCardLimitSheet
         )
+        MoreSection.Backup -> BackupRestoreScreen(
+            padding = padding,
+            backupUiState = backupUiState,
+            onGenerateBackup = onGenerateBackup,
+            onPickRestoreBackup = onPickRestoreBackup
+        )
     }
 }
 
@@ -1213,7 +1272,8 @@ private fun MoreScreen(
 private fun MoreMenu(
     padding: PaddingValues,
     onOpenRelatorios: () -> Unit,
-    onOpenConfiguracoes: () -> Unit
+    onOpenConfiguracoes: () -> Unit,
+    onOpenBackup: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -1237,6 +1297,55 @@ private fun MoreMenu(
                 icon = Icons.Filled.Settings,
                 onClick = onOpenConfiguracoes
             )
+        }
+        item {
+            MoreActionCard(
+                title = "Backup e Restauração",
+                subtitle = "Cópia completa dos perfis e dados locais",
+                icon = Icons.Filled.AccountCircle,
+                onClick = onOpenBackup
+            )
+        }
+    }
+}
+
+@Composable
+private fun BackupRestoreScreen(
+    padding: PaddingValues,
+    backupUiState: BackupUiState,
+    onGenerateBackup: () -> Unit,
+    onPickRestoreBackup: () -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(padding),
+        contentPadding = PaddingValues(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        item {
+            ElevatedPanel {
+                Text("Backup e Restauração", style = MaterialTheme.typography.titleMedium, color = HfText)
+                Text(
+                    text = "O backup inclui todos os perfis locais e suas informações.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = HfMuted
+                )
+                Button(
+                    onClick = onGenerateBackup,
+                    enabled = !backupUiState.isRunning,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (backupUiState.isRunning) "Processando..." else "Gerar backup")
+                }
+                OutlinedButton(
+                    onClick = onPickRestoreBackup,
+                    enabled = !backupUiState.isRunning,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Restaurar backup")
+                }
+            }
         }
     }
 }
@@ -3347,6 +3456,7 @@ private fun moreSectionLabel(section: MoreSection): String {
         MoreSection.Menu -> "Mais"
         MoreSection.Relatorios -> "Relatórios"
         MoreSection.Configuracoes -> "Configurações"
+        MoreSection.Backup -> "Backup"
     }
 }
 
@@ -3407,6 +3517,18 @@ private fun selectedBudgetMonths(uiState: FinanceUiState): List<Int> {
     return uiState.budgets.firstOrNull { it.id == uiState.selectedBudgetId }?.months
         ?.ifEmpty { (1..12).toList() }
         ?: (1..12).toList()
+}
+
+private fun defaultBackupFileName(): String {
+    val calendar = Calendar.getInstance()
+    return "homefinance-backup-%04d-%02d-%02d-%02d%02d.json".format(
+        Locale.US,
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH) + 1,
+        calendar.get(Calendar.DAY_OF_MONTH),
+        calendar.get(Calendar.HOUR_OF_DAY),
+        calendar.get(Calendar.MINUTE)
+    )
 }
 
 private fun currentMonth(allowedMonths: List<Int>): Int {

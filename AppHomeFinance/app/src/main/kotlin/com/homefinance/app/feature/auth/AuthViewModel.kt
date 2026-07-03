@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.homefinance.app.core.validation.validateDisplayName
 import com.homefinance.app.core.validation.validateEmail
-import com.homefinance.app.core.validation.validatePassword
 import com.homefinance.app.domain.usecase.BootstrapAuthStateUseCase
 import com.homefinance.app.domain.usecase.CreateLocalAccountUseCase
 import com.homefinance.app.domain.usecase.LoginLocalUseCase
@@ -39,17 +38,43 @@ class AuthViewModel(
                     hasLocalAccount = state.hasLocalAccount,
                     isAuthenticated = state.isAuthenticated,
                     accountName = state.accountName,
-                    userId = state.userId
+                    userId = state.userId,
+                    profiles = state.profiles
                 )
             }
         }
     }
 
-    fun createAccount(name: String, email: String, password: String) {
+    fun handleRestoreCompleted() {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    isAuthenticated = false,
+                    userId = null,
+                    accountName = "",
+                    message = null
+                )
+            }
+            val state = bootstrapAuthStateUseCase()
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    hasLocalAccount = state.hasLocalAccount,
+                    isAuthenticated = false,
+                    accountName = "",
+                    userId = null,
+                    profiles = state.profiles,
+                    message = "Backup restaurado. Selecione um perfil."
+                )
+            }
+        }
+    }
+
+    fun createProfile(name: String, email: String) {
         val nameError = validateDisplayName(name)
         val emailError = validateEmail(email)
-        val passwordError = validatePassword(password)
-        val validationError = nameError ?: emailError ?: passwordError
+        val validationError = nameError ?: emailError
         if (validationError != null) {
             _uiState.update { it.copy(message = validationError) }
             return
@@ -59,8 +84,7 @@ class AuthViewModel(
             _uiState.update { it.copy(isSaving = true, message = null) }
             val result = createAccountUseCase(
                 name = name.trim(),
-                email = email.trim(),
-                password = password
+                email = email.trim()
             )
             _uiState.update { current ->
                 result.fold(
@@ -70,8 +94,9 @@ class AuthViewModel(
                             isAuthenticated = true,
                             userId = it.userId,
                             accountName = it.displayName,
+                            profiles = current.profiles + it.toProfile(),
                             isSaving = false,
-                            message = "Conta local criada com sucesso."
+                            message = "Perfil local criado."
                         )
                     },
                     onFailure = { failure ->
@@ -85,18 +110,10 @@ class AuthViewModel(
         }
     }
 
-    fun login(email: String, password: String) {
-        val emailError = validateEmail(email)
-        val passwordError = validatePassword(password)
-        val validationError = emailError ?: passwordError
-        if (validationError != null) {
-            _uiState.update { it.copy(message = validationError) }
-            return
-        }
-
+    fun selectProfile(userId: Long) {
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, message = null) }
-            val result = loginUseCase(email.trim(), password)
+            val result = loginUseCase(userId)
             _uiState.update { current ->
                 result.fold(
                     onSuccess = { account ->
@@ -136,5 +153,13 @@ class AuthViewModel(
 
     fun clearMessage() {
         _uiState.update { it.copy(message = null) }
+    }
+
+    private fun com.homefinance.app.core.model.LocalAccount.toProfile(): com.homefinance.app.core.model.LocalProfile {
+        return com.homefinance.app.core.model.LocalProfile(
+            userId = userId,
+            displayName = displayName,
+            email = email
+        )
     }
 }

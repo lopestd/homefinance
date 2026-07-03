@@ -6,7 +6,7 @@ import com.homefinance.app.data.repository.AuthRepository
 class LoginLocalUseCase(
     private val authRepository: AuthRepository
 ) {
-    suspend operator fun invoke(email: String, password: String): Result<LocalAccount> {
-        return authRepository.login(email, password)
+    suspend operator fun invoke(userId: Long): Result<LocalAccount> {
+        return authRepository.selectProfile(userId)
     }
 }

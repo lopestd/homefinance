@@ -7,3 +7,9 @@ data class LocalAccount(
     val passwordHash: String,
     val salt: String
 )
+
+data class LocalProfile(
+    val userId: Long,
+    val displayName: String,
+    val email: String
+)

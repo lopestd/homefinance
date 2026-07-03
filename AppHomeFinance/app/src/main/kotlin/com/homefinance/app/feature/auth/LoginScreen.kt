@@ -31,7 +31,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.homefinance.app.R
@@ -46,59 +45,46 @@ import com.homefinance.app.core.ui.theme.HfText
 @Composable
 fun LoginScreen(
     state: AuthUiState,
-    onLogin: (email: String, password: String) -> Unit,
+    onSelectProfile: (Long) -> Unit,
     onNavigateToCreateAccount: () -> Unit
 ) {
-    var email by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
-
     AuthBackground {
         AuthCard {
             AuthBrand()
             Text(
-                text = "Entrar",
+                text = "Quem está usando?",
                 style = MaterialTheme.typography.titleLarge,
                 color = HfText
             )
             Text(
-                text = "Acesse seus dados locais do HomeFinance.",
+                text = "Selecione um perfil local para acessar os dados vinculados.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = HfMuted
             )
             Spacer(Modifier.height(2.dp))
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("E-mail") },
-                singleLine = true
-            )
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Senha") },
-                visualTransformation = PasswordVisualTransformation(),
-                singleLine = true
-            )
-            Button(
-                onClick = { onLogin(email, password) },
-                enabled = !state.isSaving,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                if (state.isSaving) {
-                    CircularProgressIndicator(strokeWidth = 2.dp)
-                } else {
-                    Text("Entrar")
+            if (state.profiles.isEmpty()) {
+                Text("Nenhum perfil local cadastrado.", color = HfMuted)
+            } else {
+                state.profiles.forEach { profile ->
+                    Button(
+                        onClick = { onSelectProfile(profile.userId) },
+                        enabled = !state.isSaving,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(profile.displayName)
+                    }
+                    Text(
+                        text = profile.email,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = HfMuted
+                    )
                 }
             }
-            if (!state.hasLocalAccount) {
-                TextButton(
-                    onClick = onNavigateToCreateAccount,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Criar conta local")
-                }
+            TextButton(
+                onClick = onNavigateToCreateAccount,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Criar novo perfil")
             }
             if (!state.message.isNullOrBlank()) {
                 Text(

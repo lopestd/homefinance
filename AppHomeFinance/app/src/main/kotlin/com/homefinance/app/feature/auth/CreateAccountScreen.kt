@@ -31,7 +31,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.homefinance.app.R
@@ -46,23 +45,22 @@ import com.homefinance.app.core.ui.theme.HfText
 @Composable
 fun CreateAccountScreen(
     state: AuthUiState,
-    onCreateAccount: (name: String, email: String, password: String) -> Unit,
+    onCreateProfile: (name: String, email: String) -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
     var name by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
 
     AuthBackground {
         AuthCard {
             AuthBrand()
             Text(
-                text = "Criar conta local",
+                text = "Criar perfil local",
                 style = MaterialTheme.typography.titleLarge,
                 color = HfText
             )
             Text(
-                text = "Seu HomeFinance fica salvo apenas neste dispositivo.",
+                text = "Identifique o perfil para vincular os dados locais.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = HfMuted
             )
@@ -71,7 +69,7 @@ fun CreateAccountScreen(
                 value = name,
                 onValueChange = { name = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Nome") },
+                label = { Text("Nome do perfil") },
                 singleLine = true
             )
             OutlinedTextField(
@@ -81,23 +79,15 @@ fun CreateAccountScreen(
                 label = { Text("E-mail") },
                 singleLine = true
             )
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Senha") },
-                visualTransformation = PasswordVisualTransformation(),
-                singleLine = true
-            )
             Button(
-                onClick = { onCreateAccount(name, email, password) },
+                onClick = { onCreateProfile(name, email) },
                 enabled = !state.isSaving,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 if (state.isSaving) {
                     CircularProgressIndicator(strokeWidth = 2.dp)
                 } else {
-                    Text("Criar conta")
+                    Text("Criar perfil")
                 }
             }
             if (state.hasLocalAccount) {
@@ -105,7 +95,7 @@ fun CreateAccountScreen(
                     onClick = onNavigateToLogin,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Entrar com conta existente")
+                    Text("Selecionar perfil existente")
                 }
             }
             if (!state.message.isNullOrBlank()) {

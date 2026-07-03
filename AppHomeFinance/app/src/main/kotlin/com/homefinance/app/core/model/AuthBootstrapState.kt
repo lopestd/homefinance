@@ -4,5 +4,6 @@ data class AuthBootstrapState(
     val hasLocalAccount: Boolean,
     val isAuthenticated: Boolean,
     val accountName: String,
-    val userId: Long?
+    val userId: Long?,
+    val profiles: List<LocalProfile> = emptyList()
 )

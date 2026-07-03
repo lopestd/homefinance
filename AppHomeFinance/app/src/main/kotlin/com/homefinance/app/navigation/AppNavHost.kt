@@ -1,5 +1,6 @@
 package com.homefinance.app.navigation
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -14,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.homefinance.app.feature.auth.AuthUiState
+import com.homefinance.app.feature.backup.BackupUiState
 import com.homefinance.app.feature.auth.CreateAccountScreen
 import com.homefinance.app.feature.auth.LoginScreen
 import com.homefinance.app.feature.finance.FinanceViewModel
@@ -22,9 +24,13 @@ import com.homefinance.app.feature.home.HomeScreen
 @Composable
 fun AppNavHost(
     authUiState: AuthUiState,
-    onCreateAccount: (name: String, email: String, password: String) -> Unit,
-    onLogin: (email: String, password: String) -> Unit,
+    backupUiState: BackupUiState,
+    onCreateProfile: (name: String, email: String) -> Unit,
+    onSelectProfile: (Long) -> Unit,
     onLogout: () -> Unit,
+    onExportBackup: (Uri) -> Unit,
+    onRestoreBackup: (Uri) -> Unit,
+    onClearBackupMessage: () -> Unit,
     financeViewModel: FinanceViewModel,
     navController: NavHostController = rememberNavController()
 ) {
@@ -74,7 +80,7 @@ fun AppNavHost(
         composable(AppRoute.CreateAccount.route) {
             CreateAccountScreen(
                 state = authUiState,
-                onCreateAccount = onCreateAccount,
+                onCreateProfile = onCreateProfile,
                 onNavigateToLogin = {
                     navController.navigate(AppRoute.Login.route) {
                         launchSingleTop = true
@@ -85,7 +91,7 @@ fun AppNavHost(
         composable(AppRoute.Login.route) {
             LoginScreen(
                 state = authUiState,
-                onLogin = onLogin,
+                onSelectProfile = onSelectProfile,
                 onNavigateToCreateAccount = {
                     navController.navigate(AppRoute.CreateAccount.route) {
                         launchSingleTop = true
@@ -106,7 +112,11 @@ fun AppNavHost(
             HomeScreen(
                 accountName = authUiState.accountName.ifBlank { "Usuário" },
                 uiState = financeUiState,
+                backupUiState = backupUiState,
                 onLogout = onLogout,
+                onExportBackup = onExportBackup,
+                onRestoreBackup = onRestoreBackup,
+                onClearBackupMessage = onClearBackupMessage,
                 onSelectBudget = financeViewModel::selectBudget,
                 onCreateBudget = financeViewModel::createBudget,
                 onUpdateBudget = financeViewModel::updateBudget,

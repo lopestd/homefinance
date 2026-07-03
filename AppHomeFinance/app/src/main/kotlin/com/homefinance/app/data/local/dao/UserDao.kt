@@ -11,6 +11,9 @@ interface UserDao {
     @Query("SELECT COUNT(1) FROM usuarios")
     suspend fun countUsers(): Int
 
+    @Query("SELECT * FROM usuarios WHERE ativo = 1 ORDER BY nome")
+    suspend fun listActiveUsers(): List<UserEntity>
+
     @Query("SELECT * FROM usuarios WHERE email = :email LIMIT 1")
     suspend fun findByEmail(email: String): UserEntity?
 
@@ -23,4 +26,3 @@ interface UserDao {
     @Update
     suspend fun update(user: UserEntity)
 }
-

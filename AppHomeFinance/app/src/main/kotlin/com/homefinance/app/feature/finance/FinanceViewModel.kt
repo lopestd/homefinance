@@ -28,6 +28,11 @@ class FinanceViewModel(
         refresh(forceLoading = true)
     }
 
+    fun resetAfterRestore() {
+        currentUserId = null
+        _uiState.value = FinanceUiState()
+    }
+
     fun selectBudget(budgetId: Long?) {
         _uiState.update { it.copy(selectedBudgetId = budgetId) }
         refresh(forceLoading = false)
