@@ -28,6 +28,11 @@ data class LancamentoCartaoRow(
     val totalInstallments: Int?
 )
 
+data class CartaoInvoiceKeyRow(
+    val budgetId: Long,
+    val month: Int
+)
+
 @Dao
 interface CartaoDao {
     @Query("SELECT * FROM cartoes WHERE id_usuario = :userId AND ativo = 1 ORDER BY nome")
@@ -110,6 +115,17 @@ interface CartaoDao {
         """
     )
     suspend fun countChargesForInvoice(userId: Long, cardId: Long, budgetId: Long, month: Int): Int
+
+    @Query(
+        """
+        SELECT DISTINCT orcamento_id AS budgetId,
+                        mes_referencia AS month
+        FROM lancamentos_cartao
+        WHERE id_usuario = :userId
+          AND cartao_id = :cardId
+        """
+    )
+    suspend fun listInvoiceKeysForCard(userId: Long, cardId: Long): List<CartaoInvoiceKeyRow>
 
     @Query(
         """

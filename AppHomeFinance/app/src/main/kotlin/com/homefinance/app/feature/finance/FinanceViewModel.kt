@@ -2,10 +2,12 @@ package com.homefinance.app.feature.finance
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.homefinance.app.core.model.BudgetItem
 import com.homefinance.app.core.model.CardMovement
 import com.homefinance.app.core.model.CategoryType
 import com.homefinance.app.core.model.RecurrenceType
 import com.homefinance.app.data.repository.FinanceRepository
+import java.util.Calendar
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -632,11 +634,12 @@ class FinanceViewModel(
             }
             val selectedBudget = _uiState.value.selectedBudgetId
             val snapshot = financeRepository.loadSnapshot(userId, selectedBudget)
+            val defaultBudgetId = resolveDefaultBudgetId(snapshot.budgets)
             val resolvedSelected = when {
                 snapshot.budgets.isEmpty() -> null
-                selectedBudget == null -> snapshot.budgets.first().id
+                selectedBudget == null -> defaultBudgetId
                 snapshot.budgets.any { it.id == selectedBudget } -> selectedBudget
-                else -> snapshot.budgets.first().id
+                else -> defaultBudgetId
             }
             val refreshedSnapshot = if (resolvedSelected != selectedBudget) {
                 financeRepository.loadSnapshot(userId, resolvedSelected)
@@ -688,4 +691,12 @@ class FinanceViewModel(
         if (!allowNegative && signedCents <= 0L) return 0L
         return signedCents
     }
+}
+
+internal fun resolveDefaultBudgetId(
+    budgets: List<BudgetItem>,
+    currentYear: Int = Calendar.getInstance().get(Calendar.YEAR)
+): Long? {
+    return budgets.firstOrNull { it.year == currentYear }?.id
+        ?: budgets.firstOrNull()?.id
 }

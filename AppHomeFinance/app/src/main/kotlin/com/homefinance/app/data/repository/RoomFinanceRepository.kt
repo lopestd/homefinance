@@ -46,6 +46,7 @@ class RoomFinanceRepository(
 
     override suspend fun loadSnapshot(userId: Long, selectedBudgetId: Long?): FinanceSnapshot {
         ensureBudgetMonths(userId)
+        syncAllCardInvoiceExpenses(userId)
         val balances = budgetDao.listInitialBalances(userId).associateBy { it.budgetId }
         val budgets = budgetDao.listByUser(userId).map { budget ->
             BudgetItem(
@@ -350,19 +351,24 @@ class RoomFinanceRepository(
 
     override suspend fun updateCard(userId: Long, cardId: Long, name: String, defaultLimitCents: Long): Result<Unit> {
         return runCatching {
-            val current = cardDao.findCard(userId, cardId)
-                ?: throw IllegalArgumentException("Cartão não encontrado.")
-            val normalized = name.trim()
-            val existing = cardDao.findCardByName(userId, normalized)
-            if (existing != null && existing.id != cardId) {
-                throw IllegalArgumentException("Cartão já cadastrado.")
-            }
-            cardDao.updateCard(
-                current.copy(
-                    name = normalized,
-                    defaultLimitCents = defaultLimitCents.coerceAtLeast(0L)
+            database.withTransaction {
+                val current = cardDao.findCard(userId, cardId)
+                    ?: throw IllegalArgumentException("Cartão não encontrado.")
+                val normalized = name.trim()
+                val existing = cardDao.findCardByName(userId, normalized)
+                if (existing != null && existing.id != cardId) {
+                    throw IllegalArgumentException("Cartão já cadastrado.")
+                }
+                cardDao.updateCard(
+                    current.copy(
+                        name = normalized,
+                        defaultLimitCents = defaultLimitCents.coerceAtLeast(0L)
+                    )
                 )
-            )
+                cardDao.listInvoiceKeysForCard(userId, cardId).forEach {
+                    syncCardInvoiceExpense(userId, cardId, it.budgetId, it.month)
+                }
+            }
         }.map { Unit }
     }
 
@@ -374,17 +380,20 @@ class RoomFinanceRepository(
         limitCents: Long
     ): Result<Unit> {
         return runCatching {
-            validateCard(userId, cardId)
-            validateBudgetMonth(userId, budgetId, month)
-            cardDao.upsertLimit(
-                CartaoLimiteMensalEntity(
-                    cardId = cardId,
-                    budgetId = budgetId,
-                    month = month,
-                    limitCents = limitCents.coerceAtLeast(0L),
-                    userId = userId
+            database.withTransaction {
+                validateCard(userId, cardId)
+                validateBudgetMonth(userId, budgetId, month)
+                cardDao.upsertLimit(
+                    CartaoLimiteMensalEntity(
+                        cardId = cardId,
+                        budgetId = budgetId,
+                        month = month,
+                        limitCents = limitCents.coerceAtLeast(0L),
+                        userId = userId
+                    )
                 )
-            )
+                syncCardInvoiceExpense(userId, cardId, budgetId, month)
+            }
         }.map { Unit }
     }
 
@@ -1004,10 +1013,19 @@ class RoomFinanceRepository(
         val card = cardDao.findCard(userId, cardId) ?: return
         val budget = budgetDao.findById(userId, budgetId) ?: return
         val total = cardDao.invoiceTotalCents(userId, cardId, budgetId, month).coerceAtLeast(0L)
+        val chargeCount = cardDao.countChargesForInvoice(userId, cardId, budgetId, month)
         val existing = despesaDao.findCardInvoiceExpense(userId, cardId, budgetId, month)
-        if (total <= 0L) {
+        if (chargeCount <= 0) {
             despesaDao.deleteOpenCardInvoiceExpense(userId, cardId, budgetId, month)
             return
+        }
+        val isClosed = cardDao.isInvoiceClosed(userId, cardId, budgetId, month)
+        val limit = (cardDao.findLimit(userId, cardId, budgetId, month)?.limitCents
+            ?: card.defaultLimitCents).coerceAtLeast(0L)
+        val invoiceExpenseAmount = if (isClosed) {
+            total
+        } else {
+            maxOf(limit, total)
         }
         val categoryId = ensureCategory(userId, CARD_INVOICE_CATEGORY, CategoryType.DESPESA)
         val description = "Fatura do cartão ${card.name}"
@@ -1019,7 +1037,7 @@ class RoomFinanceRepository(
                     budgetId = budgetId,
                     categoryId = categoryId,
                     description = description,
-                    amountCents = total,
+                    amountCents = invoiceExpenseAmount,
                     month = month,
                     dateIso = dateIso,
                     status = "Pendente",
@@ -1035,7 +1053,7 @@ class RoomFinanceRepository(
                 existing.copy(
                     categoryId = categoryId,
                     description = description,
-                    amountCents = total,
+                    amountCents = invoiceExpenseAmount,
                     month = month,
                     dateIso = dateIso,
                     invoiceCardId = cardId,
@@ -1043,6 +1061,16 @@ class RoomFinanceRepository(
                     invoiceMonth = month
                 )
             )
+        }
+    }
+
+    private suspend fun syncAllCardInvoiceExpenses(userId: Long) {
+        database.withTransaction {
+            cardDao.listCards(userId).forEach { card ->
+                cardDao.listInvoiceKeysForCard(userId, card.id).forEach { invoice ->
+                    syncCardInvoiceExpense(userId, card.id, invoice.budgetId, invoice.month)
+                }
+            }
         }
     }
 

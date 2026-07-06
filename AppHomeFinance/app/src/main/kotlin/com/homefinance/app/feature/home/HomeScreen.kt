@@ -304,6 +304,7 @@ fun HomeScreen(
     val budgetMonths = selectedBudgetMonths(uiState)
     var selectedMonth by rememberSaveable { mutableStateOf(currentMonth(budgetMonths)) }
     var cardsSelectedMonth by rememberSaveable { mutableStateOf(selectedMonth) }
+    var cardsSelectedCardId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     var revenueSheetOpen by rememberSaveable { mutableStateOf(false) }
     var expenseSheetOpen by rememberSaveable { mutableStateOf(false) }
@@ -337,6 +338,7 @@ fun HomeScreen(
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     LaunchedEffect(uiState.selectedBudgetId, budgetMonths) {
         if (selectedMonth !in budgetMonths) {
             selectedMonth = currentMonth(budgetMonths)
@@ -345,6 +347,18 @@ fun HomeScreen(
             cardsSelectedMonth = selectedMonth
         }
     }
+    LaunchedEffect(uiState.cards, uiState.cardSummaries, cardsSelectedMonth, uiState.selectedBudgetId) {
+        if (cardsSelectedCardId == null || uiState.cards.none { it.id == cardsSelectedCardId }) {
+            val openCardId = uiState.cardSummaries.firstOrNull {
+                it.budgetId == uiState.selectedBudgetId &&
+                    it.month == cardsSelectedMonth &&
+                    !it.isClosed &&
+                    it.invoiceCents > 0L
+            }?.cardId
+            cardsSelectedCardId = openCardId ?: uiState.cards.firstOrNull()?.id
+        }
+    }
+    val effectiveCardsSelectedCardId = cardsSelectedCardId ?: uiState.cards.firstOrNull()?.id
 
     val filteredUiState = remember(uiState, selectedMonth) {
         uiState.copy(
@@ -419,7 +433,22 @@ fun HomeScreen(
                 when {
                     selectedTab == MainTab.Receitas -> AddFab(onClick = { revenueSheetOpen = true })
                     selectedTab == MainTab.Despesas -> AddFab(onClick = { expenseSheetOpen = true })
-                    selectedTab == MainTab.Cartoes -> AddFab(onClick = { cardChargeSheetOpen = true })
+                    selectedTab == MainTab.Cartoes -> AddFab(
+                        onClick = {
+                            val selectedCardSummary = uiState.cardSummaries.firstOrNull {
+                                it.cardId == effectiveCardsSelectedCardId &&
+                                    it.budgetId == uiState.selectedBudgetId &&
+                                    it.month == cardsSelectedMonth
+                            }
+                            if (selectedCardSummary?.isClosed == true) {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Fatura fechada bloqueia novo lançamento.")
+                                }
+                            } else {
+                                cardChargeSheetOpen = true
+                            }
+                        }
+                    )
                 }
             },
             snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -456,6 +485,8 @@ fun HomeScreen(
                     months = budgetMonths,
                     selectedMonth = cardsSelectedMonth,
                     onSelectMonth = { cardsSelectedMonth = it },
+                    selectedCardId = effectiveCardsSelectedCardId,
+                    onSelectCard = { cardsSelectedCardId = it },
                     onOpenLimitSheet = { cardLimitSheetOpen = true },
                     onCloseInvoice = onCloseCardInvoice,
                     onReopenInvoice = onReopenCardInvoice,
@@ -732,6 +763,7 @@ fun HomeScreen(
             },
             months = budgetMonths,
             initialMonth = cardsSelectedMonth,
+            initialCardId = effectiveCardsSelectedCardId,
             onDismiss = { cardChargeSheetOpen = false },
             onSave = { cardId, categoryId, description, amount, movement, complement, month, dateIso, recurrence, installments, recurrenceMonths ->
                 onCreateCardCharge(cardId, categoryId, description, amount, movement, complement, month, dateIso, recurrence, installments, recurrenceMonths)
@@ -1119,26 +1151,15 @@ private fun CardsScreen(
     months: List<Int>,
     selectedMonth: Int,
     onSelectMonth: (Int) -> Unit,
+    selectedCardId: Long?,
+    onSelectCard: (Long?) -> Unit,
     onOpenLimitSheet: () -> Unit,
     onCloseInvoice: (Long, Long, Int) -> Unit,
     onReopenInvoice: (Long, Long, Int) -> Unit,
     onEditCardCharge: (CardChargeItem) -> Unit,
     onDeleteCardCharge: (Long) -> Unit
 ) {
-    var selectedCardId by rememberSaveable { mutableStateOf<Long?>(null) }
     val selectedBudgetId = uiState.selectedBudgetId
-
-    LaunchedEffect(uiState.cards, uiState.cardSummaries, selectedMonth, selectedBudgetId) {
-        if (selectedCardId == null || uiState.cards.none { it.id == selectedCardId }) {
-            val openCardId = uiState.cardSummaries.firstOrNull {
-                it.budgetId == selectedBudgetId &&
-                    it.month == selectedMonth &&
-                    !it.isClosed &&
-                    it.invoiceCents > 0L
-            }?.cardId
-            selectedCardId = openCardId ?: uiState.cards.firstOrNull()?.id
-        }
-    }
 
     val selectedCard = uiState.cards.firstOrNull { it.id == selectedCardId }
     val summary = uiState.cardSummaries.firstOrNull {
@@ -1170,7 +1191,7 @@ private fun CardsScreen(
                     CardDropdown(
                         cards = uiState.cards,
                         selectedId = selectedCardId,
-                        onSelect = { selectedCardId = it },
+                        onSelect = onSelectCard,
                         modifier = Modifier.weight(1f)
                     )
                     MonthDropdown(
