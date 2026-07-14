@@ -180,10 +180,15 @@ private data class TimelineItem(
     val isIncome: Boolean
 )
 
-private enum class DeleteTargetType {
-    Revenue,
-    Expense,
-    CardCharge
+private enum class DeleteTargetType(val label: String) {
+    Revenue("lançamento de receita"),
+    Expense("lançamento de despesa"),
+    CardCharge("lançamento de cartão"),
+    Budget("orçamento"),
+    Category("categoria"),
+    PredefinedExpense("gasto pré-definido"),
+    PredefinedRevenue("receita pré-definida"),
+    Card("cartão")
 }
 
 private data class DeleteTarget(
@@ -209,8 +214,10 @@ fun HomeScreen(
     onSelectBudget: (Long?) -> Unit,
     onCreateBudget: (String) -> Unit,
     onUpdateBudget: (Long, String) -> Unit,
+    onDeleteBudget: (Long) -> Unit,
     onCreateCategory: (String, CategoryType) -> Unit,
     onUpdateCategory: (Long, String, CategoryType) -> Unit,
+    onDeleteCategory: (Long) -> Unit,
     onCreateRevenue: (
         description: String,
         amount: String,
@@ -238,10 +245,13 @@ fun HomeScreen(
     onUpdateInitialBalance: (String) -> Unit,
     onCreatePredefinedExpense: (String, Long?) -> Unit,
     onUpdatePredefinedExpense: (Long, String, Long?) -> Unit,
+    onDeletePredefinedExpense: (Long) -> Unit,
     onCreatePredefinedRevenue: (String, Boolean) -> Unit,
     onUpdatePredefinedRevenue: (Long, String, Boolean) -> Unit,
+    onDeletePredefinedRevenue: (Long) -> Unit,
     onCreateCard: (String, String) -> Unit,
     onUpdateCard: (Long, String, String) -> Unit,
+    onDeleteCard: (Long) -> Unit,
     onSetCardLimit: (Long?, Int, String) -> Unit,
     onCreateCardCharge: (
         cardId: Long?,
@@ -506,15 +516,20 @@ fun HomeScreen(
                     onPickRestoreBackup = { openBackupLauncher.launch(arrayOf("application/json", "text/*", "*/*")) },
                     onOpenBudgetSheet = { budgetSheetOpen = true },
                     onEditBudget = { editingBudget = it },
+                    onDeleteBudget = { pendingDelete = DeleteTarget(DeleteTargetType.Budget, it) },
                     onOpenCategorySheet = { categorySheetOpen = true },
                     onEditCategory = { editingCategory = it },
+                    onDeleteCategory = { pendingDelete = DeleteTarget(DeleteTargetType.Category, it) },
                     onOpenInitialBalanceSheet = { initialBalanceSheetOpen = true },
                     onOpenPredefinedExpenseSheet = { predefinedExpenseSheetOpen = true },
                     onEditPredefinedExpense = { editingPredefinedExpense = it },
+                    onDeletePredefinedExpense = { pendingDelete = DeleteTarget(DeleteTargetType.PredefinedExpense, it) },
                     onOpenPredefinedRevenueSheet = { predefinedRevenueSheetOpen = true },
                     onEditPredefinedRevenue = { editingPredefinedRevenue = it },
+                    onDeletePredefinedRevenue = { pendingDelete = DeleteTarget(DeleteTargetType.PredefinedRevenue, it) },
                     onOpenCardSheet = { cardSheetOpen = true },
                     onEditCard = { editingCard = it },
+                    onDeleteCard = { pendingDelete = DeleteTarget(DeleteTargetType.Card, it) },
                     onOpenCardLimitSheet = { cardLimitSheetOpen = true }
                 )
             }
@@ -802,7 +817,7 @@ fun HomeScreen(
     pendingDelete?.let { target ->
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
-            title = { Text("Excluir lançamento?") },
+            title = { Text("Excluir ${target.type.label}?") },
             text = { Text("Confirme para excluir ou cancele a ação.") },
             confirmButton = {
                 TextButton(
@@ -811,6 +826,11 @@ fun HomeScreen(
                             DeleteTargetType.Revenue -> onDeleteRevenue(target.id)
                             DeleteTargetType.Expense -> onDeleteExpense(target.id)
                             DeleteTargetType.CardCharge -> onDeleteCardCharge(target.id)
+                            DeleteTargetType.Budget -> onDeleteBudget(target.id)
+                            DeleteTargetType.Category -> onDeleteCategory(target.id)
+                            DeleteTargetType.PredefinedExpense -> onDeletePredefinedExpense(target.id)
+                            DeleteTargetType.PredefinedRevenue -> onDeletePredefinedRevenue(target.id)
+                            DeleteTargetType.Card -> onDeleteCard(target.id)
                         }
                         pendingDelete = null
                     }
@@ -1249,15 +1269,20 @@ private fun MoreScreen(
     onPickRestoreBackup: () -> Unit,
     onOpenBudgetSheet: () -> Unit,
     onEditBudget: (BudgetItem) -> Unit,
+    onDeleteBudget: (Long) -> Unit,
     onOpenCategorySheet: () -> Unit,
     onEditCategory: (CategoryItem) -> Unit,
+    onDeleteCategory: (Long) -> Unit,
     onOpenInitialBalanceSheet: () -> Unit,
     onOpenPredefinedExpenseSheet: () -> Unit,
     onEditPredefinedExpense: (PredefinedExpenseItem) -> Unit,
+    onDeletePredefinedExpense: (Long) -> Unit,
     onOpenPredefinedRevenueSheet: () -> Unit,
     onEditPredefinedRevenue: (PredefinedRevenueItem) -> Unit,
+    onDeletePredefinedRevenue: (Long) -> Unit,
     onOpenCardSheet: () -> Unit,
     onEditCard: (CardItem) -> Unit,
+    onDeleteCard: (Long) -> Unit,
     onOpenCardLimitSheet: () -> Unit
 ) {
     when (section) {
@@ -1277,15 +1302,20 @@ private fun MoreScreen(
             uiState = uiState,
             onOpenBudgetSheet = onOpenBudgetSheet,
             onEditBudget = onEditBudget,
+            onDeleteBudget = onDeleteBudget,
             onOpenCategorySheet = onOpenCategorySheet,
             onEditCategory = onEditCategory,
+            onDeleteCategory = onDeleteCategory,
             onOpenInitialBalanceSheet = onOpenInitialBalanceSheet,
             onOpenPredefinedExpenseSheet = onOpenPredefinedExpenseSheet,
             onEditPredefinedExpense = onEditPredefinedExpense,
+            onDeletePredefinedExpense = onDeletePredefinedExpense,
             onOpenPredefinedRevenueSheet = onOpenPredefinedRevenueSheet,
             onEditPredefinedRevenue = onEditPredefinedRevenue,
+            onDeletePredefinedRevenue = onDeletePredefinedRevenue,
             onOpenCardSheet = onOpenCardSheet,
             onEditCard = onEditCard,
+            onDeleteCard = onDeleteCard,
             onOpenCardLimitSheet = onOpenCardLimitSheet
         )
         MoreSection.Backup -> BackupRestoreScreen(
@@ -1443,15 +1473,20 @@ private fun SettingsScreen(
     uiState: FinanceUiState,
     onOpenBudgetSheet: () -> Unit,
     onEditBudget: (BudgetItem) -> Unit,
+    onDeleteBudget: (Long) -> Unit,
     onOpenCategorySheet: () -> Unit,
     onEditCategory: (CategoryItem) -> Unit,
+    onDeleteCategory: (Long) -> Unit,
     onOpenInitialBalanceSheet: () -> Unit,
     onOpenPredefinedExpenseSheet: () -> Unit,
     onEditPredefinedExpense: (PredefinedExpenseItem) -> Unit,
+    onDeletePredefinedExpense: (Long) -> Unit,
     onOpenPredefinedRevenueSheet: () -> Unit,
     onEditPredefinedRevenue: (PredefinedRevenueItem) -> Unit,
+    onDeletePredefinedRevenue: (Long) -> Unit,
     onOpenCardSheet: () -> Unit,
     onEditCard: (CardItem) -> Unit,
+    onDeleteCard: (Long) -> Unit,
     onOpenCardLimitSheet: () -> Unit
 ) {
     LazyColumn(
@@ -1474,7 +1509,8 @@ private fun SettingsScreen(
                         SettingsLine(
                             title = "Ano ${budget.year}",
                             detail = if (budget.isActive) "Ativo" else "Inativo",
-                            onEdit = { onEditBudget(budget) }
+                            onEdit = { onEditBudget(budget) },
+                            onDelete = { onDeleteBudget(budget.id) }
                         )
                     }
                 }
@@ -1507,7 +1543,8 @@ private fun SettingsScreen(
                         SettingsLine(
                             title = category.name,
                             detail = category.type.name,
-                            onEdit = { onEditCategory(category) }
+                            onEdit = { onEditCategory(category) },
+                            onDelete = { onDeleteCategory(category.id) }
                         )
                     }
                 }
@@ -1527,7 +1564,8 @@ private fun SettingsScreen(
                         SettingsLine(
                             title = item.description,
                             detail = category,
-                            onEdit = { onEditPredefinedExpense(item) }
+                            onEdit = { onEditPredefinedExpense(item) },
+                            onDelete = { onDeletePredefinedExpense(item.id) }
                         )
                     }
                 }
@@ -1546,7 +1584,8 @@ private fun SettingsScreen(
                         SettingsLine(
                             title = item.description,
                             detail = if (item.isRecurring) "Recorrente" else "Eventual",
-                            onEdit = { onEditPredefinedRevenue(item) }
+                            onEdit = { onEditPredefinedRevenue(item) },
+                            onDelete = { onDeletePredefinedRevenue(item.id) }
                         )
                     }
                 }
@@ -1565,7 +1604,8 @@ private fun SettingsScreen(
                         SettingsLine(
                             title = card.name,
                             detail = formatMoney(card.defaultLimitCents),
-                            onEdit = { onEditCard(card) }
+                            onEdit = { onEditCard(card) },
+                            onDelete = { onDeleteCard(card.id) }
                         )
                     }
                     TextButton(onClick = onOpenCardLimitSheet) {
@@ -2427,7 +2467,8 @@ private fun SettingsCard(
 private fun SettingsLine(
     title: String,
     detail: String,
-    onEdit: (() -> Unit)? = null
+    onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -2459,6 +2500,19 @@ private fun SettingsLine(
                     imageVector = Icons.Filled.Edit,
                     contentDescription = "Editar",
                     tint = HfMuted,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+        if (onDelete != null) {
+            IconButton(
+                onClick = onDelete,
+                modifier = Modifier.size(34.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Delete,
+                    contentDescription = "Excluir",
+                    tint = HfRed,
                     modifier = Modifier.size(18.dp)
                 )
             }

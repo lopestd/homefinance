@@ -7,6 +7,12 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 COMPOSE_FILE="${SCRIPT_DIR}/docker-compose.local.yml"
 ENV_FILE="${SCRIPT_DIR}/.env.docker.local"
 ENV_EXAMPLE="${SCRIPT_DIR}/.env.docker.local.example"
+APP_VERSION="$(node -e 'process.stdout.write(require(process.argv[1]).version)' "${PROJECT_ROOT}/frontend/package.json")"
+
+if [[ -z "${APP_VERSION}" ]]; then
+  echo "Nao foi possivel ler a versao em frontend/package.json."
+  exit 1
+fi
 
 if [[ ! -f "${ENV_FILE}" ]]; then
   cp "${ENV_EXAMPLE}" "${ENV_FILE}"
@@ -16,7 +22,7 @@ if [[ ! -f "${ENV_FILE}" ]]; then
 fi
 
 run_compose() {
-  docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" "$@"
+  APP_VERSION="${APP_VERSION}" docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" "$@"
 }
 
 ACTION="${1:-up}"

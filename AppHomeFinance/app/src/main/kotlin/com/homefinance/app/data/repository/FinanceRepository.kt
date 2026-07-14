@@ -9,8 +9,10 @@ interface FinanceRepository {
     suspend fun loadSnapshot(userId: Long, selectedBudgetId: Long?): FinanceSnapshot
     suspend fun createBudget(userId: Long, year: Int): Result<Unit>
     suspend fun updateBudget(userId: Long, budgetId: Long, year: Int): Result<Unit>
+    suspend fun deleteBudget(userId: Long, budgetId: Long): Result<Unit>
     suspend fun createCategory(userId: Long, name: String, type: CategoryType): Result<Unit>
     suspend fun updateCategory(userId: Long, categoryId: Long, name: String, type: CategoryType): Result<Unit>
+    suspend fun deleteCategory(userId: Long, categoryId: Long): Result<Unit>
     suspend fun updateInitialBalance(userId: Long, budgetId: Long, amountCents: Long): Result<Unit>
     suspend fun createPredefinedExpense(
         userId: Long,
@@ -24,6 +26,7 @@ interface FinanceRepository {
         categoryId: Long,
         description: String
     ): Result<Unit>
+    suspend fun deletePredefinedExpense(userId: Long, predefinedExpenseId: Long): Result<Unit>
 
     suspend fun createPredefinedRevenue(
         userId: Long,
@@ -37,9 +40,11 @@ interface FinanceRepository {
         description: String,
         isRecurring: Boolean
     ): Result<Unit>
+    suspend fun deletePredefinedRevenue(userId: Long, predefinedRevenueId: Long): Result<Unit>
 
     suspend fun createCard(userId: Long, name: String, defaultLimitCents: Long): Result<Unit>
     suspend fun updateCard(userId: Long, cardId: Long, name: String, defaultLimitCents: Long): Result<Unit>
+    suspend fun deleteCard(userId: Long, cardId: Long): Result<Unit>
     suspend fun setCardLimit(
         userId: Long,
         cardId: Long,

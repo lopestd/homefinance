@@ -6,13 +6,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 IMAGE_NAME="brdocker2020/homefinance"
 DOCKER_USER="${DOCKER_USER:-}"
-AUTO_VERSION="$(date +%y%m%d.%H%M)"
-VERSION="$AUTO_VERSION"
+VERSION="$(node -e 'process.stdout.write(require(process.argv[1]).version)' "$ROOT_DIR/frontend/package.json")"
 MULTI_ARCH_PUSHED=0
 
-read -r -p "Versao da imagem (ENTER para ${AUTO_VERSION}): " VERSION_INPUT
-if [[ -n "${VERSION_INPUT:-}" ]]; then
-  VERSION="$VERSION_INPUT"
+if [[ -z "$VERSION" ]]; then
+  echo "Nao foi possivel ler a versao em frontend/package.json."
+  exit 1
 fi
 
 TAG_VERSION="${IMAGE_NAME}:${VERSION}"
@@ -54,6 +53,7 @@ if [[ "${MULTI_ARCH,,}" == "s" || "${MULTI_ARCH,,}" == "sim" ]]; then
   docker buildx build \
     -f "$SCRIPT_DIR/Dockerfile" \
     --platform linux/amd64,linux/arm64 \
+    --build-arg "APP_VERSION=$VERSION" \
     -t "$TAG_VERSION" \
     -t "$TAG_LATEST" \
     --push \
@@ -63,6 +63,7 @@ if [[ "${MULTI_ARCH,,}" == "s" || "${MULTI_ARCH,,}" == "sim" ]]; then
 else
   docker build \
     -f "$SCRIPT_DIR/Dockerfile" \
+    --build-arg "APP_VERSION=$VERSION" \
     -t "$TAG_VERSION" \
     -t "$TAG_LATEST" \
     "$ROOT_DIR"
@@ -80,5 +81,6 @@ fi
 echo
 echo "============================================"
 echo " Build concluido com sucesso!"
+echo " Versao da aplicacao: $VERSION"
 echo " Imagem: $TAG_VERSION"
 echo "============================================"

@@ -72,6 +72,17 @@ class FinanceViewModel(
         }
     }
 
+    fun deleteBudget(budgetId: Long) {
+        val userId = currentUserId ?: return
+        viewModelScope.launch {
+            val result = financeRepository.deleteBudget(userId, budgetId)
+            _uiState.update {
+                it.copy(message = result.exceptionOrNull()?.message ?: "Orçamento excluído.")
+            }
+            refresh(forceLoading = false)
+        }
+    }
+
     fun createCategory(name: String, type: CategoryType) {
         val userId = currentUserId ?: return
         val normalized = name.trim()
@@ -99,6 +110,17 @@ class FinanceViewModel(
             val result = financeRepository.updateCategory(userId, categoryId, normalized, type)
             _uiState.update {
                 it.copy(message = result.exceptionOrNull()?.message ?: "Categoria atualizada.")
+            }
+            refresh(forceLoading = false)
+        }
+    }
+
+    fun deleteCategory(categoryId: Long) {
+        val userId = currentUserId ?: return
+        viewModelScope.launch {
+            val result = financeRepository.deleteCategory(userId, categoryId)
+            _uiState.update {
+                it.copy(message = result.exceptionOrNull()?.message ?: "Categoria excluída.")
             }
             refresh(forceLoading = false)
         }
@@ -285,6 +307,17 @@ class FinanceViewModel(
         }
     }
 
+    fun deletePredefinedExpense(predefinedExpenseId: Long) {
+        val userId = currentUserId ?: return
+        viewModelScope.launch {
+            val result = financeRepository.deletePredefinedExpense(userId, predefinedExpenseId)
+            _uiState.update {
+                it.copy(message = result.exceptionOrNull()?.message ?: "Gasto pré-definido excluído.")
+            }
+            refresh(forceLoading = false)
+        }
+    }
+
     fun createPredefinedRevenue(description: String, isRecurring: Boolean) {
         val userId = currentUserId ?: return
         val normalized = description.trim()
@@ -312,6 +345,17 @@ class FinanceViewModel(
             val result = financeRepository.updatePredefinedRevenue(userId, predefinedRevenueId, normalized, isRecurring)
             _uiState.update {
                 it.copy(message = result.exceptionOrNull()?.message ?: "Receita pré-definida atualizada.")
+            }
+            refresh(forceLoading = false)
+        }
+    }
+
+    fun deletePredefinedRevenue(predefinedRevenueId: Long) {
+        val userId = currentUserId ?: return
+        viewModelScope.launch {
+            val result = financeRepository.deletePredefinedRevenue(userId, predefinedRevenueId)
+            _uiState.update {
+                it.copy(message = result.exceptionOrNull()?.message ?: "Receita pré-definida excluída.")
             }
             refresh(forceLoading = false)
         }
@@ -346,6 +390,17 @@ class FinanceViewModel(
             val result = financeRepository.updateCard(userId, cardId, normalized, cents)
             _uiState.update {
                 it.copy(message = result.exceptionOrNull()?.message ?: "Cartão atualizado.")
+            }
+            refresh(forceLoading = false)
+        }
+    }
+
+    fun deleteCard(cardId: Long) {
+        val userId = currentUserId ?: return
+        viewModelScope.launch {
+            val result = financeRepository.deleteCard(userId, cardId)
+            _uiState.update {
+                it.copy(message = result.exceptionOrNull()?.message ?: "Cartão excluído.")
             }
             refresh(forceLoading = false)
         }

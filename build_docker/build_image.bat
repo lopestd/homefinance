@@ -5,39 +5,22 @@ set ROOT_DIR=%SCRIPT_DIR%..
 set IMAGE_NAME=brdocker2020/homefinance
 if not defined DOCKER_USER set "DOCKER_USER="
 
-REM Gerar versao automatica no formato yymmdd.hhmm
-REM Formato de data no Windows pt-BR: dd/mm/yyyy
-for /f "tokens=1-3 delims=/" %%a in ("%DATE:~0,10%") do (
-    set DAY=%%a
-    set MONTH=%%b
-    set YEAR=%%c
+pushd "%ROOT_DIR%"
+for /f %%i in ('node -p "require('./frontend/package.json').version"') do set VERSION=%%i
+if "%VERSION%"=="" (
+    echo Nao foi possivel ler a versao em frontend/package.json.
+    popd
+    exit /b 1
 )
-for /f "tokens=1-2 delims=:,." %%a in ("%TIME%") do (
-    set HOUR=%%a
-    set MINUTE=%%b
-)
-REM Remover espacos em branco (hora pode ter espaco antes de 10:00)
-set YEAR=%YEAR: =0%
-set MONTH=%MONTH: =0%
-set DAY=%DAY: =0%
-set HOUR=%HOUR: =0%
-set MINUTE=%MINUTE: =0%
-REM Formatar versao: yymmdd.hhmm
-set AUTO_VERSION=%YEAR:~2,2%%MONTH%%DAY%.%HOUR%%MINUTE%
-
-set VERSION=%AUTO_VERSION%
-set /p VERSION_INPUT=Versao da imagem (ENTER para %AUTO_VERSION%):
-if not "%VERSION_INPUT%"=="" set VERSION=%VERSION_INPUT%
 set TAG_VERSION=%IMAGE_NAME%:%VERSION%
 set TAG_LATEST=%IMAGE_NAME%:latest
 
 set /p MULTI_ARCH=Build multi-arch (amd64+arm64) e publicar? (s/N):
 set MULTI_ARCH_PUSHED=0
 
-pushd "%ROOT_DIR%"
 if /I "%MULTI_ARCH%"=="s" goto buildx
 if /I "%MULTI_ARCH%"=="sim" goto buildx
-docker build -f "%SCRIPT_DIR%Dockerfile" -t %TAG_VERSION% -t %TAG_LATEST% "%ROOT_DIR%"
+docker build -f "%SCRIPT_DIR%Dockerfile" --build-arg APP_VERSION=%VERSION% -t %TAG_VERSION% -t %TAG_LATEST% "%ROOT_DIR%"
 if errorlevel 1 exit /b 1
 goto afterbuild
 
@@ -63,7 +46,7 @@ if errorlevel 1 (
     )
 )
 docker buildx create --use --name homefinance_multiarch >nul 2>&1
-docker buildx build -f "%SCRIPT_DIR%Dockerfile" --platform linux/amd64,linux/arm64 -t %TAG_VERSION% -t %TAG_LATEST% --push "%ROOT_DIR%"
+docker buildx build -f "%SCRIPT_DIR%Dockerfile" --platform linux/amd64,linux/arm64 --build-arg APP_VERSION=%VERSION% -t %TAG_VERSION% -t %TAG_LATEST% --push "%ROOT_DIR%"
 if errorlevel 1 exit /b 1
 set MULTI_ARCH_PUSHED=1
 
@@ -105,6 +88,7 @@ docker push %TAG_LATEST%
 echo.
 echo ============================================
 echo  Build concluido com sucesso!
+echo  Versao da aplicacao: %VERSION%
 echo  Imagem: %TAG_VERSION%
 echo ============================================
 endlocal

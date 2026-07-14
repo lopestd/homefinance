@@ -1,30 +1,68 @@
 import { useMemo, useState } from "react";
 
+const isEmptyFilterValue = (value) =>
+  value === null || value === "" || value === undefined;
+
+const normalizeSmartSearchText = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const getSmartSearchTerms = (value, columnConfig) => {
+  const minimumLength = Number.isInteger(columnConfig?.minimumSearchLength)
+    ? columnConfig.minimumSearchLength
+    : 3;
+
+  return normalizeSmartSearchText(value)
+    .split(" ")
+    .filter((term) => term.length >= minimumLength);
+};
+
+const isSmartTextFilter = (columnConfig) =>
+  columnConfig?.type === "text" &&
+  Array.isArray(columnConfig.searchFields) &&
+  columnConfig.searchFields.length > 0;
+
+const isFilterActive = (columnKey, filterValue, columnConfigs) => {
+  if (isEmptyFilterValue(filterValue)) return false;
+
+  const columnConfig = columnConfigs[columnKey];
+  if (isSmartTextFilter(columnConfig)) {
+    return getSmartSearchTerms(filterValue, columnConfig).length > 0;
+  }
+
+  return true;
+};
+
 /**
- * Hook customizado para gerenciar filtros e ordenação em tabelas
+ * Hook customizado para gerenciar filtros e ordenaÃ§Ã£o em tabelas
  * @param {Array} items - Lista de itens a ser filtrada/ordenada
- * @param {Object} columnConfigs - Configuração de cada coluna
- * @param {Object} initialSort - Ordenação inicial opcional ({ column, direction })
- * @returns {Object} Objeto com funções e estados para gerenciar filtros e ordenação
+ * @param {Object} columnConfigs - ConfiguraÃ§Ã£o de cada coluna
+ * @param {Object} initialSort - OrdenaÃ§Ã£o inicial opcional ({ column, direction })
+ * @returns {Object} Objeto com funÃ§Ãµes e estados para gerenciar filtros e ordenaÃ§Ã£o
  */
 const useTableFilters = (items, columnConfigs, initialSort = { column: null, direction: "asc" }) => {
   // Estado para filtros por coluna
   const [filters, setFilters] = useState({});
 
-  // Estado para ordenação
+  // Estado para ordenaÃ§Ã£o
   const [sortConfig, setSortConfig] = useState(initialSort);
 
   /**
    * Aplica filtros aos itens
    * @param {Array} items - Lista de itens
    * @param {Object} filters - Objeto com filtros ativos
-   * @param {Object} columnConfigs - Configuração de colunas
+   * @param {Object} columnConfigs - ConfiguraÃ§Ã£o de colunas
    * @returns {Array} Itens filtrados
    */
   const applyFilters = (items, filters, columnConfigs) => {
     return items.filter((item) => {
       return Object.entries(filters).every(([columnKey, filterValue]) => {
-        if (filterValue === null || filterValue === "" || filterValue === undefined) {
+        if (!isFilterActive(columnKey, filterValue, columnConfigs)) {
           return true;
         }
 
@@ -37,6 +75,20 @@ const useTableFilters = (items, columnConfigs, initialSort = { column: null, dir
 
         switch (columnConfig.type) {
           case "text": {
+            if (isSmartTextFilter(columnConfig)) {
+              const searchTerms = getSmartSearchTerms(filterValue, columnConfig);
+              const searchableText = normalizeSmartSearchText(
+                columnConfig.searchFields
+                  .map((field) => item[field])
+                  .filter((value) => value !== null && value !== undefined)
+                  .join(" ")
+              );
+
+              return columnConfig.matchMode === "anyTerms"
+                ? searchTerms.some((term) => searchableText.includes(term))
+                : searchTerms.every((term) => searchableText.includes(term));
+            }
+
             const searchText = String(filterValue).toLowerCase();
             const itemText = String(itemValue || "").toLowerCase();
             return itemText.includes(searchText);
@@ -71,10 +123,10 @@ const useTableFilters = (items, columnConfigs, initialSort = { column: null, dir
   };
 
   /**
-   * Aplica ordenação aos itens
+   * Aplica ordenaÃ§Ã£o aos itens
    * @param {Array} items - Lista de itens
-   * @param {Object} sortConfig - Configuração de ordenação
-   * @param {Object} columnConfigs - Configuração de colunas
+   * @param {Object} sortConfig - ConfiguraÃ§Ã£o de ordenaÃ§Ã£o
+   * @param {Object} columnConfigs - ConfiguraÃ§Ã£o de colunas
    * @returns {Array} Itens ordenados
    */
   const applySort = (items, sortConfig, columnConfigs) => {
@@ -106,7 +158,7 @@ const useTableFilters = (items, columnConfigs, initialSort = { column: null, dir
           case "text":
           case "select":
           default:
-            // Ordenação alfabética (case-insensitive)
+            // OrdenaÃ§Ã£o alfabÃ©tica (case-insensitive)
             comparison = String(aValue || "").toLowerCase().localeCompare(
               String(bValue || "").toLowerCase()
             );
@@ -131,7 +183,7 @@ const useTableFilters = (items, columnConfigs, initialSort = { column: null, dir
   };
 
   /**
-   * Aplica filtros e ordenação aos itens
+   * Aplica filtros e ordenaÃ§Ã£o aos itens
    */
   const filteredAndSortedItems = useMemo(() => {
     let result = [...items];
@@ -139,7 +191,7 @@ const useTableFilters = (items, columnConfigs, initialSort = { column: null, dir
     // Aplicar filtros
     result = applyFilters(result, filters, columnConfigs);
 
-    // Aplicar ordenação
+    // Aplicar ordenaÃ§Ã£o
     result = applySort(result, sortConfig, columnConfigs);
 
     return result;
@@ -177,7 +229,7 @@ const useTableFilters = (items, columnConfigs, initialSort = { column: null, dir
   };
 
   /**
-   * Alterna a ordenação de uma coluna
+   * Alterna a ordenaÃ§Ã£o de uma coluna
    * @param {string} column - Chave da coluna
    */
   const toggleSort = (column) => {
@@ -190,33 +242,33 @@ const useTableFilters = (items, columnConfigs, initialSort = { column: null, dir
           return { column: null, direction: "asc" };
         }
       } else {
-        // Nova coluna, começa com asc
+        // Nova coluna, comeÃ§a com asc
         return { column, direction: "asc" };
       }
     });
   };
 
   /**
-   * Define a direção de ordenação para uma coluna
+   * Define a direÃ§Ã£o de ordenaÃ§Ã£o para uma coluna
    * @param {string} column - Chave da coluna
-   * @param {string} direction - Direção ('asc' ou 'desc')
+   * @param {string} direction - DireÃ§Ã£o ('asc' ou 'desc')
    */
   const setSortDirection = (column, direction) => {
     setSortConfig({ column, direction });
   };
 
   /**
-   * Verifica se há filtros ativos
+   * Verifica se hÃ¡ filtros ativos
    */
   const hasActiveFilters = Object.keys(filters).some(
-    (key) => filters[key] !== null && filters[key] !== "" && filters[key] !== undefined
+    (key) => isFilterActive(key, filters[key], columnConfigs)
   );
 
   /**
-   * Conta quantos filtros estão ativos
+   * Conta quantos filtros estÃ£o ativos
    */
   const activeFiltersCount = Object.keys(filters).filter(
-    (key) => filters[key] !== null && filters[key] !== "" && filters[key] !== undefined
+    (key) => isFilterActive(key, filters[key], columnConfigs)
   ).length;
 
   return {

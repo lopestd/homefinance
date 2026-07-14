@@ -217,6 +217,11 @@
   max-width: 180px;
 }
 
+.logout-button--inline,
+.app-version {
+  display: none;
+}
+
 .logout-button {
   width: 100%;
   border-color: #1e293b;
@@ -383,6 +388,56 @@
 
   .user-meta span {
     color: #cbd5e1;
+  }
+
+  .user-meta {
+    flex: 1;
+  }
+
+  .logout-button--mobile {
+    display: none;
+  }
+
+  .logout-button--inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    margin-left: auto;
+    padding: 0;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 10px;
+    color: #cbd5e1;
+    background: rgba(15, 23, 42, 0.22);
+  }
+
+  .logout-button--inline svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .logout-button--inline:hover {
+    color: #fecaca;
+    border-color: rgba(248, 113, 113, 0.65);
+    background: rgba(127, 29, 29, 0.34);
+  }
+
+  .logout-button--inline:focus-visible {
+    outline: 2px solid #93c5fd;
+    outline-offset: 2px;
+  }
+
+  .app-version {
+    display: block;
+    padding-top: 2px;
+    color: #94a3b8;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+    text-align: center;
   }
 
   .logout-button {

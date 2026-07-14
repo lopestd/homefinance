@@ -292,7 +292,10 @@ const CartaoPage = ({
       type: 'text',
       label: 'Descrição',
       sortable: true,
-      filterable: true
+      filterable: true,
+      searchFields: ['descricaoPesquisa', 'complemento'],
+      minimumSearchLength: 3,
+      matchMode: 'allTerms'
     },
     categoria: {
       key: 'categoria',
@@ -418,6 +421,7 @@ const CartaoPage = ({
     () =>
       filteredLancamentos.map((lancamento) => ({
         ...lancamento,
+        descricaoPesquisa: stripCreditoTag(lancamento.descricao),
         categoria:
           despesasCategorias.find((categoria) => String(categoria.id) === String(lancamento.categoriaId))?.nome || "\u2014"
       })),

@@ -33,4 +33,21 @@ interface CategoriaDao {
 
     @Update
     suspend fun update(category: CategoriaEntity)
+
+    @Query(
+        """
+        SELECT EXISTS(
+            SELECT 1 FROM receitas
+            WHERE id_usuario = :userId AND categoria_id = :categoryId
+            UNION ALL
+            SELECT 1 FROM despesas
+            WHERE id_usuario = :userId AND categoria_id = :categoryId
+            UNION ALL
+            SELECT 1 FROM lancamentos_cartao
+            WHERE id_usuario = :userId AND categoria_id = :categoryId
+        )
+        """
+    )
+    suspend fun hasEntries(userId: Long, categoryId: Long): Boolean
+
 }

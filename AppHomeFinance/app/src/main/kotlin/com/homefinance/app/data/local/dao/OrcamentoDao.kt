@@ -41,6 +41,29 @@ interface OrcamentoDao {
     @Upsert
     suspend fun upsertInitialBalance(balance: SaldoInicialOrcamentoEntity)
 
+    @Query(
+        """
+        SELECT EXISTS(
+            SELECT 1 FROM receitas
+            WHERE id_usuario = :userId AND orcamento_id = :budgetId
+            UNION ALL
+            SELECT 1 FROM despesas
+            WHERE id_usuario = :userId
+              AND (orcamento_id = :budgetId OR fatura_orcamento_id = :budgetId)
+            UNION ALL
+            SELECT 1 FROM lancamentos_cartao
+            WHERE id_usuario = :userId AND orcamento_id = :budgetId
+        )
+        """
+    )
+    suspend fun hasEntries(userId: Long, budgetId: Long): Boolean
+
+    @Query("DELETE FROM orcamento_meses WHERE id_usuario = :userId AND orcamento_id = :budgetId")
+    suspend fun deleteMonthsByBudget(userId: Long, budgetId: Long)
+
+    @Query("DELETE FROM saldo_inicial_orcamento WHERE id_usuario = :userId AND orcamento_id = :budgetId")
+    suspend fun deleteInitialBalanceByBudget(userId: Long, budgetId: Long)
+
     @Query("DELETE FROM orcamentos WHERE id_usuario = :userId AND id = :budgetId")
     suspend fun deleteById(userId: Long, budgetId: Long)
 }

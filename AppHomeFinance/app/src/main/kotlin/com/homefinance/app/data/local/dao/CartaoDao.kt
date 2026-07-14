@@ -59,6 +59,22 @@ interface CartaoDao {
 
     @Query(
         """
+        SELECT EXISTS(
+            SELECT 1 FROM lancamentos_cartao
+            WHERE id_usuario = :userId AND cartao_id = :cardId
+            UNION ALL
+            SELECT 1 FROM despesas
+            WHERE id_usuario = :userId AND fatura_cartao_id = :cardId
+        )
+        """
+    )
+    suspend fun hasEntries(userId: Long, cardId: Long): Boolean
+
+    @Query("DELETE FROM cartoes WHERE id_usuario = :userId AND id = :cardId")
+    suspend fun deleteCard(userId: Long, cardId: Long)
+
+    @Query(
+        """
         SELECT l.id,
                l.orcamento_id AS budgetId,
                l.cartao_id AS cardId,
@@ -189,4 +205,16 @@ interface CartaoDao {
 
     @Upsert
     suspend fun upsertLimit(limit: CartaoLimiteMensalEntity)
+
+    @Query("DELETE FROM cartao_limites_mensais WHERE id_usuario = :userId AND cartao_id = :cardId")
+    suspend fun deleteLimitsByCard(userId: Long, cardId: Long)
+
+    @Query("DELETE FROM cartao_limites_mensais WHERE id_usuario = :userId AND orcamento_id = :budgetId")
+    suspend fun deleteLimitsByBudget(userId: Long, budgetId: Long)
+
+    @Query("DELETE FROM cartao_faturas_fechadas WHERE id_usuario = :userId AND cartao_id = :cardId")
+    suspend fun deleteClosedInvoicesByCard(userId: Long, cardId: Long)
+
+    @Query("DELETE FROM cartao_faturas_fechadas WHERE id_usuario = :userId AND orcamento_id = :budgetId")
+    suspend fun deleteClosedInvoicesByBudget(userId: Long, budgetId: Long)
 }

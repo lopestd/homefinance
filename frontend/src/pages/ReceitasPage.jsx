@@ -74,7 +74,10 @@ const ReceitasPage = ({
       type: 'text',
       label: 'Descrição',
       sortable: true,
-      filterable: true
+      filterable: true,
+      searchFields: ['descricao', 'complemento'],
+      minimumSearchLength: 3,
+      matchMode: 'allTerms'
     },
     categoria: {
       key: 'categoria',

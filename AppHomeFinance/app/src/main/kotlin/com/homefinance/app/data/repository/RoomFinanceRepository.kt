@@ -191,6 +191,25 @@ class RoomFinanceRepository(
         }.map { Unit }
     }
 
+    override suspend fun deleteBudget(userId: Long, budgetId: Long): Result<Unit> {
+        return runCatching {
+            database.withTransaction {
+                budgetDao.findById(userId, budgetId)
+                    ?: throw IllegalArgumentException("Orçamento não encontrado.")
+                if (budgetDao.hasEntries(userId, budgetId)) {
+                    throw IllegalStateException(
+                        "Não é possível excluir este orçamento, pois ele está vinculado a lançamentos."
+                    )
+                }
+                cardDao.deleteLimitsByBudget(userId, budgetId)
+                cardDao.deleteClosedInvoicesByBudget(userId, budgetId)
+                budgetDao.deleteInitialBalanceByBudget(userId, budgetId)
+                budgetDao.deleteMonthsByBudget(userId, budgetId)
+                budgetDao.deleteById(userId, budgetId)
+            }
+        }.map { Unit }
+    }
+
     override suspend fun createCategory(userId: Long, name: String, type: CategoryType): Result<Unit> {
         return runCatching {
             val normalizedName = name.trim()
@@ -223,6 +242,21 @@ class RoomFinanceRepository(
                     type = type.name
                 )
             )
+        }.map { Unit }
+    }
+
+    override suspend fun deleteCategory(userId: Long, categoryId: Long): Result<Unit> {
+        return runCatching {
+            database.withTransaction {
+                val current = categoryDao.findById(userId, categoryId)
+                    ?: throw IllegalArgumentException("Categoria não encontrada.")
+                if (categoryDao.hasEntries(userId, categoryId)) {
+                    throw IllegalStateException(
+                        "Não é possível excluir esta categoria, pois ela está vinculada a lançamentos."
+                    )
+                }
+                categoryDao.update(current.copy(isActive = false))
+            }
         }.map { Unit }
     }
 
@@ -290,6 +324,16 @@ class RoomFinanceRepository(
         }.map { Unit }
     }
 
+    override suspend fun deletePredefinedExpense(userId: Long, predefinedExpenseId: Long): Result<Unit> {
+        return runCatching {
+            database.withTransaction {
+                val current = predefinedDao.findExpenseById(userId, predefinedExpenseId)
+                    ?: throw IllegalArgumentException("Gasto pré-definido não encontrado.")
+                predefinedDao.updateExpense(current.copy(isActive = false))
+            }
+        }.map { Unit }
+    }
+
     override suspend fun createPredefinedRevenue(
         userId: Long,
         description: String,
@@ -333,6 +377,16 @@ class RoomFinanceRepository(
         }.map { Unit }
     }
 
+    override suspend fun deletePredefinedRevenue(userId: Long, predefinedRevenueId: Long): Result<Unit> {
+        return runCatching {
+            database.withTransaction {
+                val current = predefinedDao.findRevenueById(userId, predefinedRevenueId)
+                    ?: throw IllegalArgumentException("Receita pré-definida não encontrada.")
+                predefinedDao.updateRevenue(current.copy(isActive = false))
+            }
+        }.map { Unit }
+    }
+
     override suspend fun createCard(userId: Long, name: String, defaultLimitCents: Long): Result<Unit> {
         return runCatching {
             val normalized = name.trim()
@@ -368,6 +422,23 @@ class RoomFinanceRepository(
                 cardDao.listInvoiceKeysForCard(userId, cardId).forEach {
                     syncCardInvoiceExpense(userId, cardId, it.budgetId, it.month)
                 }
+            }
+        }.map { Unit }
+    }
+
+    override suspend fun deleteCard(userId: Long, cardId: Long): Result<Unit> {
+        return runCatching {
+            database.withTransaction {
+                cardDao.findCard(userId, cardId)
+                    ?: throw IllegalArgumentException("Cartão não encontrado.")
+                if (cardDao.hasEntries(userId, cardId)) {
+                    throw IllegalStateException(
+                        "Não é possível excluir este cartão, pois ele está vinculado a lançamentos."
+                    )
+                }
+                cardDao.deleteLimitsByCard(userId, cardId)
+                cardDao.deleteClosedInvoicesByCard(userId, cardId)
+                cardDao.deleteCard(userId, cardId)
             }
         }.map { Unit }
     }

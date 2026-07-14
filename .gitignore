@@ -52,7 +52,9 @@ docs/*
 !docs/database/**
 !docs/sql/
 !docs/sql/**
-AppHomeFinance/docs/
+AppHomeFinance/docs/*
+!AppHomeFinance/docs/README.md
+!AppHomeFinance/docs/registro-tecnico-2026-07-14.md
 
 # OS files
 Thumbs.db

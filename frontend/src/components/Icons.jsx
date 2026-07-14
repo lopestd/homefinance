@@ -22,6 +22,12 @@ const IconTrash = () => (
   </svg>
 );
 
+const IconLogout = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path fill="currentColor" d="M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5v-2H5V5h5V3zm5.7 4.3-1.4 1.4 2.3 2.3H8v2h8.6l-2.3 2.3 1.4 1.4 4.7-4.7-4.7-4.7z" />
+  </svg>
+);
+
 const IconInfo = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true">
     <path fill="currentColor" d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2zm0 6a1.25 1.25 0 1 1 0 2.5A1.25 1.25 0 0 1 12 8zm1.5 9h-3v-2h1v-3h-1v-2h3v5h1v2z" />
@@ -51,6 +57,7 @@ export {
   IconX,
   IconEdit,
   IconTrash,
+  IconLogout,
   IconInfo,
   IconWarning,
   IconSuccess,

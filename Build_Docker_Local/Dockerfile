@@ -1,4 +1,5 @@
 FROM node:20-bullseye-slim AS frontend-build
+ARG APP_VERSION
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm ci
@@ -6,10 +7,13 @@ COPY frontend/ ./
 RUN npm run build
 
 FROM node:20-bullseye-slim
+ARG APP_VERSION
 WORKDIR /app/backend
 
 ENV NODE_ENV=production
 ENV PORT=3000
+LABEL org.opencontainers.image.title="HomeFinance" \
+      org.opencontainers.image.version="${APP_VERSION}"
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends python3 make g++ \

@@ -4,6 +4,8 @@ import useAuth from "./hooks/useAuth";
 import useCartao from "./hooks/useCartao";
 import useDespesas from "./hooks/useDespesas";
 import useReceitas from "./hooks/useReceitas";
+import { IconLogout } from "./components/Icons";
+import { APP_VERSION } from "./config/appVersion";
 import Modal from "./components/Modal";
 import { CartaoPage } from "./pages/CartaoPage";
 import { ConfiguracoesPage } from "./pages/ConfiguracoesPage";
@@ -431,10 +433,22 @@ function App() {
               <strong>{userName}</strong>
               <span>{userEmail}</span>
             </div>
+            <button
+              type="button"
+              className="logout-button logout-button--inline"
+              onClick={handleLogout}
+              title="Sair"
+              aria-label="Sair da conta"
+            >
+              <IconLogout />
+            </button>
           </div>
-          <button type="button" className="ghost logout-button" onClick={handleLogout}>
+          <button type="button" className="ghost logout-button logout-button--mobile" onClick={handleLogout}>
             Sair
           </button>
+          <span className="app-version" title={`HomeFinance v${APP_VERSION}`}>
+            HomeFinance v{APP_VERSION}
+          </span>
         </div>
       </aside>
       {isMobileMenuOpen && <div className="mobile-backdrop" onClick={handleNavClick} />}
